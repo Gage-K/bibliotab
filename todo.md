@@ -10,6 +10,7 @@
 - [x] Conditionally render background color based on if current position
 - [x] Have current position update onClick
 - [x] Add hover styling
+- [ ] Implement a11y labels
 
 ## Tab Form
 
