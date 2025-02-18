@@ -32,6 +32,21 @@ function App() {
       setPosition(pos);
     }
   }
+  console.log(`position: ${position}`);
+
+  function updateTabData(pos, formData) {
+    console.log("update tab function");
+    console.log(`notes at position ${pos} with the id ${tab[pos].id}`);
+    console.log(tab[pos].notes);
+    console.log("form data");
+    console.log(formData);
+
+    setTab((prev) =>
+      prev.map((tabItem, index) =>
+        index === pos ? { id: nanoid(), notes: formData } : tabItem
+      )
+    );
+  }
 
   return (
     <>
@@ -44,7 +59,7 @@ function App() {
           dateModified={tabDetails.dateModified}
           tuning={tabDetails.tuning}
         />
-        <TabForm />
+        <TabForm tab={tab} updateTabData={updateTabData} position={position} />
         <button onClick={() => updatePosition(position - 1)}>
           Previous position
         </button>

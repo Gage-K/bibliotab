@@ -1,12 +1,40 @@
-import React from "react";
+import { useState, useEffect } from "react";
+import PropTypes from "prop-types";
 
-export default function TabForm() {
+export default function TabForm({ tab, updateTabData, position }) {
+  // CONSTANTS
   const strings = [1, 2, 3, 4, 5, 6]; // eventually this will be customizable
   const frets = [
     -2, -1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18,
     19, 20, 21, 22, 23, 24,
   ];
 
+  // STATES
+  const [formData, setFormData] = useState(tab[position].notes);
+
+  // USE EFFECTS
+  useEffect(() => {
+    console.log("position changed");
+    setFormData(tab[position].notes);
+  }, [position]);
+
+  // FUNCTIONS
+  function updateFret(Event, string) {
+    const { value } = Event.target;
+    setFormData((prev) =>
+      prev.map((item, index) =>
+        index === string - 1 ? { ...item, fret: parseInt(value) } : item
+      )
+    );
+  }
+
+  function saveFormData(Event) {
+    Event.preventDefault();
+    updateTabData(position, formData);
+  }
+
+  // maps over each string; for each string
+  //    map over frets and create a radio button/field + label
   const allFields = (
     <>
       {strings.map((string) => (
@@ -20,10 +48,11 @@ export default function TabForm() {
                 {string === 1 ? fret : null}
 
                 <input
+                  onChange={(Event) => updateFret(Event, string)}
                   type="radio"
                   name={`string${string}`}
                   value={fret}
-                  defaultChecked={fret === -2 ? true : false}
+                  checked={formData[string - 1].fret === fret}
                 />
               </label>
             ))}
@@ -35,7 +64,16 @@ export default function TabForm() {
 
   return (
     <section className="tab-form-section">
-      <form>{allFields}</form>
+      <form onSubmit={saveFormData}>
+        {allFields}
+        <button>Save</button>
+      </form>
     </section>
   );
 }
+
+TabForm.propTypes = {
+  tab: PropTypes.array.isRequired,
+  updateTabData: PropTypes.func.isRequired,
+  position: PropTypes.number.isRequired,
+};
