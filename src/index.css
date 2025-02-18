@@ -65,3 +65,11 @@ button:focus-visible {
     background-color: #f9f9f9;
   }
 }
+
+.tab-display {
+  display: flex;
+}
+
+.tab-moment {
+  margin: 0rem 1rem;
+}
