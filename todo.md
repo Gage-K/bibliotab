@@ -27,3 +27,5 @@
   - [ ] remove tabData of spec id
 - [ ] Implement user ability to update formData
   - [ ] onChange event for formData
+- [ ] Allow for different number of strings to be selected
+  - [ ] Automatically render fieldsets based on number of strings
