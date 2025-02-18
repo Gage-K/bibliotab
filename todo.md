@@ -14,7 +14,7 @@
 
 ## Tab Form
 
-- [ ] Init Form
+- [x] Init Form
 - [ ] Create formData state
 - [ ] Load tab data into form from current pos
 - [ ] Update formData state with tab data
@@ -29,3 +29,6 @@
   - [ ] onChange event for formData
 - [ ] Allow for different number of strings to be selected
   - [ ] Automatically render fieldsets based on number of strings
+- [ ] Refactor to have form also save style for each string played
+  - [ ] pass style to `updateTabData`
+- [ ] Make controlled component for radio more dynamic (can accommodate more than 6 strings; make it not hardcoded)
