@@ -7,6 +7,7 @@
 ## Tab Display
 
 - [ ] Implement a11y labels
+- [ ] Implement note & chord finder
 
 - [x] Finish tab display for all tab
 - [x] Conditionally render background color based on if current position
