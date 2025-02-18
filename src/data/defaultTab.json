@@ -12,8 +12,8 @@
       "id": 1,
       "notes": [
         {
-          "fret": null,
-          "style": null
+          "fret": 0,
+          "style": "none"
         },
         {
           "fret": -1,
@@ -41,8 +41,8 @@
       "id": 2,
       "notes": [
         {
-          "fret": null,
-          "style": null
+          "fret": 0,
+          "style": "none"
         },
         {
           "fret": 10,
@@ -70,8 +70,8 @@
       "id": 4,
       "notes": [
         {
-          "fret": null,
-          "style": null
+          "fret": 0,
+          "style": "none"
         },
         {
           "fret": 5,
