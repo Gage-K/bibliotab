@@ -14,7 +14,7 @@ export default function TabForm({ tab, updateTabData, position }) {
 
   // USE EFFECTS
   useEffect(() => {
-    console.log("position changed");
+    // Whenever user's current position changes, update formData to current position
     setFormData(tab[position].notes);
   }, [position]);
 
