@@ -68,8 +68,21 @@ button:focus-visible {
 
 .tab-display {
   display: flex;
+  margin: 2rem 0rem;
 }
 
 .tab-moment {
-  margin: 0rem 1rem;
+  margin: 0rem 0.25rem;
+  padding: 0rem 1rem;
+  border-radius: 0.5rem;
+  background-color: rgba(58, 58, 58, 0%);
+  border: 1px solid rgba(192, 192, 192, 0%);
+}
+
+.tab-moment:hover {
+  border: 1px solid rgba(192, 192, 192, 100%);
+}
+
+.tab-current-pos {
+  background-color: rgba(58, 58, 58, 100%);
 }
