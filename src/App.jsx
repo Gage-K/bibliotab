@@ -21,8 +21,15 @@ function App() {
   const [tab, setTab] = useState(initTab);
   const [position, setPosition] = useState(0); // position indicates place in array of tab, like a timestamp
 
+  function tabPositionExists(pos) {
+    // checks if requested position in tab exists
+    return pos < tab.length && pos >= 0;
+  }
+
   function updatePosition(pos) {
-    setPosition((prevPos) => pos);
+    if (tabPositionExists(pos)) {
+      setPosition((prevPos) => pos);
+    }
   }
 
   console.log(position);
@@ -37,8 +44,11 @@ function App() {
         dateModified={tabDetails.dateModified}
         tuning={tabDetails.tuning}
       />
+      <button onClick={() => updatePosition(position - 1)}>
+        Previous position
+      </button>
       <button onClick={() => updatePosition(position + 1)}>
-        Update position
+        Next position
       </button>
       <TabDisplay
         tab={tab}
