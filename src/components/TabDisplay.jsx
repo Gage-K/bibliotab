@@ -6,7 +6,7 @@ export default function TabDisplay({
   position,
   tuning,
   updatePosition,
-  addNewTab,
+  addNewFrame,
   addNewMeasure,
 }) {
   const renderTuning = (
@@ -32,7 +32,7 @@ export default function TabDisplay({
         <div key={measureIndex} className="tab-measure-container">
           <button
             className="button-plus"
-            onClick={() => addNewTab(measureIndex, -1, true)}>
+            onClick={() => addNewFrame(measureIndex, -1, true)}>
             +
           </button>
           {measure.map((frame, frameIndex) => (
@@ -52,7 +52,7 @@ export default function TabDisplay({
               </div>
               <button
                 className="button-plus"
-                onClick={() => addNewTab(measureIndex, frameIndex, true)}>
+                onClick={() => addNewFrame(measureIndex, frameIndex, true)}>
                 +
               </button>
             </div>
@@ -74,7 +74,7 @@ TabDisplay.propTypes = {
   position: PropTypes.number.isRequired,
   tuning: PropTypes.array.isRequired,
   updatePosition: PropTypes.func.isRequired,
-  addNewTab: PropTypes.func.isRequired,
+  addNewFrame: PropTypes.func.isRequired,
   addNewMeasure: PropTypes.func.isRequired,
 };
 
