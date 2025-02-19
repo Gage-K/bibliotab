@@ -4,9 +4,20 @@
 
 - [ ] Remove testing defaults (defaultTab.json references)
 
+## App Wide
+
+- [ ] Refactor to allow for measure grouping
+  - [x] Update default data to reflect this
+  - [ ] Display measure start and end
+  - [ ] Update buttons in TabDisplay
+  - [ ] Update position (maybe as measure and then frame)
+  - [ ] Update functions in TabForm
+  - [ ] Update user controls in App
+
 ## Tab Display
 
 - [ ] Implement note & chord finder
+- [ ] Create a max-width for display and add wrapping
 
 - [x] Finish tab display for all tab
 - [x] Conditionally render background color based on if current position
