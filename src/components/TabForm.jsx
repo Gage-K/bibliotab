@@ -1,7 +1,14 @@
 import { useState, useEffect, useMemo } from "react";
 import PropTypes from "prop-types";
 
-export default function TabForm({ tab, updateTabData, position }) {
+export default function TabForm({
+  tab,
+  updateTabData,
+  position,
+  getEmptyTab,
+  addNewTab,
+  deleteTab,
+}) {
   // CONSTANTS
   const strings = [1, 2, 3, 4, 5, 6]; // eventually this will be customizable
   const frets = [
@@ -72,6 +79,15 @@ export default function TabForm({ tab, updateTabData, position }) {
         {allFields}
         <button>Save</button>
       </form>
+      <div className="form-button-group">
+        <button onClick={() => setFormData(getEmptyTab().notes)}>Clear</button>
+        <button onClick={() => addNewTab(position, false)}>Duplicate</button>
+        <button
+          onClick={() => deleteTab(tab[position].id)}
+          disabled={tab.length === 1}>
+          Delete
+        </button>
+      </div>
     </section>
   );
 }
@@ -80,4 +96,7 @@ TabForm.propTypes = {
   tab: PropTypes.array.isRequired,
   updateTabData: PropTypes.func.isRequired,
   position: PropTypes.number.isRequired,
+  getEmptyTab: PropTypes.func.isRequired,
+  addNewTab: PropTypes.func.isRequired,
+  deleteTab: PropTypes.func.isRequired,
 };
