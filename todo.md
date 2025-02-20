@@ -7,12 +7,16 @@
 ## App Wide
 
 - [ ] Refactor to allow for measure grouping
+  - [x] Update buttons in TabDisplay
+  - [x] Update functions in TabForm
+  - [x] Update user controls in App
+  - [x] fix set position after delete
+  - [x] create function to delete measure (and call function when deleted frame is last of measure)
   - [x] Update default data to reflect this
   - [x] Display measure start and end
-  - [ ] Update buttons in TabDisplay
   - [x] Update position (maybe as measure and then frame)
-  - [ ] Update functions in TabForm
-  - [ ] Update user controls in App
+- [ ] Implement leaving notes feature for measures
+- [x] Add comments to checkIfPositionExists() to be more readable (possibly refactor)
 
 ## Tab Display
 
