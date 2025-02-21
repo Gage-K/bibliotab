@@ -6,7 +6,10 @@
 
 ## App Wide
 
-- [ ] Refactor to allow for measure grouping
+- [ ] Implement leaving notes feature for measures
+- [ ] On delete, keep position if it exists; if not, move back 1;
+- [x] Add comments to checkIfPositionExists() to be more readable (possibly refactor)
+- [x] Refactor to allow for measure grouping
   - [x] Update buttons in TabDisplay
   - [x] Update functions in TabForm
   - [x] Update user controls in App
@@ -15,13 +18,12 @@
   - [x] Update default data to reflect this
   - [x] Display measure start and end
   - [x] Update position (maybe as measure and then frame)
-- [ ] Implement leaving notes feature for measures
-- [x] Add comments to checkIfPositionExists() to be more readable (possibly refactor)
 
 ## Tab Display
 
 - [ ] Implement note & chord finder
-- [ ] Create a max-width for display and add wrapping
+- [x] Create a max-width for display and add wrapping
+- [ ] Consider a way to manage chunk calculation based on number of measures in chunk
 
 - [x] Finish tab display for all tab
 - [x] Conditionally render background color based on if current position
