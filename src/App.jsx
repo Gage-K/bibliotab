@@ -102,14 +102,15 @@ function App() {
 
   function addNewMeasure(measure) {
     const newMeasure = [getEmptyFrame()];
-    const updatedTab = [
-      ...tab.slice(0, measure),
-      newMeasure,
-      ...tab.slice(measure + 1),
-    ];
+    // if measure is -1, create a new tab with the empty measure placed at the start
+    // otherwise, slice the tab and place new measure there
+    const updatedTab =
+      measure === -1
+        ? [newMeasure, ...tab]
+        : [...tab.slice(0, measure), newMeasure, ...tab.slice(measure + 1)];
 
     setTab(updatedTab);
-    updatePosition(measure, 0);
+    measure === -1 ? updatePosition(0, 0) : updatePosition(measure, 0);
   }
 
   function addNewFrame(measure, frame, isEmptyTab) {
