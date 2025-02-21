@@ -6,7 +6,7 @@ export default function TabForm({
   updateTabData,
   measure,
   frame,
-  getEmptyTab,
+  getEmptyFrame,
   addNewFrame,
   deleteTab,
 }) {
@@ -60,7 +60,13 @@ export default function TabForm({
           <div className="form-string-fret">
             {frets.map((fret) => (
               <label key={fret} className="form-fret">
-                {string === 1 ? fret : null}
+                {string === 1
+                  ? fret === -2
+                    ? "Ø"
+                    : fret === -1
+                    ? "X"
+                    : fret
+                  : null}
 
                 <input
                   onChange={(Event) => updateFret(Event, string)}
@@ -84,7 +90,9 @@ export default function TabForm({
         <button>Save</button>
       </form>
       <div className="form-button-group">
-        <button onClick={() => setFormData(getEmptyTab().notes)}>Clear</button>
+        <button onClick={() => setFormData(getEmptyFrame().notes)}>
+          Clear
+        </button>
         <button onClick={() => addNewFrame(measure, frame, false)}>
           Duplicate
         </button>
@@ -104,7 +112,7 @@ TabForm.propTypes = {
   updateTabData: PropTypes.func.isRequired,
   measure: PropTypes.number.isRequired,
   frame: PropTypes.number.isRequired,
-  getEmptyTab: PropTypes.func.isRequired,
+  getEmptyFrame: PropTypes.func.isRequired,
   addNewFrame: PropTypes.func.isRequired,
   deleteTab: PropTypes.func.isRequired,
 };
