@@ -66,32 +66,9 @@ button:focus-visible {
   }
 }
 
-.tab-display {
-  display: flex;
-  margin: 2rem 0rem;
-}
-
-.tab-frame {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  margin: 0rem 0.25rem;
-  padding: 0rem 0.75rem;
-  border-radius: 0.5rem;
-  background-color: rgba(58, 58, 58, 0%);
-  border: 1px solid rgba(192, 192, 192, 0%);
-}
-
-.tab-frame:hover {
-  border: 1px solid rgba(192, 192, 192, 100%);
-}
-
-.tab-frame-container {
-  display: flex;
-}
-
-.tab-measure-container {
-  display: flex;
+.td-display {
+  width: 100%;
+  max-width: 1100px;
 }
 
 .button-plus {
@@ -106,12 +83,17 @@ button:focus-visible {
   opacity: 100%;
 }
 
-.button-plus:focus {
-  opacity: 100%;
+.button-plus.first:hover {
+  width: 100%;
 }
 
-.tab-current-pos {
-  background-color: rgba(58, 58, 58, 100%);
+.button-plus.last {
+  border: 1px solid #646cff;
+  width: 100%;
+}
+
+.td-current-pos {
+  background-color: rgba(58, 58, 58, 50%);
 }
 
 .tab-form-section {
@@ -137,4 +119,62 @@ legend {
   display: flex;
   flex-direction: column;
   align-items: center;
+}
+
+.td-row {
+  display: flex;
+  position: relative;
+  gap: 0;
+  margin-bottom: 3rem;
+  width: 100%;
+  border-right: 5px solid rgba(192, 192, 192, 100%);
+  padding-right: 1rem;
+}
+
+.td-pre-frame {
+  display: flex;
+}
+
+.td-frame {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 0rem 0.25rem;
+  padding: 0rem 1rem;
+  border-radius: 0.5rem;
+  background-color: rgba(58, 58, 58, 0%);
+  border: 1px solid rgba(192, 192, 192, 0%);
+}
+
+.td-frame:hover {
+  border: 1px solid rgba(192, 192, 192, 100%);
+}
+
+.td-frame.td-current-pos {
+  background-color: rgba(58, 58, 58, 50%);
+}
+
+.td-measure-bar {
+  border: 1px solid rgba(192, 192, 192, 100%);
+  margin: 0 1rem;
+}
+
+.td-tuning {
+  display: flex;
+  flex-direction: column;
+  border-right: 5px solid rgba(192, 192, 192, 100%);
+  margin-right: 1rem;
+  padding-right: 1rem;
+}
+
+.td-tuning-note:before {
+  display: block;
+  content: " ";
+  margin-top: 0.75rem;
+  top: 1;
+  left: 0;
+  width: 100%;
+  z-index: -999;
+  position: absolute;
+  border-top: 2px solid hsl(0, 0%, 20%);
 }
