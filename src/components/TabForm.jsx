@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import PropTypes from "prop-types";
+import { CaretCircleDown, CaretCircleUp } from "@phosphor-icons/react";
 
 export default function TabForm({
   tab,
@@ -19,6 +20,7 @@ export default function TabForm({
 
   // STATES
   const [formData, setFormData] = useState(tab[measure][frame].notes);
+  const [isOpen, setIsOpen] = useState(true);
 
   // HOOKS
   const currentNotes = useMemo(
@@ -85,24 +87,32 @@ export default function TabForm({
 
   return (
     <section className="tab-form-section">
-      <form onSubmit={saveFormData}>
-        {allFields}
-        <button>Save</button>
-      </form>
-      <div className="form-button-group">
-        <button onClick={() => setFormData(getEmptyFrame().notes)}>
-          Clear
-        </button>
-        <button onClick={() => addNewFrame(measure, frame, false)}>
-          Duplicate
-        </button>
-        <button
-          onClick={() => deleteTab(frame, measure)}
-          /*disabled={tab.length === 1}*/
-        >
-          Delete
-        </button>
-      </div>
+      <button onClick={() => setIsOpen((prev) => !prev)}>
+        {isOpen ? <CaretCircleUp /> : <CaretCircleDown />}
+        {isOpen ? " Close Editor" : " Open Editor"}
+      </button>
+      {isOpen && (
+        <>
+          <form onSubmit={saveFormData}>
+            {allFields}
+            <button>Save</button>
+          </form>
+          <div className="form-button-group">
+            <button onClick={() => setFormData(getEmptyFrame().notes)}>
+              Clear
+            </button>
+            <button onClick={() => addNewFrame(measure, frame, false)}>
+              Duplicate
+            </button>
+            <button
+              onClick={() => deleteTab(frame, measure)}
+              /*disabled={tab.length === 1}*/
+            >
+              Delete
+            </button>
+          </div>
+        </>
+      )}
     </section>
   );
 }
