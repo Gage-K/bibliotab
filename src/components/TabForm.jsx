@@ -25,7 +25,6 @@ export default function TabForm({
 
   // STATES
   const [formData, setFormData] = useState(currentNotes);
-  const [isOpen, setIsOpen] = useState(true);
 
   // HOOKS
 
@@ -88,32 +87,15 @@ export default function TabForm({
 
   return (
     <section className="tab-form-section">
-      <button onClick={() => setIsOpen((prev) => !prev)}>
-        {isOpen ? <CaretCircleUp /> : <CaretCircleDown />}
-        {isOpen ? " Close Editor" : " Open Editor"}
-      </button>
-      {isOpen && (
-        <>
-          <form onSubmit={saveFormData}>
-            {allFields}
-            <button>Save</button>
-          </form>
-          <div className="form-button-group">
-            <button onClick={() => setFormData(getEmptyFrame().notes)}>
-              Clear
-            </button>
-            <button onClick={() => addNewFrame(measure, frame, false)}>
-              Duplicate
-            </button>
-            <button
-              onClick={() => deleteTab(frame, measure)}
-              /*disabled={tab.length === 1}*/
-            >
-              Delete
-            </button>
-          </div>
-        </>
-      )}
+      <form onSubmit={saveFormData}>
+        {allFields}
+        <button>Save</button>
+      </form>
+      <div className="form-button-group">
+        <button onClick={() => setFormData(getEmptyFrame().notes)}>
+          Clear
+        </button>
+      </div>
     </section>
   );
 }
@@ -124,6 +106,4 @@ TabForm.propTypes = {
   measure: PropTypes.number.isRequired,
   frame: PropTypes.number.isRequired,
   getEmptyFrame: PropTypes.func.isRequired,
-  addNewFrame: PropTypes.func.isRequired,
-  deleteTab: PropTypes.func.isRequired,
 };

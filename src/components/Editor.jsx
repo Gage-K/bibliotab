@@ -1,13 +1,60 @@
-import { createContext } from "react";
+import TabForm from "./TabForm";
+import EditorControls from "./EditorControls";
+import PropTypes from "prop-types";
 
-const EditorContext = createContext();
-
-export default function Editor() {
+export default function Editor({
+  tab,
+  position,
+  editorIsOpen,
+  addNewFrame,
+  addNewMeasure,
+  deleteFrame,
+  deleteMeasure,
+  getEmptyFrame,
+  handleOpeningEditor,
+  updatePosition,
+  updateTabData,
+}) {
   return (
-    <EditorContext.Provider>
-      <p>Editor goes here</p>
-    </EditorContext.Provider>
+    <section className="editor">
+      <EditorControls
+        handleOpeningEditor={handleOpeningEditor}
+        isOpen={editorIsOpen}
+        movePrev={() => updatePosition(position.measure, position.frame - 1)}
+        moveNext={() => updatePosition(position.measure, position.frame + 1)}
+        duplicate={() => addNewFrame(position.measure, position.frame, false)}
+        deleteFrame={() => deleteFrame(position.frame, position.measure)}
+        deleteMeasure={() => deleteMeasure(position.measure)}
+        insertFrame={() => addNewFrame(position.measure, position.frame, true)}
+        insertMeasure={() =>
+          addNewMeasure(position.measure + 1)
+        }></EditorControls>
+
+      {editorIsOpen && (
+        <TabForm
+          tab={tab}
+          updateTabData={updateTabData}
+          measure={position.measure}
+          frame={position.frame}
+          getEmptyFrame={getEmptyFrame}
+          addNewFrame={addNewFrame}
+          deleteTab={deleteFrame}
+        />
+      )}
+    </section>
   );
 }
 
-export { EditorContext };
+Editor.propTypes = {
+  tab: PropTypes.object.isRequired,
+  position: PropTypes.object.isRequired,
+  editorIsOpen: PropTypes.bool.isRequired,
+  addNewFrame: PropTypes.func.isRequired,
+  addNewMeasure: PropTypes.func.isRequired,
+  deleteFrame: PropTypes.func.isRequired,
+  deleteMeasure: PropTypes.func.isRequired,
+  getEmptyFrame: PropTypes.func.isRequired,
+  handleOpeningEditor: PropTypes.func.isRequired,
+  updatePosition: PropTypes.func.isRequired,
+  updateTabData: PropTypes.func.isRequired,
+};

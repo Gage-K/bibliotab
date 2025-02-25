@@ -10,6 +10,7 @@ import TabDetails from "./components/TabDetails";
 import TabDisplay from "./components/TabDisplay";
 import TabForm from "./components/TabForm";
 import EditorControls from "./components/EditorControls";
+import Editor from "./components/Editor";
 
 // DATA IMPORTS
 import defaultTab from "./data/defaultTab.json";
@@ -24,8 +25,12 @@ function App() {
   // STATES
   const [tab, setTab] = useState(initTab);
   const [position, setPosition] = useState({ measure: 0, frame: 0 });
+  const [editorIsOpen, setEditorIsOpen] = useState(true);
 
   // FUNCTIONS
+  function handleOpeningEditor() {
+    setEditorIsOpen((prev) => !prev);
+  }
   function isExistingPosition(measure, frame) {
     return tab[measure] != undefined ? tab[measure][frame] != undefined : false;
   }
@@ -114,7 +119,7 @@ function App() {
     const updatedTab =
       measure === -1
         ? [newMeasure, ...tab]
-        : [...tab.slice(0, measure), newMeasure, ...tab.slice(measure + 1)];
+        : [...tab.slice(0, measure), newMeasure, ...tab.slice(measure)];
 
     setTab(updatedTab);
     measure === -1 ? updatePosition(0, 0) : updatePosition(measure, 0);
@@ -207,18 +212,19 @@ function App() {
           dateModified={tabDetails.dateModified}
           tuning={tabDetails.tuning}
         />
-        <TabForm
+
+        <Editor
           tab={tab}
-          updateTabData={updateTabData}
-          measure={position.measure}
-          frame={position.frame}
-          getEmptyFrame={getEmptyFrame}
+          position={position}
+          editorIsOpen={editorIsOpen}
           addNewFrame={addNewFrame}
-          deleteTab={deleteFrame}
-        />
-        <EditorControls
-          movePrev={() => updatePosition(position.measure, position.frame - 1)}
-          moveNext={() => updatePosition(position.measure, position.frame + 1)}
+          addNewMeasure={addNewMeasure}
+          deleteFrame={deleteFrame}
+          deleteMeasure={deleteMeasure}
+          getEmptyFrame={getEmptyFrame}
+          handleOpeningEditor={handleOpeningEditor}
+          updatePosition={updatePosition}
+          updateTabData={updateTabData}
         />
 
         <TabDisplay
@@ -237,6 +243,3 @@ function App() {
 export default App;
 
 export { TabContext };
-/*
-
-*/
