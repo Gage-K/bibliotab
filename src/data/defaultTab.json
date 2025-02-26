@@ -5,7 +5,8 @@
     "creator": "Gage",
     "dateCreated": 20250214,
     "dateModified": 20250215,
-    "tuning": ["E", "A", "D", "G", "b", "e"]
+    "tuning": ["E", "B", "G", "D", "A", "E"],
+    "id": 1
   },
   "tab": [
     [
