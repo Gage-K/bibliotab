@@ -10,8 +10,9 @@
 
 - [ ] Implement leaving notes feature for measures
 - [ ] Set up useContext()
-- [ ] Improve styling of editor controls
-- [ ] Improve styling of song details
+- [ ] Fix header sizing
+- [ ] improve mobile experience
+- [ ] implement update fret style
 
 ## Song Details
 
@@ -20,17 +21,14 @@
 ## Tab Display
 
 - [ ] Implement note & chord finder
+- [ ] Implement style affectation into display interpreter
 
 ## Tab Form
 
 - [ ] Allow for different number of strings to be selected
 - [ ] Automatically render fieldsets based on number of strings
-- [ ] Make editor controls sticky (maybe reconsider how to structure html)
-- [ ] Remove duplicated editor control buttons
 - [ ] Create grid layout for each string of form to enable x-axis scrolling
 - [ ] remove fieldset styling
-
-## Mobile
 
 ## a11y
 
@@ -38,6 +36,11 @@
 
 ## Completed Graveyard:
 
+- [x] Improve styling of song details
+- [x] Improve styling of editor controls
+- [x] Remove duplicated editor control buttons
+- [x] Make editor controls sticky (maybe reconsider how to structure html)
+- [x] Make a wrapper for the entire header of the tablature app
 - [x] On delete, keep position if it exists; if not, move back 1;
 - [x] Add further controls:
   - [x] Insert next/prev measure
