@@ -1,27 +1,27 @@
 import PropTypes from "prop-types";
 import { nanoid } from "nanoid";
 import { Fragment } from "react";
+import { TabContext } from "../App";
+import { useContext } from "react";
 
 export default function TabDisplay({
   tab,
   position,
-  tuning,
   updatePosition,
   addNewFrame,
   addNewMeasure,
 }) {
-  console.log(tuning);
-  /*
+  const { details } = useContext(TabContext);
+
   const renderTuning = (
     <div className="td-grid-tuning">
-      {tuning.toReversed().map((note, index) => (
+      {details.tuning.map((note, index) => (
         <p className="" key={index}>
           {note}
         </p>
       ))}
     </div>
   );
-  */
 
   function interpretNote(note) {
     return note === -2 ? "\u00A0\u00A0" : note === -1 ? "X" : note;
@@ -39,6 +39,7 @@ export default function TabDisplay({
   return (
     <>
       <section className="td-grid">
+        {renderTuning}
         {flattenedTab.map((tabChunk, tabChunkIndex) => (
           <Fragment key={nanoid()}>
             {tabChunkIndex === 0 && (
