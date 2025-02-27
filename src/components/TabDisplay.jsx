@@ -10,12 +10,13 @@ export default function TabDisplay({
   updatePosition,
   addNewFrame,
   addNewMeasure,
+  tuning,
 }) {
   const { details } = useContext(TabContext);
 
   const renderTuning = (
     <div className="td-grid-tuning">
-      {details.tuning.map((note, index) => (
+      {tuning.map((note, index) => (
         <p className="" key={index}>
           {note}
         </p>
