@@ -1,5 +1,5 @@
 // REACT IMPORTS
-import { useState, createContext } from "react";
+import { useState, createContext, useEffect } from "react";
 import { nanoid } from "nanoid";
 
 // STYLE IMPORTS
@@ -18,19 +18,50 @@ console.log(Storage);
 
 function App() {
   // CONSTANTS (FOR TESTING)
-  const tabDetails = defaultTab.tabDetails; // general details about tab
-  const initTab = defaultTab.tab; // init testing notes for tab --> change later to empty init
 
   // STATES
+  const [allTabs, setAllTabs] = useState(
+    JSON.parse(localStorage.getItem("allTabs")) || defaultTab.allTabs
+  );
+
+  const tabIndex = 1;
+
+  const tabDetails = allTabs[tabIndex].details; // general details about tab
+  const initTab = allTabs[tabIndex].tab; // init testing notes for tab --> change later to empty init
+
+  const [currentId, setCurrentId] = useState(allTabs[tabIndex].id);
   const [tab, setTab] = useState(initTab);
   const [position, setPosition] = useState({ measure: 0, frame: 0 });
   const [editorIsOpen, setEditorIsOpen] = useState(true);
   const [details, setDetails] = useState(tabDetails);
+  const [isSaving, setIsSaving] = useState(false);
 
-  console.log("in main app");
-  console.log(details);
+  console.log("all tabs");
+  console.log(allTabs);
+  console.log("local storage");
+  console.log(JSON.parse(localStorage.getItem("allTabs")));
+
+  // HOOKS
+
+  useEffect(() => {
+    console.log("use effect ran");
+    localStorage.setItem("allTabs", JSON.stringify(allTabs));
+    setIsSaving(false);
+  }, [isSaving]);
 
   // FUNCTIONS
+  function handleSave() {
+    console.log("handle save");
+    setAllTabs((prevAllTabs) =>
+      prevAllTabs.map((prevTab) =>
+        prevTab.id != currentId
+          ? prevTab
+          : { ...prevTab, tab: tab, details: details }
+      )
+    );
+    setIsSaving(true);
+  }
+
   function handleOpeningEditor() {
     setEditorIsOpen((prev) => !prev);
   }
@@ -209,6 +240,7 @@ function App() {
   return (
     <TabContext.Provider value={{ details, setDetails }}>
       <main>
+        <button onClick={() => handleSave()}>Save tab</button>
         <TabDetails />
         <div className="main-wrapper">
           <Editor
