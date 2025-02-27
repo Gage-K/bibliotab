@@ -9,7 +9,7 @@ export default function Dashboard() {
       <button onClick={createNewTab}>Create New Tab</button>
 
       {tabs.map((tab) => (
-        <Fragment key={tab.details.id}>
+        <Fragment key={tab.id}>
           <Link to={`/editor/${tab.id}`}>
             <div className="db-list-item">
               <p>{tab.details.song}</p>
