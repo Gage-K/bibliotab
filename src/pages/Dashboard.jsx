@@ -4,7 +4,6 @@ import { Link } from "react-router";
 
 export default function Dashboard() {
   const { tabs, createNewTab, deleteTab } = useContext(TablabContext);
-  console.log(tabs);
   return (
     <div>
       <button onClick={createNewTab}>Create New Tab</button>
