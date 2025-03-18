@@ -25,9 +25,10 @@
 
 - [ ] Review display a11y
 
-## Minor Fixes
+## Minor Fixes & Changes
 
 - [ ] Remove testing defaults (defaultTab.json references)
+- [ ] Code Review
 
 ## Completed Graveyard:
 
