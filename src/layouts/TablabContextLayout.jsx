@@ -94,7 +94,6 @@ export default function TablabContextLayout() {
   return (
     <TablabContext.Provider
       value={{ tabs, updateDetails, updateTab, createNewTab, deleteTab }}>
-      <button onClick={() => localStorage.clear()}>Reset</button>
       <Outlet />
     </TablabContext.Provider>
   );
