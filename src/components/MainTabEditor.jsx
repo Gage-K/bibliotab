@@ -1,7 +1,7 @@
 // REACT IMPORTS
 import { useState, createContext, useEffect, useContext } from "react";
 import { nanoid } from "nanoid";
-import { useParams, Link } from "react-router";
+import { useParams } from "react-router";
 
 // STYLE IMPORTS
 import "../App.css";
@@ -10,9 +10,11 @@ import "../App.css";
 import TabDetails from "./TabDetails";
 import TabDisplay from "./TabDisplay";
 import Editor from "./Editor";
+import Header from "./Header";
 
 // DATA IMPORTS
 import { TablabContext } from "../layouts/TablabContextLayout";
+import PageWrapper from "../layouts/PageWrapper";
 
 const TabContext = createContext();
 
@@ -38,7 +40,7 @@ export default function MainTabEditor() {
   const isLoading = Object.keys(tabData).length === 0;
   const [tab, setTab] = useState(tabData.tab);
   const [position, setPosition] = useState({ measure: 0, frame: 0 });
-  const [editorIsOpen, setEditorIsOpen] = useState(true);
+  const [editorIsOpen, setEditorIsOpen] = useState(false);
 
   // HOOKS
 
@@ -225,42 +227,40 @@ export default function MainTabEditor() {
 
   return (
     <>
-      {!isLoading && (
-        <TabContext.Provider value={tabData}>
-          <main>
-            <Link to="/dashboard">Dashboard</Link>
-
-            <TabDetails />
-
-            {
-              <div className="main-wrapper">
-                <Editor
-                  tab={tab}
-                  position={position}
-                  editorIsOpen={editorIsOpen}
-                  addNewFrame={addNewFrame}
-                  addNewMeasure={addNewMeasure}
-                  deleteFrame={deleteFrame}
-                  deleteMeasure={deleteMeasure}
-                  getEmptyFrame={getEmptyFrame}
-                  handleOpeningEditor={handleOpeningEditor}
-                  updatePosition={updatePosition}
-                  updateTabData={updateTabData}
-                />
-
-                <TabDisplay
-                  tab={tab}
-                  position={position}
-                  updatePosition={updatePosition}
-                  addNewFrame={addNewFrame}
-                  addNewMeasure={addNewMeasure}
-                  tuning={tabData.details.tuning}
-                />
+      <Header />
+      <PageWrapper>
+        {!isLoading && (
+          <TabContext.Provider value={tabData}>
+            <main className="mx-auto h-full">
+              <div className="editor-top h-full">
+                <TabDetails />
               </div>
-            }
-          </main>
-        </TabContext.Provider>
-      )}
+              <Editor
+                tab={tab}
+                position={position}
+                editorIsOpen={editorIsOpen}
+                addNewFrame={addNewFrame}
+                addNewMeasure={addNewMeasure}
+                deleteFrame={deleteFrame}
+                deleteMeasure={deleteMeasure}
+                getEmptyFrame={getEmptyFrame}
+                handleOpeningEditor={handleOpeningEditor}
+                updatePosition={updatePosition}
+                updateTabData={updateTabData}
+              />
+
+              <TabDisplay
+                tab={tab}
+                position={position}
+                updatePosition={updatePosition}
+                addNewFrame={addNewFrame}
+                addNewMeasure={addNewMeasure}
+                tuning={tabData.details.tuning}
+              />
+            </main>
+          </TabContext.Provider>
+        )}
+      </PageWrapper>
     </>
   );
 }
