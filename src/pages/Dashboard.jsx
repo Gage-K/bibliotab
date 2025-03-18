@@ -17,7 +17,7 @@ export default function Dashboard() {
     <>
       <Header />
       <PageWrapper>
-        <div className="db-head-wrapper flex justify-between flex-wrap gap-4 items-end">
+        <div className="db-head-wrapper flex justify-between flex-wrap items-end">
           <h1 className="text-5xl font-bold text-neutral-800 mt-8">Tabs</h1>
           <button
             onClick={createNewTab}
