@@ -27,6 +27,20 @@ export default function Header() {
               }>
               tabs
             </NavLink>
+            <NavLink
+              to="/guide"
+              className={(isActive) =>
+                isActive.isActive ? activeStyle : linkBaseStyle
+              }>
+              guide
+            </NavLink>
+            <NavLink
+              to="/updates"
+              className={(isActive) =>
+                isActive.isActive ? activeStyle : linkBaseStyle
+              }>
+              updates
+            </NavLink>
           </nav>
         </div>
       </PageWrapper>
