@@ -8,18 +8,7 @@ export default function TabDisplay({
   updatePosition,
   addNewFrame,
   addNewMeasure,
-  tuning,
 }) {
-  const renderTuning = (
-    <div className="td-grid-tuning">
-      {tuning.map((note, index) => (
-        <p className="" key={index}>
-          {note}
-        </p>
-      ))}
-    </div>
-  );
-
   function interpretNote(note, style) {
     const newNote = note === -2 ? "\u00A0\u00A0" : note === -1 ? "X" : note;
     const interpretedNote =
@@ -56,12 +45,11 @@ export default function TabDisplay({
   return (
     <>
       <section className="td-grid">
-        {renderTuning}
         {flattenedTab.map((tabChunk, tabChunkIndex) => (
           <Fragment key={nanoid()}>
             {tabChunkIndex === 0 && (
               <button
-                className="td-grid-button-measure"
+                className="td-grid-button-measure hidden"
                 onClick={() => addNewMeasure(-1)}>
                 Insert Measure
               </button>
@@ -78,7 +66,7 @@ export default function TabDisplay({
               }>
               {tabChunk.frameIndex === 0 && (
                 <button
-                  className="td-grid-button"
+                  className="td-grid-button hidden"
                   onClick={() => addNewFrame(tabChunk.measureIndex, -1, true)}>
                   +
                 </button>
@@ -88,8 +76,8 @@ export default function TabDisplay({
                 className={
                   position.measure === tabChunk.measureIndex &&
                   position.frame === tabChunk.frameIndex
-                    ? "td-grid-frame td-current-pos"
-                    : "td-grid-frame"
+                    ? "flex flex-col gap-4 justify-center w-full rounded-sm bg-neutral-300/20 border border-transparent hover:border-neutral-300 rounded"
+                    : "flex flex-col gap-4 justify-center w-full border border-transparent hover:border-neutral-300 rounded"
                 }
                 onClick={() =>
                   updatePosition(tabChunk.measureIndex, tabChunk.frameIndex)
@@ -101,7 +89,7 @@ export default function TabDisplay({
                 ))}
               </div>
               <button
-                className="td-grid-button"
+                className="td-grid-button hidden"
                 onClick={() =>
                   addNewFrame(tabChunk.measureIndex, tabChunk.frameIndex, true)
                 }>
@@ -112,7 +100,7 @@ export default function TabDisplay({
             {tabChunkIndex === flattenedTab.length - 1 && (
               <>
                 <button
-                  className="td-grid-button-measure"
+                  className="td-grid-button-measure hidden"
                   onClick={() => addNewMeasure(tab.length)}>
                   Insert measure
                 </button>
