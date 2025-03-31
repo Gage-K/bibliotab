@@ -3,7 +3,7 @@ import PageWrapper from "../layouts/PageWrapper";
 
 export default function Header() {
   const linkBaseStyle =
-    "bg-neutral-100/0 rounded-sm px-3 py-1 hover:bg-neutral-100 hover:text-neutral-900";
+    "bg-neutral-100/0 rounded-sm px-3 py-1 hover:bg-neutral-100 hover:text-neutral-900 duration-150 ease-in-out";
   const activeStyle = `${linkBaseStyle} text-neutral-900 bg-neutral-100/100`;
   return (
     <header className="shadow-2xs sticky top-0 py-2 mb-4 bg-neutral-50 z-1">
