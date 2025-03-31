@@ -9,6 +9,7 @@
   "author": "Gage Krause",
   "license": "ISC",
   "dependencies": {
+    "dotenv": "^16.4.7",
     "express": "^5.1.0",
     "express-session": "^1.18.1",
     "passport": "^0.7.0",
