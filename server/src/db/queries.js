@@ -120,6 +120,122 @@ async function deleteUser(id) {
   console.log(`User with id of ${id} deleted`);
 }
 
+// TAB READ FUNCTIONS
+
+async function getAllTabs() {
+  const { rows } = await pool.query(`SELECT * FROM tabs`);
+  return rows;
+}
+
+async function getTabsByUser(userId) {
+  const values = [userId];
+  const { rows } = await pool.query(
+    `SELECT * FROM tabs WHERE user_id=$1`,
+    values
+  );
+  return rows;
+}
+
+async function getTabById(id) {
+  const values = [id];
+  const { rows } = await pool.query(`SELECT * FROM tabs WHERE id=$1`, values);
+  return rows;
+}
+
+async function getTabsByName(tabName) {
+  const values = [tabName];
+  const { rows } = await pool.query(
+    `SELECT * FROM tabs WHERE tab_name=$1`,
+    values
+  );
+  return rows;
+}
+
+async function getTabsByArtist(artist) {
+  const values = [artist];
+  const { rows } = await pool.query(
+    `SELECT * FROM tabs WHERE tab_artist=$1`,
+    values
+  );
+  return rows;
+}
+
+// TAB CREATE FUNCTIONS
+
+async function insertTab(userId, name, artist, tuning, tab) {
+  // inserts new tab (duplicate details ok)
+  // returns id of inserted row for tab
+  const createdAt = new Date();
+  const modifiedAt = new Date();
+  const values = [userId, name, artist, tuning, createdAt, modifiedAt, tab];
+
+  const insertedRow = await pool.query(
+    `INSERT INTO tabs (user_id, tab_name, tab_artist, tuning, created_at, modified_at, tab)
+                        VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
+    values
+  );
+  return insertedRow.rows[0].id;
+}
+
+// TAB UPDATE FUNCTIONS
+
+async function updateTabName(id, name) {
+  const values = [id, name];
+  const tabData = await getTabById(id);
+  if (!tabData[0]) {
+    console.error(`Tab with id of ${id} does not exist. Update aborted.`);
+    return;
+  }
+  await pool.query(`UPDATE tabs SET name=$2 WHERE id=$1`, values);
+  console.log(`Name of tab with id of ${id} updated`);
+}
+
+async function updateTabArtist(id, artist) {
+  const values = [id, artist];
+  const tabData = await getTabById(id);
+  if (!tabData[0]) {
+    console.error(`Tab with id of ${id} does not exist. Update aborted.`);
+    return;
+  }
+  await pool.query(`UPDATE tabs SET artist=$2 WHERE id=$1`, values);
+  console.log(`Artist of tab with id of ${id} updated`);
+}
+
+async function updateTuning(id, tuning) {
+  const values = [id, tab];
+  const tabData = await getTabById(id);
+  if (!tabData[0]) {
+    console.error(`Tab with id of ${id} does not exist. Update aborted.`);
+    return;
+  }
+  await pool.query(`UPDATE tabs SET tuning=$2 WHERE id=$1`, values);
+  console.log(`Tuning of tab with id of ${id} updated`);
+}
+
+async function updateTab(id, tab) {
+  const values = [id, tab];
+  const tabData = await getTabById(id);
+  if (!tabData[0]) {
+    console.error(`Tab with id of ${id} does not exist. Update aborted.`);
+    return;
+  }
+  await pool.query(`UPDATE tabs SET tab=$2 WHERE id=$1`, values);
+  console.log(`Tablature with id of ${id} updated`);
+}
+
+// TAB DELETE FUNCTIONS
+
+async function deleteTab(id) {
+  const values = [id];
+  const tabData = await getTabById(id);
+  if (!tabData[0]) {
+    console.error(`Tab with id of ${id} does not exist. Delete aborted.`);
+    return;
+  }
+  await pool.query(`DELETE FROM tabs WHERE id=$1`, values);
+  console.log(`Tab with id of ${id} deleted`);
+}
+
 module.exports = {
   getAllUsers,
   getUserByUsername,
@@ -129,4 +245,15 @@ module.exports = {
   updateUserPassword,
   updateUserEmail,
   deleteUser,
+  getAllTabs,
+  getTabById,
+  getTabsByArtist,
+  getTabsByUser,
+  getTabsByName,
+  insertTab,
+  updateTabName,
+  updateTabArtist,
+  updateTuning,
+  updateTab,
+  deleteTab,
 };
