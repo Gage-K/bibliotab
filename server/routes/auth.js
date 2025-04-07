@@ -11,11 +11,13 @@ passport.use(
     try {
       const rows = await db.getUserByUsername(username);
       const user = rows[0];
+      const pwData = await db.getUserPassword(user.id);
+      const currentPassword = pwData[0].password;
 
       if (!user) {
         return done(null, false, { message: "Incorrect username" });
       }
-      const match = await bcrypt.compare(password, user.password);
+      const match = await bcrypt.compare(password, currentPassword);
       if (!match) {
         // passwords do not match!
         return done(null, false, { message: "Incorrect password" });
@@ -66,9 +68,9 @@ router.get("/signup", (req, res, next) => {
 
 router.post("/signup", async (req, res, next) => {
   try {
-    const { username, password } = req.body;
+    const { username, email, password } = req.body;
     const hashedPassword = await bcrypt.hash(req.body.password, 10);
-    await db.insertUser(username, null, hashedPassword);
+    await db.insertUser(username, email || null, hashedPassword);
     res.redirect("/");
   } catch (err) {
     console.error(err);
