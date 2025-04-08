@@ -9,12 +9,15 @@
     <h1>Test environment</h1>
     <% if (locals.currentUser) { %>
     <h2>Welcome back <%= currentUser.username %></h2>
-    <form action="/logout" method="post">
+    <form action="/api/logout" method="post">
       <button type="submit">Log Out</button>
     </form>
+    <a href="/tabs">All tabs</a>
+
     <%} else { %>
     <a href="/login">Log in</a>
-    <a href="/signup">Sign up</a>
+    <a href="/register">Sign up</a>
     <% } %>
+    <a href="/test">Go to test page</a>
   </body>
 </html>
