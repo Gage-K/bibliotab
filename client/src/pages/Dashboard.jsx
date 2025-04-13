@@ -1,17 +1,105 @@
 import { TablabContext } from "../layouts/TablabContextLayout";
-import { useContext } from "react";
-import { Link } from "react-router";
+import { useContext, useState, useEffect } from "react";
+import { Link, Navigate, useNavigate } from "react-router";
 import { nanoid } from "nanoid";
+import axios from "../api/axios";
 
 import Header from "../components/Header";
 import PageWrapper from "../layouts/PageWrapper";
+import useAuth from "../hooks/useAuth";
+
+const TABS_URL = "/api/tabs";
+const DEFAULT_TAB = {
+  tabName: "Untitled",
+  tabArtist: "Untitled",
+  tuning: ["E", "B", "G", "D", "A", "E"],
+  tab: [
+    {
+      id: 1,
+      notes: [
+        {
+          fret: -2,
+          style: "none",
+        },
+        {
+          fret: -2,
+          style: "none",
+        },
+        {
+          fret: -2,
+          style: "none",
+        },
+        {
+          fret: -2,
+          style: "none",
+        },
+        {
+          fret: -2,
+          style: "none",
+        },
+        {
+          fret: -2,
+          style: "none",
+        },
+      ],
+    },
+  ],
+};
 
 export default function Dashboard() {
   const { tabs, createNewTab, deleteTab } = useContext(TablabContext);
   const detailStyle = "p-3 border-t border-neutral-300 truncate";
   const buttonStyle =
     "w-full max-w-16 py-2 flex justify-center text-xs flex-none border border-transparent  rounded font-semibold hover:shadow-sm duration-150 ease-in-out";
-  console.log(tabs.length);
+
+  const { auth } = useAuth();
+  const navigate = useNavigate();
+
+  const [allTabs, setAllTabs] = useState([]);
+
+  useEffect(() => {
+    let isMounted = true;
+    const controller = new AbortController();
+
+    const getTabs = async () => {
+      try {
+        const response = await axios.get(TABS_URL, {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: auth.accessToken,
+          },
+        });
+        setAllTabs(response.data);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
+    getTabs();
+
+    return () => {
+      isMounted = false;
+      controller.abort();
+    };
+  }, []);
+
+  async function createTab() {
+    try {
+      const response = await axios.post(TABS_URL, JSON.stringify(DEFAULT_TAB), {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: auth.accessToken,
+        },
+        withCredentials: true,
+      });
+      if (response.status === 200) {
+        const tabId = response.data.tabId;
+        navigate(`/editor/${tabId}`, { tabId: tabId });
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  }
 
   return (
     <>
@@ -20,13 +108,13 @@ export default function Dashboard() {
         <div className="db-head-wrapper flex justify-between flex-wrap items-end">
           <h1 className="text-5xl font-bold text-neutral-800 mt-8">Tabs</h1>
           <button
-            onClick={createNewTab}
+            onClick={createTab}
             className="text-xs py-4 h-fit border border-opacity-100 px-3 rounded-md bg-neutral-800 text-neutral-50 hover:bg-neutral-400 hover:shadow-lg duration-150 ease-in-out">
             Create New Tab
           </button>
         </div>
 
-        {tabs.length === 0 ? (
+        {allTabs.length === 0 ? (
           <div className="my-10 p-4 bg-neutral-100 border border-neutral-200 rounded-sm grid place-items-center gap-y-2">
             <h2 className="text-md">No current tabs</h2>
           </div>
@@ -44,15 +132,13 @@ export default function Dashboard() {
                 </tr>
               </thead>
               <tbody>
-                {tabs.map((tab) => (
+                {allTabs.map((tab) => (
                   <tr
                     key={nanoid()}
                     className="grid grid-cols-4 text-neutral-700 font-normal">
-                    <td className={detailStyle}>{tab.details.song}</td>
-                    <td className={detailStyle}>{tab.details.artist}</td>
-                    <td className={detailStyle}>
-                      {tab.details.tuning.toReversed()}
-                    </td>
+                    <td className={detailStyle}>{tab.tab_name}</td>
+                    <td className={detailStyle}>{tab.tab_artist}</td>
+                    <td className={detailStyle}>{tab.tuning.toReversed()}</td>
                     <td className={`${detailStyle} flex flex-wrap gap-1`}>
                       <Link
                         to={`/editor/${tab.id}`}
