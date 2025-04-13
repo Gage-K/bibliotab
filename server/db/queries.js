@@ -47,7 +47,7 @@ async function insertUser(username, email, password) {
       userValues
     );
   } catch (err) {
-    console.error(err);
+    return err;
   }
   const userDetails = await getUserByUsername(username);
 
@@ -60,7 +60,7 @@ async function insertUser(username, email, password) {
       passwordValues
     );
   } catch (err) {
-    console.error(err);
+    return err;
   }
 
   // return new user's id
