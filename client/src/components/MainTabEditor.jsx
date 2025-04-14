@@ -33,11 +33,8 @@ export default function MainTabEditor() {
   const isLoading = Object.keys(tab).length === 0;
   const [position, setPosition] = useState({ measure: 0, frame: 0 });
   const [editorIsOpen, setEditorIsOpen] = useState(false);
-  console.log("main:");
-  console.log(tab);
 
   function updateDetails(name, value) {
-    console.log(name);
     setDetails((prevTab) => ({ ...prevTab, [name]: value }));
   }
 
@@ -56,7 +53,6 @@ export default function MainTabEditor() {
             Authorization: auth.accessToken,
           },
         });
-        console.log("test data");
         const data = response.data[0];
         const details = {
           id: data.id,
@@ -80,8 +76,6 @@ export default function MainTabEditor() {
     };
   }, []);
 
-  /*
-
   // FUNCTIONS
 
   function handleOpeningEditor() {
@@ -99,10 +93,10 @@ export default function MainTabEditor() {
   function isOnlyMeasure() {
     return tab.length === 1;
   }
-  /*
+
   function isLastFrame(measure, frame) {
     return tab[measure].length - 1 === frame;
-  }*/
+  }
 
   function updatePosition(measure, frame) {
     // If position exists, update it
@@ -270,20 +264,21 @@ export default function MainTabEditor() {
                 <TabDetails details={details} updateDetails={updateDetails} />
               </div>
 
-              {/* 
+              {
                 <Editor
-                tab={tab.tab}
-                position={position}
-                editorIsOpen={editorIsOpen}
-                addNewFrame={addNewFrame}
-                addNewMeasure={addNewMeasure}
-                deleteFrame={deleteFrame}
-                deleteMeasure={deleteMeasure}
-                getEmptyFrame={getEmptyFrame}
-                handleOpeningEditor={handleOpeningEditor}
-                updatePosition={updatePosition}
-                updateTabData={updateTabData}
-              />
+                  tab={tab}
+                  position={position}
+                  editorIsOpen={editorIsOpen}
+                  addNewFrame={addNewFrame}
+                  addNewMeasure={addNewMeasure}
+                  deleteFrame={deleteFrame}
+                  deleteMeasure={deleteMeasure}
+                  getEmptyFrame={getEmptyFrame}
+                  handleOpeningEditor={handleOpeningEditor}
+                  updatePosition={updatePosition}
+                  updateTabData={updateTabData}
+                />
+              }
 
               <TabDisplay
                 tab={tab}
@@ -291,10 +286,8 @@ export default function MainTabEditor() {
                 updatePosition={updatePosition}
                 addNewFrame={addNewFrame}
                 addNewMeasure={addNewMeasure}
-                tuning={tab.tuning}
+                tuning={details.tuning}
               />
-                
-                */}
             </main>
           </TabContext.Provider>
         )}
