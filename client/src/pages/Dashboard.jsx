@@ -14,35 +14,37 @@ const DEFAULT_TAB = {
   tabArtist: "Untitled",
   tuning: ["E", "B", "G", "D", "A", "E"],
   tab: [
-    {
-      id: 1,
-      notes: [
-        {
-          fret: -2,
-          style: "none",
-        },
-        {
-          fret: -2,
-          style: "none",
-        },
-        {
-          fret: -2,
-          style: "none",
-        },
-        {
-          fret: -2,
-          style: "none",
-        },
-        {
-          fret: -2,
-          style: "none",
-        },
-        {
-          fret: -2,
-          style: "none",
-        },
-      ],
-    },
+    [
+      {
+        id: 1,
+        notes: [
+          {
+            fret: -2,
+            style: "none",
+          },
+          {
+            fret: -2,
+            style: "none",
+          },
+          {
+            fret: -2,
+            style: "none",
+          },
+          {
+            fret: -2,
+            style: "none",
+          },
+          {
+            fret: -2,
+            style: "none",
+          },
+          {
+            fret: -2,
+            style: "none",
+          },
+        ],
+      },
+    ],
   ],
 };
 
