@@ -1,6 +1,12 @@
 import { useState, useEffect, useMemo } from "react";
 import PropTypes from "prop-types";
 
+const STRINGS = [1, 2, 3, 4, 5, 6];
+const FRETS = [
+  -2, -1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
+  20, 21, 22, 23, 24,
+];
+
 export default function TabForm({
   tab,
   updateTabData,
@@ -8,13 +14,6 @@ export default function TabForm({
   frame,
   getEmptyFrame,
 }) {
-  // CONSTANTS
-  const strings = [1, 2, 3, 4, 5, 6]; // eventually this will be customizable
-  const frets = [
-    -2, -1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18,
-    19, 20, 21, 22, 23, 24,
-  ];
-
   const currentNotes = useMemo(
     () => tab[measure][frame]?.notes,
     [tab, measure, frame]
@@ -70,7 +69,7 @@ export default function TabForm({
       <hr className="text-neutral-700 " />
 
       <div className="flex flex-col sm:flex-row text-sm my-4 w-full border border-neutral-700 rounded-sm sm:divide-x">
-        {strings.toReversed().map((string) => (
+        {STRINGS.toReversed().map((string) => (
           <fieldset
             className="grid grid-cols-3 sm:flex sm:flex-col gap-2 w-full p-2 border-b sm:border-b-0 border-neutral-700"
             name={`String ${string}`}
@@ -89,7 +88,7 @@ export default function TabForm({
                 className="bg-neutral-700 p-1 rounded w-full"
                 value={formData[string - 1].fret}
                 onChange={(Event) => updateFret(Event, string)}>
-                {frets.map((fret) => (
+                {FRETS.map((fret) => (
                   <option key={fret} value={fret}>
                     {fret === -2 ? "" : fret === -1 ? "X" : fret}
                   </option>
