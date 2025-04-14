@@ -1,6 +1,8 @@
 const { Router } = require("express");
 const router = Router();
 const tabsController = require("../../controllers/tabsController");
+// const { isAuth } = require("../../middleware/authMiddleware");
+const passport = require("passport");
 
 router.get(
   "/",
