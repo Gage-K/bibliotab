@@ -6,6 +6,7 @@ import defaultTab from "../data/defaultTab.json";
 import { nanoid } from "nanoid";
 
 const TablabContext = createContext();
+const test = "test";
 
 export default function TablabContextLayout() {
   const [tabs, setTabs] = useState(
@@ -92,8 +93,7 @@ export default function TablabContextLayout() {
   }, [tabs]);
 
   return (
-    <TablabContext.Provider
-      value={{ tabs, updateDetails, updateTab, createNewTab, deleteTab }}>
+    <TablabContext.Provider value={{ test }}>
       <Outlet />
     </TablabContext.Provider>
   );
