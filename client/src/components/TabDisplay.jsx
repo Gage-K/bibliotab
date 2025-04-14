@@ -34,6 +34,9 @@ export default function TabDisplay({
   }
 
   // removes tab nesting and creates one continuous tab array
+  console.log("tab");
+  console.log(tab);
+  console.log("measure");
   const flattenedTab = tab.flatMap((measure, measureIndex) =>
     measure.map((frame, frameIndex) => ({
       frame,
