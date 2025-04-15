@@ -92,6 +92,16 @@ async function updateUserEmail(id, newEmail) {
   }
 }
 
+async function updateUserLastLogin(id) {
+  const values = [id, new Date()];
+  console.log(values);
+  try {
+    await pool.query(`UPDATE users SET last_login=$2 WHERE id=$1`, values);
+  } catch (err) {
+    return err;
+  }
+}
+
 // USER DELETE FUNCTIONS
 
 async function deleteUser(id) {
@@ -271,6 +281,7 @@ module.exports = {
   insertUser,
   updateUserPassword,
   updateUserEmail,
+  updateUserLastLogin,
   deleteUser,
   getAllTabs,
   getTabById,
