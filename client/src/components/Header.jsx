@@ -5,7 +5,6 @@ import { Circle } from "@phosphor-icons/react";
 
 export default function Header() {
   const { auth } = useAuth();
-  console.log(auth);
   const linkBaseStyle =
     "bg-neutral-100/0 rounded-sm px-3 py-1 hover:bg-neutral-100 hover:text-neutral-900 duration-150 ease-in-out";
   const activeStyle = `${linkBaseStyle} text-neutral-900 bg-neutral-100/100`;
