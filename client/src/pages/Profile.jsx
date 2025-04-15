@@ -33,12 +33,9 @@ export default function Profile() {
   }, []);
   */
 
-  console.log(user);
-
   useEffect(() => {
     let isMounted = true;
     const controller = new AbortController();
-    console.log(auth);
 
     const getUser = async () => {
       try {
