@@ -14,6 +14,8 @@ export default function Editor({
   handleOpeningEditor,
   updatePosition,
   updateTabData,
+  isEditing,
+  saveChanges,
 }) {
   return (
     <section className="sticky top-12 border border-neutral-800 px-1 md:px-3 rounded bg-neutral-800 text-neutral-50 font-medium text-xs z-1 shadow-md">
@@ -26,9 +28,9 @@ export default function Editor({
         deleteFrame={() => deleteFrame(position.frame, position.measure)}
         deleteMeasure={() => deleteMeasure(position.measure)}
         insertFrame={() => addNewFrame(position.measure, position.frame, true)}
-        insertMeasure={() =>
-          addNewMeasure(position.measure + 1)
-        }></EditorControls>
+        insertMeasure={() => addNewMeasure(position.measure + 1)}
+        isEditing={isEditing}
+        saveChanges={() => saveChanges()}></EditorControls>
 
       {editorIsOpen && (
         <TabForm
