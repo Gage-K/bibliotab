@@ -1,9 +1,9 @@
-import { Check, Info, X } from "@phosphor-icons/react";
+import { Check, X } from "@phosphor-icons/react";
 import { Fragment, useEffect, useRef, useState } from "react";
 import Header from "../components/Header";
 import PageWrapper from "../layouts/PageWrapper";
 import Footer from "../components/Footer";
-import { Link, redirect, useNavigate, useLocation } from "react-router";
+import { Link, useNavigate, useLocation } from "react-router";
 import axios from "../api/axios";
 
 const USER_REGEX = /^[A-z][A-z0-9-_]{3,23}$/;
@@ -30,7 +30,6 @@ export default function Register() {
   const [matchFocus, setMatchFocus] = useState(false);
 
   const [errMsg, setErrMsg] = useState("");
-  const [success, setSuccess] = useState(false);
 
   useEffect(() => {
     userRef.current.focus();
@@ -57,7 +56,7 @@ export default function Register() {
   async function handleSubmit(event) {
     event.preventDefault();
 
-    // if button enabled with JS injection
+    // prevents enabling button by JS injection
     const v1 = USER_REGEX.test(user);
     const v2 = PWD_REGEX.test(pwd);
     if (!v1 || !v2) {
