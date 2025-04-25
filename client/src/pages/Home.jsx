@@ -13,8 +13,6 @@ export default function Home() {
       <Header />
 
       <main className="text-lg">
-        {/*
-        
         <PageWrapper>
           <div className="flex gap-8 flex-wrap md:flex-nowrap">
             <div className="align-start">
@@ -22,8 +20,8 @@ export default function Home() {
                 tablab
               </h1>
               <p>
-                tablab is a free web application for creating guitar tablature
-                that is minimalist and easy to use.
+                Tablab is a web application for creating guitar tablature that
+                is minimalist and easy to use.
               </p>
             </div>
             <div className="min-w-96 w-full h-64 bg-neutral-600 rounded-md shadow-sm"></div>
@@ -70,10 +68,10 @@ export default function Home() {
           </ul>
 
           <h2 className={h2Style}>Get started</h2>
-          <p>Jump into tablab</p>
+          <p>Jump into tablab {/* CTA TBD */} </p>
         </PageWrapper>
-        */}
       </main>
+      <Footer />
     </>
   );
 }
