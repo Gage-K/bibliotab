@@ -17,47 +17,44 @@ export default function Header() {
     <header className="shadow-2xs sticky top-0 py-2 mb-4 bg-neutral-50 z-1">
       <PageWrapper>
         <div className="flex justify-between items-baseline">
-          <Link to="/" className="font-semibold">
-            tablab
-          </Link>
-          <nav className="flex gap-2 text-neutral-500 text-sm font-medium">
-            <NavLink
-              to="/"
-              className={(isActive) =>
-                isActive.isActive ? activeStyle : linkBaseStyle
-              }>
-              home
-            </NavLink>
-            <NavLink
-              to="/dashboard"
-              className={(isActive) =>
-                isActive.isActive ? activeStyle : linkBaseStyle
-              }>
-              tabs
-            </NavLink>
-            <NavLink
-              to="/updates"
-              className={(isActive) =>
-                isActive.isActive ? activeStyle : linkBaseStyle
-              }>
-              updates
-            </NavLink>
-          </nav>
-          <div className="flex gap-2 text-neutral-500 text-sm font-medium">
+          <div className="flex items-center gap-8">
+            <Link to="/" className="font-semibold">
+              tablab
+            </Link>
+            <nav className="flex gap-2 text-neutral-500 text-sm font-medium">
+              <NavLink
+                to="/dashboard"
+                className={(isActive) =>
+                  isActive.isActive ? activeStyle : linkBaseStyle
+                }>
+                tabs
+              </NavLink>
+              <NavLink
+                to="/updates"
+                className={(isActive) =>
+                  isActive.isActive ? activeStyle : linkBaseStyle
+                }>
+                updates
+              </NavLink>
+            </nav>
+          </div>
+          <div className="flex gap-4 text-neutral-500 text-sm font-medium items-center">
             {auth.user ? (
-              <>
-                <button onClick={logout} className="text-sm">
-                  Log out
-                </button>
-                <Link to="/profile">
-                  <span className="hidden">Profile</span>
-                  <Circle size={32} />
-                </Link>
-              </>
+              <Link to="/profile" className="font-semibold hover:underline">
+                {auth.user}
+              </Link>
             ) : (
               <>
-                <Link to="/login">Log in</Link>{" "}
-                <Link to="/register">Register</Link>
+                <Link
+                  to="/register"
+                  className="hover:text-neutral-800 hover:underline duration-50 ease-in-out">
+                  Sign up
+                </Link>
+                <Link
+                  to="/login"
+                  className="px-2 py-1 bg-neutral-800 text-neutral-50 rounded-sm hover:bg-neutral-600 duration-150 ease-in-out">
+                  Log in
+                </Link>
               </>
             )}
           </div>
