@@ -14,29 +14,18 @@ async function getUser(req, res) {
 
 async function updateUserEmail(req, res) {
   try {
-    const { id } = req.params;
+    const userId = req.user.id;
     const { email } = req.body;
-    const currentUser = res.locals.currentUser
-      ? res.locals.currentUser.id
-      : null;
 
-    if (currentUser !== id) {
-      return res.status(403).json({ message: "You do not have access" });
-    }
-
-    const user = await db.getUserById(id);
+    // check if email is in use
     const listedEmails = await db.getUserByEmail(email);
-    if (!user[0]) {
-      res.json(`User does not exist`);
-      return;
-    }
     if (listedEmails[0]) {
-      res.json({ message: `This email is already in use` });
+      res.status(409).json({ message: `This email is already in use` });
       return;
     }
 
-    await db.updateUserEmail(id, email);
-    res.json(`Email updated.`);
+    await db.updateUserEmail(userId, email);
+    res.status(201).json({ message: `Email updated` });
   } catch (err) {
     console.error(err);
   }
