@@ -4,6 +4,9 @@
 
 - [ ] Remove test code
 - [ ] Add more thorough try catch blocks
+- [ ] Delete button on dashboard
+- [ ] Delete account button on profile
+- [ ] Save button in editor
 
 ### Bugs
 
