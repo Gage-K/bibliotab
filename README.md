@@ -73,3 +73,4 @@ The following improvements are in the pipeline:
 - [ ] Measure notes
 - [ ] Dark mode
 - [ ] Recovery email
+- [ ] Improved error UX
