@@ -1,7 +1,6 @@
 const path = require("node:path");
 const express = require("express");
 const app = express();
-const tests = require("./tests/queryTests");
 require("dotenv").config();
 const indexRouter = require("./routes/index");
 const authRouter = require("./routes/api/auth");
@@ -10,15 +9,11 @@ const tabsRouter = require("./routes/api/tabs");
 const session = require("express-session");
 const passport = require("passport");
 const cors = require("cors");
-const jwt = require("jsonwebtoken");
 
-tests.runTests();
-
-// this is for testing purposes
 app.set("views", path.join(__dirname, "views"));
 app.set("view engine", "ejs");
 
-app.use(session({ secret: "cats", resave: false, saveUninitialized: false }));
+app.use(session({ secret: "secret", resave: false, saveUninitialized: false }));
 
 require("./config/passport")(passport); // lets app.js know about passport configuration
 app.use(passport.initialize()); // everytime route reloads, it checks if user property is not null
