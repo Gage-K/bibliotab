@@ -1,3 +1,5 @@
+// THIS CODE IS DEPRECATED
+
 import { Outlet } from "react-router";
 import { useState, createContext, useEffect } from "react";
 
