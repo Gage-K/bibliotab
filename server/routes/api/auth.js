@@ -79,35 +79,4 @@ router.post("/logout", (req, res, next) => {
   });
 });
 
-router.get(
-  "/protected",
-  passport.authenticate("jwt", { session: false }),
-  (req, res, next) => {
-    res.status(200).json({
-      success: true,
-      msg: "You are successfully authenticated to this route!",
-    });
-  }
-);
-
-router.post("/test", (req, res) => {
-  const { username, password } = req.body;
-  res.status(200).json({
-    message: "Successfully pinged",
-    username: username,
-    password: password,
-  });
-});
-
-router.get(
-  "/test",
-  passport.authenticate("jwt", { session: false }),
-  (req, res, next) => {
-    res.status(200).json({
-      success: true,
-      msg: "You are successfully authenticated to this route!",
-    });
-  }
-);
-
 module.exports = router;
