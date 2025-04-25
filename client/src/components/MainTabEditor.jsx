@@ -1,5 +1,5 @@
 // REACT IMPORTS
-import { useState, createContext, useEffect, useContext, useRef } from "react";
+import { useState, createContext, useEffect, useRef } from "react";
 import { nanoid } from "nanoid";
 import { useParams } from "react-router";
 
@@ -13,11 +13,7 @@ import Editor from "./Editor";
 import Header from "./Header";
 import useAuth from "../hooks/useAuth";
 import axios from "../api/axios";
-
-// DATA IMPORTS
-import { TablabContext } from "../layouts/TablabContextLayout";
 import PageWrapper from "../layouts/PageWrapper";
-import { Check, FloppyDisk } from "@phosphor-icons/react";
 
 const TabContext = createContext();
 const TAB_URL = "/api/tabs";
@@ -25,11 +21,8 @@ const TAB_URL = "/api/tabs";
 export default function MainTabEditor() {
   const { tabId } = useParams();
   const { auth } = useAuth();
-  const hasMounted = useRef(false);
 
   // STATES
-
-  // const [tabData, setTabData] = useState({});
   const [tab, setTab] = useState([]);
   const [details, setDetails] = useState({});
   const isLoading = Object.keys(tab).length === 0;
