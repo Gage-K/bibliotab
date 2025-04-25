@@ -10,17 +10,6 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
-/*
-@media (prefers-color-scheme: light) {
-  :root {
-  }
-  a:hover {
-  }
-  button {
-  }
-}
-  */
-
 body {
   background-color: #fafafa;
 }
