@@ -13,6 +13,8 @@ export default function Home() {
       <Header />
 
       <main className="text-lg">
+        {/*
+        
         <PageWrapper>
           <div className="flex gap-8 flex-wrap md:flex-nowrap">
             <div className="align-start">
@@ -70,9 +72,8 @@ export default function Home() {
           <h2 className={h2Style}>Get started</h2>
           <p>Jump into tablab</p>
         </PageWrapper>
+        */}
       </main>
-
-      <Footer />
     </>
   );
 }
