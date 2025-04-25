@@ -7,9 +7,7 @@ const utils = require("../../lib/utils");
 
 router.post("/login", async (req, res, next) => {
   const { username, password } = req.body;
-  console.log(req.body);
   try {
-    console.log("login route");
     const rows = await db.getUserByUsername(username);
     const user = rows[0];
 
@@ -94,7 +92,6 @@ router.get(
 
 router.post("/test", (req, res) => {
   const { username, password } = req.body;
-  console.log(req.body);
   res.status(200).json({
     message: "Successfully pinged",
     username: username,
@@ -106,7 +103,6 @@ router.get(
   "/test",
   passport.authenticate("jwt", { session: false }),
   (req, res, next) => {
-    console.log(req.user);
     res.status(200).json({
       success: true,
       msg: "You are successfully authenticated to this route!",
