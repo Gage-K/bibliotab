@@ -1,6 +1,5 @@
-import { TablabContext } from "../layouts/TablabContextLayout";
-import { useContext, useState, useEffect } from "react";
-import { Link, Navigate, useNavigate } from "react-router";
+import { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router";
 import { nanoid } from "nanoid";
 import axios from "../api/axios";
 
@@ -49,11 +48,9 @@ const DEFAULT_TAB = {
 };
 
 export default function Dashboard() {
-  const { tabs, createNewTab } = useContext(TablabContext);
   const detailStyle = "p-3 border-t border-neutral-300 truncate";
   const buttonStyle =
     "w-full max-w-16 py-2 flex justify-center text-xs flex-none border border-transparent  rounded font-semibold hover:shadow-sm duration-150 ease-in-out";
-
   const { auth } = useAuth();
   const navigate = useNavigate();
 
