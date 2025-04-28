@@ -1,56 +1,85 @@
+import { Link } from "react-router";
 import Footer from "../components/Footer";
 import Header from "../components/Header";
 import PageWrapper from "../layouts/PageWrapper";
-import { TextTSlash, Palette, CloudX } from "@phosphor-icons/react";
+import {
+  TextTSlash,
+  Palette,
+  CloudX,
+  CursorClick,
+} from "@phosphor-icons/react";
 
 export default function Home() {
   const h2Style = "text-3xl font-semibold text-neutral-800 mt-8 mb-4";
-  const cardStyle =
-    "w-full flex flex-col text-center place-items-center rounded-sm ";
-  const cardText = "font-semibold my-2";
+  const cardStyle = "max-w-full grid grid-cols-[1fr_6fr] gap-2";
+  const cardText = "font-semibold";
   return (
     <>
       <Header />
 
-      <main className="text-lg">
+      <main className="text-lg min-h-screen">
         <PageWrapper>
-          <div className="flex gap-8 flex-wrap md:flex-nowrap">
-            <div className="align-start">
+          <div class="text-center min-h-[75vh] grid place-items-center">
+            <div class="container">
               <h1 className="text-5xl font-bold text-neutral-800 pt-8 mb-10 ">
-                tablab
+                Create{" "}
+                <span class="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-indigo-600">
+                  guitar tablature
+                </span>{" "}
+                with ease
               </h1>
-              <p>
-                Tablab is a web application for creating guitar tablature that
-                is minimalist and easy to use.
+              <p class="my-8">
+                Tablab is a free web application for creating guitar tablature
+                that is minimalist and easy to use on any device.
               </p>
+              <Link
+                to="/register"
+                class="px-4 py-2 bg-indigo-600 text-neutral-50 rounded-sm hover:bg-indigo-400 duration-150 ease-in-out">
+                Sign up
+              </Link>
             </div>
-            <div className="min-w-96 w-full h-64 bg-neutral-600 rounded-md shadow-sm"></div>
           </div>
         </PageWrapper>
 
-        <div className="clip-section bg-indigo-500 pb-16">
+        <div className="pb-16">
           <PageWrapper>
             <h2 className={h2Style}>Why use tablab?</h2>
 
-            <ul className="flex flex-wrap md:flex-nowrap gap-8 ">
+            <ul className="grid grid-cols-1 md:grid-cols-2 last:col-span-full gap-8">
               <li className={cardStyle}>
-                <Palette size={40} />
-                <p className={cardText}>User-friendly interface</p>
-                <p>Create tabs easily using a clean, minimalist design</p>
+                <CursorClick
+                  size={36}
+                  class="p-2 rounded-md bg-indigo-600 text-neutral-50"
+                />
+                <div class="flex flex-col justify-start gap-2">
+                  <p className={cardText}>User-friendly interface</p>
+                  <p>Create tabs easily using a clean, minimalist design</p>
+                </div>
               </li>
 
               <li className={cardStyle}>
-                <CloudX size={40} />
-                <p className={cardText}>No installation required</p>
-                <p>
-                  Just use your browser—no need to download any apps or plugins
-                </p>
+                <CloudX
+                  size={36}
+                  class="p-2 rounded-md bg-indigo-600 text-neutral-50"
+                />
+                <div class="flex flex-col justify-start gap-2">
+                  <p className={cardText}>No installation required</p>
+                  <p>
+                    Just use your browser. No need to download any apps or
+                    plugins
+                  </p>
+                </div>
               </li>
 
               <li className={cardStyle}>
-                <TextTSlash size={40} />
-                <p className={cardText}>ASCII clunkiness-free</p>
-                <p>Say goodbye to writing tabs out in plaintext</p>
+                <TextTSlash
+                  size={36}
+                  class="p-2 rounded-md bg-indigo-600 text-neutral-50"
+                />
+                <div class="flex flex-col justify-start gap-2">
+                  <p className={cardText}>ASCII clunkiness-free</p>
+                  <p>Say goodbye to writing tabs out in plaintext</p>
+                </div>
               </li>
             </ul>
           </PageWrapper>
@@ -66,9 +95,6 @@ export default function Home() {
             </li>
             <li>Hobbyists transcribing their favorite songs</li>
           </ul>
-
-          <h2 className={h2Style}>Get started</h2>
-          <p>Jump into tablab {/* CTA TBD */} </p>
         </PageWrapper>
       </main>
       <Footer />
