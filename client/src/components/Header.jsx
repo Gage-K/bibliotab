@@ -52,7 +52,7 @@ export default function Header() {
                 </Link>
                 <Link
                   to="/login"
-                  className="px-2 py-1 bg-neutral-800 text-neutral-50 rounded-sm hover:bg-neutral-600 duration-150 ease-in-out">
+                  className="px-2 py-1 bg-indigo-600 text-neutral-50 rounded-sm hover:bg-indigo-400 duration-150 ease-in-out">
                   Log in
                 </Link>
               </>
