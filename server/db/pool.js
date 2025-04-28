@@ -4,6 +4,7 @@ const { Pool } = require("pg");
 const connectionURL = process.env.DB_URL;
 console.log("connection url:");
 console.log(connectionURL);
+console.log(process.env.NODE_ENV);
 
 module.exports =
   process.env.NODE_ENV === "prod"
