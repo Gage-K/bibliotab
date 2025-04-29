@@ -13,6 +13,7 @@ export default function Home() {
   const h2Style = "text-3xl font-semibold text-neutral-800 mt-8 mb-4";
   const cardStyle = "max-w-full grid grid-cols-[1fr_6fr] gap-2";
   const cardText = "font-semibold";
+
   return (
     <>
       <Header />
