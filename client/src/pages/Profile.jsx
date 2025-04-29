@@ -4,13 +4,13 @@ import PageWrapper from "../layouts/PageWrapper";
 import Footer from "../components/Footer";
 import axios from "../api/axios";
 import useAuth from "../hooks/useAuth";
-import { Link } from "react-router";
+import { Link, redirect, useNavigate } from "react-router";
 
 const USER_URL = "/api/user";
 const LOGOUT_URL = "/api/logout";
 
 export default function Profile() {
-  const { auth } = useAuth();
+  const { auth, setAuth } = useAuth();
   const errRef = useRef();
   const [isLoading, setIsLoading] = useState(false);
   const [user, setUser] = useState({});
@@ -19,6 +19,8 @@ export default function Profile() {
   const [isEditing, setIsEditing] = useState(false);
 
   const [errMsg, setErrMsg] = useState("");
+
+  const navigate = useNavigate();
 
   useEffect(() => {
     let isMounted = true;
@@ -80,32 +82,47 @@ export default function Profile() {
     // errRef.current.focus();
   }
 
+  async function handleLogout() {
+    setAuth({});
+    redirect("/");
+  }
+
   return (
     <Fragment>
       <Header />
       <PageWrapper>
-        <main className="min-h-screen">
+        <main className="min-h-screen ">
           {isLoading ? (
             <p>Loading...</p>
           ) : (
             <>
-              <div>
-                <h1 className="text-2xl font-bold">Profile</h1>
-                <p>
-                  Profile information will only be displayed on your dashboard.
-                </p>
-                <hr />
-                <div className="flex gap-4">
-                  <p>Username</p>
-                  <p>{user?.username}</p>
+              <div className="pt-8 grid gap-8">
+                <div>
+                  <h1 className="text-3xl font-bold text-neutral-800 mb-2">
+                    Profile
+                  </h1>
+                  <p className="text-neutral-600">
+                    Profile information will only be displayed on your
+                    dashboard.
+                  </p>
                 </div>
 
-                <p className="color-neutral-400">
-                  Account created at {user?.created_at?.substring(0, 10)}
-                </p>
-                <p className="color-neutral-400">
-                  Last logged in on {user?.last_login?.substring(0, 10)}
-                </p>
+                <div>
+                  <div className="flex gap-4 text-neutral-800">
+                    <p className=" font-medium">Username</p>
+                    <p>{user?.username}</p>
+                  </div>
+                  <button onClick={handleLogout}>Log out</button>
+                </div>
+
+                <div>
+                  <p className="text-neutral-500 text-sm">
+                    Account created on {user?.created_at?.substring(0, 10)}
+                  </p>
+                  <p className="text-neutral-500 text-sm">
+                    Last logged in on {user?.last_login?.substring(0, 10)}
+                  </p>
+                </div>
               </div>
             </>
           )}
