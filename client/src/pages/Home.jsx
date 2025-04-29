@@ -20,22 +20,22 @@ export default function Home() {
 
       <main className="text-lg min-h-screen">
         <PageWrapper>
-          <div class="text-center min-h-[75vh] grid place-items-center">
-            <div class="container">
+          <div className="text-center min-h-[75vh] grid place-items-center">
+            <div className="container">
               <h1 className="text-5xl font-bold text-neutral-800 pt-8 mb-10 ">
                 Create{" "}
-                <span class="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-indigo-600">
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-indigo-600">
                   guitar tablature
                 </span>{" "}
                 with ease
               </h1>
-              <p class="my-8">
+              <p className="my-8">
                 Tablab is a free web application for creating guitar tablature
                 that is minimalist and easy to use on any device.
               </p>
               <Link
                 to="/register"
-                class="px-4 py-2 bg-indigo-600 text-neutral-50 rounded-sm hover:bg-indigo-400 duration-150 ease-in-out">
+                className="px-4 py-2 bg-indigo-600 text-neutral-50 rounded-sm hover:bg-indigo-400 duration-150 ease-in-out">
                 Sign up
               </Link>
             </div>
@@ -50,9 +50,9 @@ export default function Home() {
               <li className={cardStyle}>
                 <CursorClick
                   size={36}
-                  class="p-2 rounded-md bg-indigo-600 text-neutral-50"
+                  className="p-2 rounded-md bg-indigo-600 text-neutral-50"
                 />
-                <div class="flex flex-col justify-start gap-2">
+                <div className="flex flex-col justify-start gap-2">
                   <p className={cardText}>User-friendly interface</p>
                   <p>Create tabs easily using a clean, minimalist design</p>
                 </div>
@@ -61,9 +61,9 @@ export default function Home() {
               <li className={cardStyle}>
                 <CloudX
                   size={36}
-                  class="p-2 rounded-md bg-indigo-600 text-neutral-50"
+                  className="p-2 rounded-md bg-indigo-600 text-neutral-50"
                 />
-                <div class="flex flex-col justify-start gap-2">
+                <div className="flex flex-col justify-start gap-2">
                   <p className={cardText}>No installation required</p>
                   <p>
                     Just use your browser. No need to download any apps or
@@ -75,9 +75,9 @@ export default function Home() {
               <li className={cardStyle}>
                 <TextTSlash
                   size={36}
-                  class="p-2 rounded-md bg-indigo-600 text-neutral-50"
+                  className="p-2 rounded-md bg-indigo-600 text-neutral-50"
                 />
-                <div class="flex flex-col justify-start gap-2">
+                <div className="flex flex-col justify-start gap-2">
                   <p className={cardText}>ASCII clunkiness-free</p>
                   <p>Say goodbye to writing tabs out in plaintext</p>
                 </div>

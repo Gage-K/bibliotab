@@ -95,15 +95,15 @@ export default function Profile() {
                   Profile information will only be displayed on your dashboard.
                 </p>
                 <hr />
-                <div class="flex gap-4">
+                <div className="flex gap-4">
                   <p>Username</p>
                   <p>{user?.username}</p>
                 </div>
 
-                <p class="color-neutral-400">
+                <p className="color-neutral-400">
                   Account created at {user?.created_at?.substring(0, 10)}
                 </p>
-                <p class="color-neutral-400">
+                <p className="color-neutral-400">
                   Last logged in on {user?.last_login?.substring(0, 10)}
                 </p>
               </div>
