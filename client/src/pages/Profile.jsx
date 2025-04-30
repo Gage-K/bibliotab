@@ -5,6 +5,7 @@ import Footer from "../components/Footer";
 import axios from "../api/axios";
 import useAuth from "../hooks/useAuth";
 import { Link, redirect, useNavigate } from "react-router";
+import { SkeletonText } from "../components/Skeleton";
 
 const USER_URL = "/api/user";
 const LOGOUT_URL = "/api/logout";
@@ -25,6 +26,7 @@ export default function Profile() {
   useEffect(() => {
     let isMounted = true;
     const controller = new AbortController();
+    setIsLoading(true);
 
     const getUser = async () => {
       try {
@@ -36,8 +38,10 @@ export default function Profile() {
         });
         setUser(response.data);
         setEmail(response.data.email);
+        setIsLoading(false);
       } catch (err) {
         console.error(err);
+        setIsLoading(false);
       }
     };
 
@@ -92,21 +96,23 @@ export default function Profile() {
       <Header />
       <PageWrapper>
         <main className="min-h-screen ">
-          {isLoading ? (
-            <p>Loading...</p>
-          ) : (
-            <>
-              <div className="pt-8 grid gap-8">
-                <div>
-                  <h1 className="text-3xl font-bold text-neutral-800 dark:text-neutral-200 mb-2">
-                    Profile
-                  </h1>
-                  <p className="text-neutral-600 dark:text-neutral-300">
-                    Profile information will only be displayed on your
-                    dashboard.
-                  </p>
+          <div className="pt-8 grid gap-8">
+            <div>
+              <h1 className="text-3xl font-bold text-neutral-800 dark:text-neutral-200 mb-2">
+                Profile
+              </h1>
+              <p className="text-neutral-600 dark:text-neutral-300">
+                Profile information will only be displayed on your dashboard.
+              </p>
+            </div>
+            {isLoading ? (
+              <>
+                <div className="max-w-lg">
+                  <SkeletonText />
                 </div>
-
+              </>
+            ) : (
+              <>
                 <div className="text-neutral-800 dark:text-neutral-200">
                   <div className="flex gap-4 ">
                     <p className=" font-medium">Username</p>
@@ -127,9 +133,9 @@ export default function Profile() {
                     Last logged in on {user?.last_login?.substring(0, 10)}
                   </p>
                 </div>
-              </div>
-            </>
-          )}
+              </>
+            )}
+          </div>
         </main>
       </PageWrapper>
       <Footer />
