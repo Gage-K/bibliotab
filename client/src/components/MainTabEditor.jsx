@@ -14,6 +14,7 @@ import Header from "./Header";
 import useAuth from "../hooks/useAuth";
 import axios from "../api/axios";
 import PageWrapper from "../layouts/PageWrapper";
+import { SkeletonLine, SkeletonText } from "./Skeleton";
 
 const TabContext = createContext();
 const TAB_URL = "/api/tabs";
@@ -288,7 +289,13 @@ export default function MainTabEditor() {
       <Header />
       <main className="min-h-screen pb-16">
         <PageWrapper>
-          {!isLoading && (
+          {isLoading ? (
+            <>
+              <SkeletonLine size="16" />
+              <SkeletonText size="8" />
+              <SkeletonText size="8" />
+            </>
+          ) : (
             <TabContext.Provider value={tab}>
               <div className="mx-auto h-full">
                 <div className="editor-top h-full">
