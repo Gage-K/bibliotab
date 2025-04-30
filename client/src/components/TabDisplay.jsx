@@ -71,7 +71,7 @@ export default function TabDisplay({
                   +
                 </button>
               )}
-              <div
+              <button
                 key={nanoid()}
                 className={
                   position.measure === tabChunk.measureIndex &&
@@ -89,7 +89,7 @@ export default function TabDisplay({
                     {interpretNote(note.fret, note.style)}
                   </p>
                 ))}
-              </div>
+              </button>
               <button
                 className="td-grid-button hidden"
                 onClick={() =>
