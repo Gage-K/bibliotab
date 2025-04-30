@@ -10,7 +10,7 @@ import {
 } from "@phosphor-icons/react";
 
 export default function Home() {
-  const h2Style = "text-3xl font-semibold text-neutral-800 mt-8 mb-4";
+  const h2Style = "text-3xl font-semibold text-neutral-800 my-8 py-4";
   const cardStyle = "max-w-full grid grid-cols-[1fr_6fr] gap-2";
   const cardText = "font-semibold";
 
@@ -88,7 +88,7 @@ export default function Home() {
 
         <PageWrapper>
           <h2 className={h2Style}>Who is talab for?</h2>
-          <ul className="list-disc list-inside">
+          <ul className="list-disc list-outside pl-4">
             <li>Guitarists who compose original music</li>
             <li>
               Teachers and students who need a simple way to write down songs,
