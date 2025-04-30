@@ -4,6 +4,7 @@ import { nanoid } from "nanoid";
 import axios from "../api/axios";
 
 import Header from "../components/Header";
+import Footer from "../components/Footer";
 import PageWrapper from "../layouts/PageWrapper";
 import useAuth from "../hooks/useAuth";
 
@@ -48,7 +49,8 @@ const DEFAULT_TAB = {
 };
 
 export default function Dashboard() {
-  const detailStyle = "p-3 border-t border-neutral-300 truncate";
+  const detailStyle =
+    "p-3 dark:text-neutral-200 border-t border-neutral-300 dark:border-neutral-800 truncate";
   const buttonStyle =
     "w-full max-w-16 py-2 flex justify-center text-xs flex-none border border-transparent  rounded font-semibold hover:shadow-sm duration-150 ease-in-out";
   const { auth } = useAuth();
@@ -119,61 +121,66 @@ export default function Dashboard() {
   return (
     <>
       <Header />
-      <PageWrapper>
-        <div className="db-head-wrapper flex justify-between flex-wrap items-end">
-          <h1 className="text-5xl font-bold text-neutral-800 mt-8">Tabs</h1>
-          <button
-            onClick={createTab}
-            className="text-xs py-4 h-fit border border-opacity-100 px-3 rounded-md bg-neutral-800 text-neutral-50 hover:bg-neutral-400 hover:shadow-lg duration-150 ease-in-out">
-            Create New Tab
-          </button>
-        </div>
+      <main className="min-h-screen pb-16">
+        <PageWrapper>
+          <div className="db-head-wrapper flex justify-between flex-wrap items-end">
+            <h1 className="text-5xl font-bold text-neutral-800 dark:text-neutral-200 mt-8">
+              Tabs
+            </h1>
+            <button
+              onClick={createTab}
+              className="text-xs py-4 h-fit px-3 rounded-md bg-neutral-800 text-neutral-50 hover:bg-neutral-400 hover:shadow-lg duration-150 ease-in-out hover:cursor-pointer">
+              Create New Tab
+            </button>
+          </div>
 
-        {allTabs.length === 0 ? (
-          <div className="my-10 p-4 bg-neutral-100 border border-neutral-200 rounded-sm grid place-items-center gap-y-2">
-            <h2 className="text-md">No current tabs</h2>
-          </div>
-        ) : (
-          <div className="border border-neutral-300 rounded my-10">
-            <table className="w-full">
-              <thead className="bg-neutral-50  rounded-sm">
-                <tr className="grid grid-cols-4">
-                  <th className="p-3 font-semibold text-left">Title</th>
-                  <th className="p-3 font-semibold text-left">Artist</th>
-                  <th className="p-3 font-semibold text-left">Tuning</th>
-                  <th className="p-3 font-semibold text-left hidden">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {allTabs.map((tab) => (
-                  <tr
-                    key={nanoid()}
-                    className="grid grid-cols-4 text-neutral-700 font-normal">
-                    <td className={detailStyle}>{tab.tab_name}</td>
-                    <td className={detailStyle}>{tab.tab_artist}</td>
-                    <td className={detailStyle}>{tab.tuning.toReversed()}</td>
-                    <td className={`${detailStyle} flex flex-wrap gap-1`}>
-                      <Link
-                        to={`/editor/${tab.id}`}
-                        className={`${buttonStyle} bg-neutral-800 text-neutral-50 hover:bg-neutral-400`}
-                        viewTransition>
-                        Edit
-                      </Link>
-                      <button
-                        onClick={() => deleteTab(tab.id)}
-                        className={`${buttonStyle} text-neutral-500 hover:bg-red-50 hover:text-red-500 hover:border-red-500`}>
-                        Delete
-                      </button>
-                    </td>
+          {allTabs.length === 0 ? (
+            <div className="my-10 p-4 bg-neutral-100 border border-neutral-200 rounded-sm grid place-items-center gap-y-2">
+              <h2 className="text-md">No current tabs</h2>
+            </div>
+          ) : (
+            <div className="border border-neutral-300 dark:border-neutral-800 rounded my-10">
+              <table className="w-full">
+                <thead className="bg-neutral-50 dark:bg-neutral-800 dark:text-neutral-200 rounded-sm">
+                  <tr className="grid grid-cols-4">
+                    <th className="p-3 font-semibold text-left">Title</th>
+                    <th className="p-3 font-semibold text-left">Artist</th>
+                    <th className="p-3 font-semibold text-left">Tuning</th>
+                    <th className="p-3 font-semibold text-left hidden">
+                      Actions
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </PageWrapper>
+                </thead>
+                <tbody>
+                  {allTabs.map((tab) => (
+                    <tr
+                      key={nanoid()}
+                      className="grid grid-cols-4 text-neutral-700 font-normal">
+                      <td className={detailStyle}>{tab.tab_name}</td>
+                      <td className={detailStyle}>{tab.tab_artist}</td>
+                      <td className={detailStyle}>{tab.tuning.toReversed()}</td>
+                      <td className={`${detailStyle} flex flex-wrap gap-1`}>
+                        <Link
+                          to={`/editor/${tab.id}`}
+                          className={`${buttonStyle} bg-neutral-800 text-neutral-50 hover:bg-neutral-400`}
+                          viewTransition>
+                          Edit
+                        </Link>
+                        <button
+                          onClick={() => deleteTab(tab.id)}
+                          className={`${buttonStyle} text-neutral-500 dark:text-neutral-400 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-500 dark:hover:text-red-50 hover:border-red-500 hover:cursor-pointer`}>
+                          Delete
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </PageWrapper>
+      </main>
+      <Footer />
     </>
   );
 }

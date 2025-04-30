@@ -98,17 +98,17 @@ export default function Profile() {
             <>
               <div className="pt-8 grid gap-8">
                 <div>
-                  <h1 className="text-3xl font-bold text-neutral-800 mb-2">
+                  <h1 className="text-3xl font-bold text-neutral-800 dark:text-neutral-200 mb-2">
                     Profile
                   </h1>
-                  <p className="text-neutral-600">
+                  <p className="text-neutral-600 dark:text-neutral-300">
                     Profile information will only be displayed on your
                     dashboard.
                   </p>
                 </div>
 
-                <div>
-                  <div className="flex gap-4 text-neutral-800">
+                <div className="text-neutral-800 dark:text-neutral-200">
+                  <div className="flex gap-4 ">
                     <p className=" font-medium">Username</p>
                     <p>{user?.username}</p>
                   </div>
@@ -119,11 +119,11 @@ export default function Profile() {
                   </button>
                 </div>
 
-                <div>
-                  <p className="text-neutral-500 text-sm">
+                <div className="text-sm text-neutral-500 dark:text-neutral-400">
+                  <p className="">
                     Account created on {user?.created_at?.substring(0, 10)}
                   </p>
-                  <p className="text-neutral-500 text-sm">
+                  <p className="">
                     Last logged in on {user?.last_login?.substring(0, 10)}
                   </p>
                 </div>

@@ -76,7 +76,7 @@ export default function Login() {
       <PageWrapper>
         <main className="min-h-screen flex justify-center py-16">
           <section>
-            <div className="bg-neutral-50 p-8 rounded-sm shadow-md border border-neutral-200">
+            <div className="bg-neutral-50 dark:bg-neutral-900 p-8 rounded-sm shadow-md border border-neutral-200 dark:border-neutral-700 dark:text-neutral-200">
               <h1 className="text-2xl font-bold mb-4">Log in</h1>
               <p
                 ref={errRef}
@@ -90,12 +90,14 @@ export default function Login() {
               </p>
               <form onSubmit={handleSubmit} className="flex flex-col gap-4">
                 <div>
-                  <label htmlFor="username" className="flex">
+                  <label
+                    htmlFor="username"
+                    className="flex dark:text-neutral-300">
                     Username:
                   </label>
                   <input
                     type="text"
-                    className="border border-neutral-300 rounded-sm px-2 py-1"
+                    className="border border-neutral-300 dark:border-neutral-700 rounded-sm px-2 py-1"
                     id="username"
                     ref={userRef}
                     autoComplete="off"
@@ -105,12 +107,14 @@ export default function Login() {
                   />
                 </div>
                 <div>
-                  <label htmlFor="password" className="flex">
+                  <label
+                    htmlFor="password"
+                    className="flex dark:text-neutral-300">
                     Password:
                   </label>
                   <input
                     type="password"
-                    className="border border-neutral-300 rounded-sm px-2 py-1"
+                    className="border border-neutral-300 dark:border-neutral-700 rounded-sm px-2 py-1"
                     id="password"
                     onChange={(e) => setPwd(e.target.value)}
                     value={pwd}
@@ -123,13 +127,13 @@ export default function Login() {
                     isLoading
                       ? `animate-pulse bg-neutral-200 rounded-sm py-2 text-neutral-500 hover:cursor-not-allowed hover:cursor-not-allowed`
                       : isFilled
-                      ? `bg-neutral-800 rounded-sm py-2 text-neutral-50 hover:bg-neutral-600 cursor-pointer`
-                      : `bg-neutral-200 rounded-sm py-2 text-neutral-500 hover:cursor-not-allowed`
+                      ? `bg-neutral-800 dark:bg-neutral-300 rounded-sm py-2 text-neutral-50 dark:text-neutral-900 hover:bg-neutral-600 cursor-pointer`
+                      : `bg-neutral-200 dark:bg-neutral-800 rounded-sm py-2 text-neutral-500 hover:cursor-not-allowed`
                   }`}>
                   Sign in
                 </button>
               </form>
-              <p className="my-2 text-md text-neutral-700">
+              <p className="my-2 text-md text-neutral-700 dark:text-neutral-400">
                 Don't have an account?{" "}
                 <Link
                   to="/register"

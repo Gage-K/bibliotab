@@ -98,8 +98,10 @@ export default function Register() {
       <PageWrapper>
         <main className="min-h-screen flex justify-center py-16">
           <section>
-            <div className="bg-neutral-50 p-8 rounded-sm shadow-md border border-neutral-200">
-              <h1 className="text-2xl font-bold mb-4">Register</h1>
+            <div className="bg-neutral-50 dark:bg-neutral-900 p-8 rounded-sm shadow-md border border-neutral-200 dark:border-neutral-700">
+              <h1 className="text-2xl font-bold mb-4 dark:text-neutral-200">
+                Register
+              </h1>
               <p
                 ref={errRef}
                 className={
@@ -110,7 +112,9 @@ export default function Register() {
                 aria-live="assertive">
                 {errMsg}
               </p>
-              <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+              <form
+                onSubmit={handleSubmit}
+                className="flex flex-col gap-4 dark:text-neutral-300">
                 <div>
                   <label htmlFor="username" className="flex items-center gap-2">
                     Username
@@ -130,7 +134,7 @@ export default function Register() {
                   <input
                     type="text"
                     id="username"
-                    className="border border-neutral-300 rounded-sm px-2 py-1"
+                    className="border border-neutral-300 rounded-sm px-2 py-1 dark:border-neutral-700"
                     ref={userRef}
                     autoComplete="off"
                     onChange={(e) => setUser(e.target.value)}
@@ -145,7 +149,7 @@ export default function Register() {
                       id="uidnote"
                       className={
                         userFocus && user && !validName
-                          ? "instructions"
+                          ? "instructions dark:text-neutral-400"
                           : "hidden"
                       }>
                       4 to 24 characters.
@@ -173,7 +177,7 @@ export default function Register() {
                   </label>
                   <input
                     type="password"
-                    className="border border-neutral-300 rounded-sm px-2 py-1"
+                    className="border border-neutral-300 rounded-sm px-2 py-1 dark:border-neutral-700"
                     id="password"
                     onChange={(e) => setPwd(e.target.value)}
                     value={pwd}
@@ -187,7 +191,9 @@ export default function Register() {
                     <p
                       id="pwdnote"
                       className={
-                        pwdFocus && !validPwd ? "instructions" : "hidden"
+                        pwdFocus && !validPwd
+                          ? "instructions dark:text-neutral-400"
+                          : "hidden"
                       }>
                       8 to 24 characters.
                       <br />
@@ -226,7 +232,7 @@ export default function Register() {
                   </label>
                   <input
                     type="password"
-                    className="border border-neutral-300 rounded-sm px-2 py-1"
+                    className="border border-neutral-300 rounded-sm px-2 py-1 dark:border-neutral-700"
                     id="confirm_pwd"
                     onChange={(e) => setMatchPwd(e.target.value)}
                     value={matchPwd}
@@ -240,7 +246,9 @@ export default function Register() {
                     <p
                       id="confirmnote"
                       className={
-                        matchFocus && !validMatch ? "instructions" : "hidden"
+                        matchFocus && !validMatch
+                          ? "instructions dark:text-neutral-400"
+                          : "hidden"
                       }>
                       Must match the first password input field.
                     </p>
@@ -252,8 +260,8 @@ export default function Register() {
                     isLoading
                       ? `animate-pulse bg-neutral-200 rounded-sm py-2 text-neutral-500 hover:cursor-not-allowed hover:cursor-not-allowed`
                       : !validName || !validPwd || !validMatch
-                      ? "bg-neutral-200 text-neutral-500 hover:cursor-not-allowed"
-                      : "bg-neutral-800 text-neutral-50 hover:bg-neutral-600 cursor-pointer"
+                      ? "bg-neutral-200 dark:bg-neutral-800 rounded-sm py-2 text-neutral-500 hover:cursor-not-allowed"
+                      : "bg-neutral-800 dark:bg-neutral-300 rounded-sm py-2 text-neutral-50 dark:text-neutral-900 hover:bg-neutral-600 cursor-pointer"
                   }`}
                   disabled={
                     !validName || !validPwd || !validMatch ? true : false
@@ -261,7 +269,7 @@ export default function Register() {
                   Sign up
                 </button>
               </form>
-              <p className="my-2 text-md text-neutral-700">
+              <p className="my-2 text-md text-neutral-700 dark:text-neutral-400">
                 Already registered?{" "}
                 <Link
                   to="/login"

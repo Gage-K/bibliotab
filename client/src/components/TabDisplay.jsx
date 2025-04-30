@@ -83,7 +83,9 @@ export default function TabDisplay({
                   updatePosition(tabChunk.measureIndex, tabChunk.frameIndex)
                 }>
                 {tabChunk.frame.notes.map((note, noteIndex) => (
-                  <p className="td-grid-note" key={noteIndex}>
+                  <p
+                    className="td-grid-note z-2 dark:text-neutral-200"
+                    key={noteIndex}>
                     {interpretNote(note.fret, note.style)}
                   </p>
                 ))}

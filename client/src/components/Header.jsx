@@ -11,17 +11,17 @@ export default function Header() {
     redirect("/");
   }
   const linkBaseStyle =
-    "bg-neutral-100/0 rounded-sm px-3 py-1 hover:bg-neutral-100 hover:text-neutral-900 duration-150 ease-in-out";
-  const activeStyle = `${linkBaseStyle} text-neutral-900 bg-neutral-100/100`;
+    "bg-neutral-100/0 rounded-sm px-3 py-1 hover:bg-neutral-100 dark:hover:bg-neutral-300 hover:text-neutral-900 duration-150 ease-in-out";
+  const activeStyle = `${linkBaseStyle} text-neutral-900 bg-neutral-100/100 dark:bg-neutral-300/100`;
   return (
-    <header className="shadow-2xs sticky top-0 py-2 mb-4 bg-neutral-50 z-1">
+    <header className="shadow-2xs dark:shadow-neutral-300/10 sticky top-0 py-2 mb-4 bg-neutral-50 dark:bg-neutral-900 z-1">
       <PageWrapper>
         <div className="flex justify-between items-baseline">
           <div className="flex items-center gap-8">
-            <Link to="/" className="font-semibold">
+            <Link to="/" className="font-semibold dark:text-neutral-300">
               tablab
             </Link>
-            <nav className="flex gap-2 text-neutral-500 text-sm font-medium">
+            <nav className="flex gap-2 text-neutral-500 dark:text-neutral-400 text-sm font-medium">
               <NavLink
                 to="/dashboard"
                 className={(isActive) =>
@@ -29,16 +29,16 @@ export default function Header() {
                 }>
                 tabs
               </NavLink>
-              <NavLink
+              {/*<NavLink
                 to="/updates"
                 className={(isActive) =>
                   isActive.isActive ? activeStyle : linkBaseStyle
                 }>
                 updates
-              </NavLink>
+              </NavLink>*/}
             </nav>
           </div>
-          <div className="flex gap-4 text-neutral-500 text-sm font-medium items-center">
+          <div className="flex gap-4 text-neutral-500 dark:text-neutral-400 text-sm font-medium items-center">
             {auth.user ? (
               <Link to="/profile" className="font-semibold hover:underline">
                 {auth.user}
@@ -47,7 +47,7 @@ export default function Header() {
               <>
                 <Link
                   to="/register"
-                  className="hover:text-neutral-800 hover:underline duration-50 ease-in-out">
+                  className="dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200 hover:underline duration-50 ease-in-out">
                   Sign up
                 </Link>
                 <Link

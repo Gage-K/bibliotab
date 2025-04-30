@@ -286,44 +286,46 @@ export default function MainTabEditor() {
   return (
     <>
       <Header />
-      <PageWrapper>
-        {!isLoading && (
-          <TabContext.Provider value={tab}>
-            <main className="mx-auto h-full">
-              <div className="editor-top h-full">
-                <TabDetails details={details} updateDetails={updateDetails} />
-              </div>
+      <main className="min-h-screen pb-16">
+        <PageWrapper>
+          {!isLoading && (
+            <TabContext.Provider value={tab}>
+              <div className="mx-auto h-full">
+                <div className="editor-top h-full">
+                  <TabDetails details={details} updateDetails={updateDetails} />
+                </div>
 
-              {
-                <Editor
+                {
+                  <Editor
+                    tab={tab}
+                    position={position}
+                    editorIsOpen={editorIsOpen}
+                    addNewFrame={addNewFrame}
+                    addNewMeasure={addNewMeasure}
+                    deleteFrame={deleteFrame}
+                    deleteMeasure={deleteMeasure}
+                    getEmptyFrame={getEmptyFrame}
+                    handleOpeningEditor={handleOpeningEditor}
+                    updatePosition={updatePosition}
+                    updateTabData={updateTabData}
+                    isEditing={isEditing}
+                    saveChanges={saveChanges}
+                  />
+                }
+
+                <TabDisplay
                   tab={tab}
                   position={position}
-                  editorIsOpen={editorIsOpen}
+                  updatePosition={updatePosition}
                   addNewFrame={addNewFrame}
                   addNewMeasure={addNewMeasure}
-                  deleteFrame={deleteFrame}
-                  deleteMeasure={deleteMeasure}
-                  getEmptyFrame={getEmptyFrame}
-                  handleOpeningEditor={handleOpeningEditor}
-                  updatePosition={updatePosition}
-                  updateTabData={updateTabData}
-                  isEditing={isEditing}
-                  saveChanges={saveChanges}
+                  tuning={details.tuning}
                 />
-              }
-
-              <TabDisplay
-                tab={tab}
-                position={position}
-                updatePosition={updatePosition}
-                addNewFrame={addNewFrame}
-                addNewMeasure={addNewMeasure}
-                tuning={details.tuning}
-              />
-            </main>
-          </TabContext.Provider>
-        )}
-      </PageWrapper>
+              </div>
+            </TabContext.Provider>
+          )}
+        </PageWrapper>
+      </main>
     </>
   );
 }
