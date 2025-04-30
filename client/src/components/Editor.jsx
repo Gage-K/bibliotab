@@ -18,7 +18,7 @@ export default function Editor({
   saveChanges,
 }) {
   return (
-    <section className="sticky top-12 border border-neutral-800 px-1 md:px-3 rounded bg-neutral-800 text-neutral-50 font-medium text-xs z-1 shadow-md">
+    <section className="sticky top-12 border border-neutral-800 px-1 md:px-3 rounded bg-neutral-800 text-neutral-50 font-medium text-xs z-100 shadow-md">
       <EditorControls
         handleOpeningEditor={handleOpeningEditor}
         isOpen={editorIsOpen}

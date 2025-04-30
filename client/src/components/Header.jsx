@@ -14,7 +14,7 @@ export default function Header() {
     "bg-neutral-100/0 rounded-sm px-3 py-1 hover:bg-neutral-100 dark:hover:bg-neutral-300 hover:text-neutral-900 duration-150 ease-in-out";
   const activeStyle = `${linkBaseStyle} text-neutral-900 bg-neutral-100/100 dark:bg-neutral-300/100`;
   return (
-    <header className="shadow-2xs dark:shadow-neutral-300/10 sticky top-0 py-2 mb-4 bg-neutral-50 dark:bg-neutral-900 z-1">
+    <header className="shadow-2xs dark:shadow-neutral-300/10 sticky top-0 py-2 mb-4 bg-neutral-50 dark:bg-neutral-900 z-100">
       <PageWrapper>
         <div className="flex justify-between items-baseline">
           <div className="flex items-center gap-8">
