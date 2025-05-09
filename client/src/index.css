@@ -39,6 +39,8 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
+  position: relative; /* make the container a positioned ancestor */
+  width: 100%; /* still recommended */
 }
 
 .td-grid-note::before {
@@ -46,10 +48,10 @@ body {
   content: "";
   transform: translateY(0.75em);
   top: 0;
-  left: 0;
+  left: -2;
   width: calc(100% + 2px);
   z-index: -999;
-  position: relative;
+  position: absolute; /* change from relative */
   border-top: 1px solid oklch(0.87 0 0);
 }
 
