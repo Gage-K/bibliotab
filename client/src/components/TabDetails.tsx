@@ -1,35 +1,30 @@
 import { useState } from "react";
-import PropTypes from "prop-types";
+import { TuningNoteType, TabDetailsType, TuningType } from "../types/tab.types";
+import { TUNING_NOTES } from "../types/consts";
 
-const NOTES = [
-  "Ab",
-  "A",
-  "A#",
-  "Bb",
-  "B",
-  "C",
-  "C#",
-  "Db",
-  "D",
-  "D#",
-  "Eb",
-  "E",
-  "F",
-  "F#",
-  "Gb",
-  "G",
-  "G#",
-];
 const STRINGS = [1, 2, 3, 4, 5, 6];
 
-export default function TabDetails({ details, updateDetails }) {
+interface TabDetailsProps {
+  details: TabDetailsType;
+  updateDetails: (name: string, value: string | TuningType) => void;
+}
+
+export default function TabDetails({
+  details,
+  updateDetails,
+}: TabDetailsProps) {
   const [isShown, setIsShown] = useState(false);
 
-  function handleTuning(event, string, value) {
-    const newTuning = details.tuning.map((note, index) =>
-      index === string ? value : note
+  function handleTuning(
+    event: React.ChangeEvent<HTMLSelectElement>,
+    string: number,
+    value: TuningNoteType
+  ) {
+    const newTuning: TuningType = details.tuning.map(
+      (note: TuningNoteType, index: number) =>
+        index === string ? (value as TuningNoteType) : note
     );
-    updateDetails(event.target.name, newTuning);
+    updateDetails(event.target.name, newTuning as TuningType);
   }
 
   return (

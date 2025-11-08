@@ -1,5 +1,5 @@
-export type Id = string;
-export type TuningNote =
+export type IdType = string;
+export type TuningNoteType =
   | "A"
   | "A#"
   | "Ab"
@@ -17,16 +17,16 @@ export type TuningNote =
   | "G"
   | "G#"
   | "Gb";
-export type Tuning = [
-  TuningNote,
-  TuningNote,
-  TuningNote,
-  TuningNote,
-  TuningNote,
-  TuningNote
+export type TuningType = [
+  TuningNoteType,
+  TuningNoteType,
+  TuningNoteType,
+  TuningNoteType,
+  TuningNoteType,
+  TuningNoteType
 ];
 
-type NoteStyle =
+type NoteStyleType =
   | "none"
   | "hammerOn"
   | "pullOff"
@@ -35,34 +35,34 @@ type NoteStyle =
   | "harmonic"
   | "tap";
 
-export type NoteFret = {
+export type NoteFretType = {
   fret: number;
-  style: NoteStyle;
+  style: NoteStyleType;
 };
-export type Frame = [
-  NoteFret,
-  NoteFret,
-  NoteFret,
-  NoteFret,
-  NoteFret,
-  NoteFret
+export type FrameType = [
+  NoteFretType,
+  NoteFretType,
+  NoteFretType,
+  NoteFretType,
+  NoteFretType,
+  NoteFretType
 ];
 
-export type Measure = Frame[];
+export type MeasureType = FrameType[];
 
-export type TabBody = Measure[];
+export type TabBodyType = MeasureType[];
 
-export type TabDetails = {
+export type TabDetailsType = {
   song: string;
   artist: string;
   creator: string;
   dateCreated: string;
   dateModified: string;
-  tuning: Tuning;
+  tuning: TuningType;
 };
 
-export type Tab = {
-  id: Id;
-  details: TabDetails;
-  body: TabBody;
+export type TabType = {
+  id: IdType;
+  details: TabDetailsType;
+  body: TabBodyType;
 };
