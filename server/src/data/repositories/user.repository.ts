@@ -89,10 +89,11 @@ export class UserRepository {
   async updateEmail(
     id: string,
     newEmail: UpdateUserDto["email"]
-  ): Promise<void> {
-    const query = "UPDATE users SET email = $1 WHERE id = $2";
+  ): Promise<User | null> {
     try {
-      await this.pool.query(query, [newEmail, id]);
+      const query = "UPDATE users SET email = $1 WHERE id = $2 RETURNING *";
+      const result = await this.pool.query<User>(query, [newEmail, id]);
+      return result.rows[0] ?? null;
     } catch (error) {
       throw new InternalServerError("Failed to update user email");
     }
@@ -101,19 +102,22 @@ export class UserRepository {
   async updatePassword(
     id: string,
     newPassword: UpdateUserDto["password"]
-  ): Promise<void> {
-    const query = "UPDATE passwords SET password = $1 WHERE user_id = $2";
+  ): Promise<boolean> {
     try {
-      await this.pool.query(query, [newPassword, id]);
+      const query = "UPDATE passwords SET password = $1 WHERE user_id = $2";
+      const result = await this.pool.query(query, [newPassword, id]);
+      return (result.rowCount ?? 0) > 0;
     } catch (error) {
       throw new InternalServerError("Failed to update user password");
     }
   }
 
-  async updateLastLogin(id: string): Promise<void> {
-    const query = "UPDATE users SET last_login = $1 WHERE id = $2";
+  async updateLastLogin(id: string): Promise<User | null> {
     try {
-      await this.pool.query(query, [new Date(), id]);
+      const query =
+        "UPDATE users SET last_login = $1 WHERE id = $2 RETURNING *";
+      const result = await this.pool.query<User>(query, [new Date(), id]);
+      return result.rows[0] ?? null;
     } catch (error) {
       throw new InternalServerError("Failed to update user last login");
     }
