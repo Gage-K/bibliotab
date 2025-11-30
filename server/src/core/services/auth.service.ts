@@ -35,20 +35,20 @@ export class AuthService {
     const user = await this.userRepo.findByUsername(username);
 
     if (!user) {
-      throw new NotFoundError("User");
+      throw new UnauthorizedError("Invalid credentials.");
     }
 
     const hashedPassword = await this.userRepo.getPassword(user.id);
 
     if (!hashedPassword) {
-      throw new NotFoundError("User");
+      throw new UnauthorizedError("Invalid credentials.");
     } else {
       const passwordIsValid = await this.verifyPassword(
         password,
         hashedPassword
       );
       if (!passwordIsValid) {
-        throw new UnauthorizedError("Incorrect password.");
+        throw new UnauthorizedError("Invalid credentials.");
       }
     }
 

@@ -6,12 +6,12 @@ export class TabService {
   constructor(private tabRepo: TabRepository) {}
 
   async getTab(tabId: string, userId: string): Promise<Tab | null> {
-    await this.verifyOwnership(tabId, userId);
-
     const tab = await this.tabRepo.findById(tabId);
     if (!tab) {
-      throw new NotFoundError("Tab not found.");
+      throw new NotFoundError("Tab");
     }
+
+    await this.verifyOwnership(tabId, userId);
 
     return tab;
   }
