@@ -6,6 +6,7 @@ import {
 } from "../../common/errors/AppError";
 import { AuthenticatedRequest, JWTPayload } from "../../core/types/auth.types";
 import { verify } from "jsonwebtoken";
+import { env } from "../../common/config/env.config";
 
 export const authMiddleware = (userRepo: UserRepository) => {
   return async (req: Request, res: Response, next: NextFunction) => {
@@ -18,11 +19,7 @@ export const authMiddleware = (userRepo: UserRepository) => {
 
       const token = authHeader.split(" ")[1];
 
-      const accessTokenSecret = process.env.ACCESS_TOKEN_SECRET;
-      if (!accessTokenSecret) {
-        throw new InternalServerError("Access token secret is not set.");
-      }
-      const payload = verify(token, accessTokenSecret) as JWTPayload;
+      const payload = verify(token, env.ACCESS_TOKEN_SECRET) as JWTPayload;
 
       if (payload.type !== "access") {
         throw new InvalidTokenError();

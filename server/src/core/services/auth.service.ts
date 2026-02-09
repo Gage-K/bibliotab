@@ -9,6 +9,7 @@ import {
   NotFoundError,
   UnauthorizedError,
 } from "../../common/errors/AppError";
+import { env } from "../../common/config/env.config";
 
 export class AuthService {
   constructor(private userRepo: UserRepository) {}
@@ -66,11 +67,7 @@ export class AuthService {
 
   async refreshToken(refreshToken: string): Promise<TokenPair> {
     try {
-      const refreshTokenSecret = process.env.REFRESH_TOKEN_SECRET;
-      if (!refreshTokenSecret) {
-        throw new InternalServerError("Refresh token secret is not set.");
-      }
-      const payload = verify(refreshToken, refreshTokenSecret) as JWTPayload;
+      const payload = verify(refreshToken, env.REFRESH_TOKEN_SECRET) as JWTPayload;
       if (payload.type !== "refresh") {
         throw new InvalidTokenError();
       }
@@ -88,21 +85,15 @@ export class AuthService {
 
   private generateTokenPair(userId: string): TokenPair {
     try {
-      const accessTokenSecret = process.env.ACCESS_TOKEN_SECRET;
-      const refreshTokenSecret = process.env.REFRESH_TOKEN_SECRET;
-      if (!accessTokenSecret || !refreshTokenSecret) {
-        throw new InternalServerError("Token secrets are not set.");
-      }
-
       const accessToken = sign(
         { sub: userId, type: "access" },
-        accessTokenSecret,
+        env.ACCESS_TOKEN_SECRET,
         { expiresIn: "15m" }
       );
 
       const refreshToken = sign(
         { sub: userId, type: "refresh" },
-        refreshTokenSecret,
+        env.REFRESH_TOKEN_SECRET,
         { expiresIn: "7d" }
       );
 

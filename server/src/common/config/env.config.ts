@@ -1,11 +1,39 @@
 import "dotenv/config";
+import { z } from "zod";
 
-export const env = {
-  DB_HOST: process.env.DB_HOST!,
-  DB_USER: process.env.DB_USER!,
-  DB_NAME: process.env.DB_NAME!,
-  DB_PASSWORD: process.env.DB_PASSWORD!,
-  DB_PORT: parseInt(process.env.DB_PORT || "5432", 10),
-  FE_API: process.env.FE_API!,
-  PORT: process.env.PORT ? parseInt(process.env.PORT, 10) : undefined,
-} as const;
+const envSchema = z.object({
+  // Database
+  DB_HOST: z.string().min(1),
+  DB_USER: z.string().min(1),
+  DB_NAME: z.string().min(1),
+  DB_PASSWORD: z.string().min(1),
+  DB_PORT: z.coerce.number().int().positive().default(5432),
+
+  // Authentication
+  ACCESS_TOKEN_SECRET: z.string().min(32),
+  REFRESH_TOKEN_SECRET: z.string().min(32),
+
+  // Server
+  PORT: z.coerce.number().int().positive().optional(),
+  NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
+
+  // Frontend
+  FE_API: z.string().url(),
+})
+
+function validateEnv() {
+  try {
+    return envSchema.parse(process.env);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      const formatted = error.issues.map(
+        (err: z.ZodIssue) => `${err.path.join(".")}: ${err.message}`
+      ).join("\n");
+      console.error("Environment validation failed:\n" + formatted);
+      process.exit(1);
+    }
+    throw error;
+  }
+}
+
+export const env = validateEnv();

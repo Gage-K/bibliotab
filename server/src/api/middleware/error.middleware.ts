@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import { AppError } from "../../common/errors/AppError";
+import { env } from "../../common/config/env.config";
 
 export const errorHandler = (
   err: Error,
@@ -19,7 +20,7 @@ export const errorHandler = (
   return res.status(500).json({
     success: false,
     message:
-      process.env.NODE_ENV === "production"
+      env.NODE_ENV === "production"
         ? "An unexpected error occurred. Please try again later."
         : err.message,
   });
