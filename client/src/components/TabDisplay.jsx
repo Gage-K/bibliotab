@@ -1,4 +1,3 @@
-import PropTypes from "prop-types";
 import { nanoid } from "nanoid";
 import { Fragment } from "react";
 
@@ -117,12 +116,3 @@ export default function TabDisplay({
     </>
   );
 }
-
-TabDisplay.propTypes = {
-  tab: PropTypes.array.isRequired,
-  position: PropTypes.number.isRequired,
-  tuning: PropTypes.array.isRequired,
-  updatePosition: PropTypes.func.isRequired,
-  addNewFrame: PropTypes.func.isRequired,
-  addNewMeasure: PropTypes.func.isRequired,
-};

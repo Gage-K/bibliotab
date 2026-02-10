@@ -1,6 +1,5 @@
 import TabForm from "./TabForm";
 import EditorControls from "./EditorControls";
-import PropTypes from "prop-types";
 
 export default function Editor({
   tab,
@@ -48,17 +47,3 @@ export default function Editor({
     </section>
   );
 }
-
-Editor.propTypes = {
-  tab: PropTypes.object.isRequired,
-  position: PropTypes.object.isRequired,
-  editorIsOpen: PropTypes.bool.isRequired,
-  addNewFrame: PropTypes.func.isRequired,
-  addNewMeasure: PropTypes.func.isRequired,
-  deleteFrame: PropTypes.func.isRequired,
-  deleteMeasure: PropTypes.func.isRequired,
-  getEmptyFrame: PropTypes.func.isRequired,
-  handleOpeningEditor: PropTypes.func.isRequired,
-  updatePosition: PropTypes.func.isRequired,
-  updateTabData: PropTypes.func.isRequired,
-};

@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { TuningNoteType, TabDetailsType, TuningType } from "../types/tab.types";
-import { TUNING_NOTES } from "../types/consts";
+import { TuningNoteType, TabDetailsType, TuningType } from "../shared/types/tab.types";
+import { TUNING_NOTES } from "../shared/types/consts";
 
 const STRINGS = [1, 2, 3, 4, 5, 6];
 
@@ -106,7 +106,7 @@ export default function TabDetails({
                       handleTuning(event, string - 1, event.target.value)
                     }
                     className="bg-neutral-100 dark:bg-neutral-800 dark:text-neutral-300 p-1 rounded">
-                    {NOTES.map((note) => (
+                    {TUNING_NOTES.map((note) => (
                       <option value={note} key={note}>
                         {note}
                       </option>
@@ -121,8 +121,3 @@ export default function TabDetails({
     </section>
   );
 }
-
-TabDetails.propTypes = {
-  details: PropTypes.object.isRequired,
-  setDetials: PropTypes.func.isRequired,
-};

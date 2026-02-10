@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo } from "react";
-import PropTypes from "prop-types";
 
 const STRINGS = [1, 2, 3, 4, 5, 6];
 const FRETS = [
@@ -154,10 +153,3 @@ export default function TabForm({
   );
 }
 
-TabForm.propTypes = {
-  tab: PropTypes.array.isRequired,
-  updateTabData: PropTypes.func.isRequired,
-  measure: PropTypes.number.isRequired,
-  frame: PropTypes.number.isRequired,
-  getEmptyFrame: PropTypes.func.isRequired,
-};

@@ -1,4 +1,3 @@
-import PropTypes from "prop-types";
 
 export default function PageWrapper(props) {
   return (
@@ -7,7 +6,3 @@ export default function PageWrapper(props) {
     </div>
   );
 }
-
-PageWrapper.propTypes = {
-  children: PropTypes.any.isRequired,
-};

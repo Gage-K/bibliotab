@@ -1,4 +1,3 @@
-import PropTypes from "prop-types";
 import {
   FastForward,
   Rewind,
@@ -93,15 +92,3 @@ export default function EditorControls({
     </div>
   );
 }
-
-EditorControls.propTypes = {
-  handleOpeningEditor: PropTypes.func.isRequired,
-  isOpen: PropTypes.bool.isRequired,
-  movePrev: PropTypes.func.isRequired,
-  moveNext: PropTypes.func.isRequired,
-  duplicate: PropTypes.func.isRequired,
-  deleteFrame: PropTypes.func.isRequired,
-  deleteMeasure: PropTypes.func.isRequired,
-  insertFrame: PropTypes.func.isRequired,
-  insertMeasure: PropTypes.func.isRequired,
-};
