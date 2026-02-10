@@ -49,7 +49,7 @@ export default function MainTabEditor() {
         const response = await axios.get(URL, {
           headers: {
             "Content-Type": "application/json",
-            Authorization: auth.accessToken,
+            Authorization: `Bearer ${auth.accessToken}`,
           },
         });
         const data = response.data[0];

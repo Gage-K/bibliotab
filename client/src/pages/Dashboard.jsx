@@ -11,10 +11,10 @@ import { SkeletonLine, SkeletonText } from "../components/Skeleton";
 
 const TABS_URL = "/api/tabs";
 const DEFAULT_TAB = {
-  tabName: "Untitled",
-  tabArtist: "Untitled",
+  tab_name: "Untitled",
+  tab_artist: "Untitled",
   tuning: ["E", "B", "G", "D", "A", "E"],
-  tab: [
+  tab_data: [
     [
       {
         id: 1,
@@ -68,10 +68,10 @@ export default function Dashboard() {
       const response = await axios.get(TABS_URL, {
         headers: {
           "Content-Type": "application/json",
-          Authorization: auth.accessToken,
+          Authorization: `Bearer ${auth.accessToken}`,
         },
       });
-      setAllTabs(response.data);
+      setAllTabs(response.data.data);
       setIsLoading(false);
     } catch (err) {
       console.error(err);
@@ -95,20 +95,21 @@ export default function Dashboard() {
     setIsCreating(true);
 
     try {
-      const response = await axios.post(TABS_URL, JSON.stringify(DEFAULT_TAB), {
+      const response = await axios.post(TABS_URL, DEFAULT_TAB, {
         headers: {
           "Content-Type": "application/json",
-          Authorization: auth.accessToken,
+          Authorization: `Bearer ${auth.accessToken}`,
         },
         withCredentials: true,
       });
-      if (response.status === 200) {
-        const tabId = response.data.tabId;
+      if (response.status === 201) {
+        const tabId = response.data.data.id;
         setIsCreating(false);
         navigate(`/editor/${tabId}`, { tabId: tabId });
       }
     } catch (err) {
-      console.error(err);
+      console.error("Error creating tab:", err);
+      console.error("Error response:", err.response?.data);
       setIsCreating(false);
     }
   }
@@ -121,7 +122,7 @@ export default function Dashboard() {
       const response = await axios.delete(URL, {
         headers: {
           "Content-Type": "application/json",
-          Authorization: auth.accessToken,
+          Authorization: `Bearer ${auth.accessToken}`,
         },
         withCredentials: true,
       });

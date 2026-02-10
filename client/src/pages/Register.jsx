@@ -5,12 +5,14 @@ import PageWrapper from "../layouts/PageWrapper";
 import Footer from "../components/Footer";
 import { Link, useNavigate, useLocation } from "react-router";
 import axios from "../api/axios";
+import useAuth from "../hooks/useAuth";
 
 const USER_REGEX = /^[A-z][A-z0-9-_]{3,23}$/;
 const PWD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#$%]).{8,24}$/;
-const REGISTER_URL = "/api/register";
+const REGISTER_URL = "/api/auth/register";
 
 export default function Register() {
+  const { setAuth } = useAuth();
   const userRef = useRef();
   const errRef = useRef();
   const navigate = useNavigate();
@@ -77,6 +79,9 @@ export default function Register() {
           },
         }
       );
+      const accessToken = response.data.accessToken;
+      const refreshToken = response.data.refreshToken;
+      setAuth({ user, accessToken, refreshToken });
       setIsLoading(false);
       navigate(from, { replace: true });
     } catch (err) {

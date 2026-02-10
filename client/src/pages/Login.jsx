@@ -6,7 +6,7 @@ import { Link, useNavigate, useLocation } from "react-router";
 import axios from "../api/axios";
 import useAuth from "../hooks/useAuth";
 
-const LOGIN_URL = "/api/login";
+const LOGIN_URL = "/api/auth/login";
 
 export default function Login() {
   const { setAuth } = useAuth();
@@ -49,8 +49,9 @@ export default function Login() {
         }
       );
 
-      const accessToken = response.data.token;
-      setAuth({ user, accessToken, refreshToken: response.data.refreshToken});
+      const accessToken = response.data.accessToken;
+      const refreshToken = response.data.refreshToken;
+      setAuth({ user, accessToken, refreshToken });
       navigate(from, { replace: true });
       setIsLoading(false);
     } catch (err) {

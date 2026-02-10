@@ -53,7 +53,7 @@ export const createTabRouter = (
       body("tab_name").trim().isLength({ min: 1, max: 255 }),
       body("tab_artist").optional().trim().isLength({ max: 255 }),
       body("tuning").isArray(),
-      body("tab_data").isObject(),
+      body("tab_data").isArray(),
     ],
     validateRequest(),
     (async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
@@ -90,7 +90,7 @@ export const createTabRouter = (
       body("tab_name").optional().trim().isLength({ min: 1, max: 255 }),
       body("tab_artist").optional().trim().isLength({ max: 255 }),
       body("tuning").optional().isArray(),
-      body("tab_data").optional().isObject(),
+      body("tab_data").optional().isArray(),
     ],
     validateRequest(),
     (async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {

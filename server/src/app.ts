@@ -41,7 +41,7 @@ app.use(
 
 // Create routes
 app.use("/api/auth", createAuthRouter(authService));
-app.use("/api/tabs/", createTabRouter(tabService, userRepository));
+app.use("/api/tabs", createTabRouter(tabService, userRepository));
 
 // Error middleware
 app.use(errorHandler);

@@ -33,7 +33,7 @@ export default function Profile() {
         const response = await axios.get(USER_URL, {
           headers: {
             "Content-Type": "application/json",
-            Authorization: auth.accessToken,
+            Authorization: `Bearer ${auth.accessToken}`,
           },
         });
         setUser(response.data);
@@ -68,7 +68,7 @@ export default function Profile() {
         {
           headers: {
             "Content-Type": "application/json",
-            Authorization: auth.accessToken,
+            Authorization: `Bearer ${auth.accessToken}`,
           },
           withCredentials: true,
         }
