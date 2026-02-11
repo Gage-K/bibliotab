@@ -52,14 +52,15 @@ export default function MainTabEditor() {
             Authorization: `Bearer ${auth.accessToken}`,
           },
         });
-        const data = response.data[0];
+        console.table(response)
+        const data = response.data.data;
         const details = {
           id: data.id,
-          artist: data.tab_artist,
-          song: data.tab_name,
-          tuning: data.tuning,
+          artist: data.details.artist,
+          song: data.details.song,
+          tuning: data.details.tuning,
         };
-        const tabData = data.tab;
+        const tabData = data.body;
         setDetails(details);
         setTab(tabData);
       } catch (err) {
@@ -81,11 +82,10 @@ export default function MainTabEditor() {
     setIsSaving(true);
     console.log(isSaving);
     const data = {
-      tabId: details.id,
-      tabName: details.song,
-      tabArtist: details.artist,
+      tab_name: details.song,
+      tab_artist: details.artist,
       tuning: details.tuning,
-      tab: tab,
+      tab_data: tab,
     };
 
     try {
@@ -93,7 +93,7 @@ export default function MainTabEditor() {
       const response = await axios.put(URL, data, {
         headers: {
           "Content-Type": "application/json",
-          Authorization: auth.accessToken,
+          Authorization: `Bearer ${auth.accessToken}`,
         },
         withCredentials: true,
       });

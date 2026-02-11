@@ -181,9 +181,9 @@ export default function Dashboard() {
                     <tr
                       key={nanoid()}
                       className="grid grid-cols-4 text-neutral-700 font-normal">
-                      <td className={detailStyle}>{tab.tab_name}</td>
-                      <td className={detailStyle}>{tab.tab_artist}</td>
-                      <td className={detailStyle}>{tab.tuning.toReversed()}</td>
+                      <td className={detailStyle}>{tab.details.song}</td>
+                      <td className={detailStyle}>{tab.details.artist}</td>
+                      <td className={detailStyle}>{tab.details.tuning.toReversed()}</td>
                       <td className={`${detailStyle} flex flex-wrap gap-1`}>
                         <Link
                           to={`/editor/${tab.id}`}
