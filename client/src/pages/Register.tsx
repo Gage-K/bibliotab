@@ -1,10 +1,11 @@
 import { Check, X } from "@phosphor-icons/react";
-import { Fragment, useEffect, useRef, useState } from "react";
+import React, { Fragment, useEffect, useRef, useState } from "react";
 import Header from "../components/Header";
 import PageWrapper from "../layouts/PageWrapper";
 import Footer from "../components/Footer";
 import { Link, useNavigate, useLocation } from "react-router";
 import axios from "../api/axios";
+import { AxiosError } from "axios";
 import useAuth from "../hooks/useAuth";
 
 const USER_REGEX = /^[A-z][A-z0-9-_]{3,23}$/;
@@ -12,9 +13,11 @@ const PWD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#$%]).{8,24}$/;
 const REGISTER_URL = "/api/auth/register";
 
 export default function Register() {
-  const { setAuth } = useAuth();
-  const userRef = useRef();
-  const errRef = useRef();
+  const { setAuth } = useAuth() as {
+    setAuth: (auth: { user: string; accessToken: string; refreshToken: string }) => void;
+  };
+  const userRef = useRef<HTMLInputElement | null>(null);
+  const errRef = useRef<HTMLParagraphElement | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
   const from = location.state?.from?.pathname || "/";
@@ -35,7 +38,7 @@ export default function Register() {
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    userRef.current.focus();
+    userRef.current?.focus();
   }, []);
 
   useEffect(() => {
@@ -56,7 +59,7 @@ export default function Register() {
     setErrMsg("");
   }, [user, pwd, matchPwd]);
 
-  async function handleSubmit(event) {
+  async function handleSubmit(event: React.FormEvent) {
     setIsLoading(true);
     event.preventDefault();
 
@@ -85,14 +88,16 @@ export default function Register() {
       setIsLoading(false);
       navigate(from, { replace: true });
     } catch (err) {
-      if (!err?.response) {
-        setErrMsg("No server response");
-      } else if (err.response?.status === 409) {
-        setErrMsg("Username taken");
-      } else {
-        setErrMsg("Registration failed");
+      if (err instanceof AxiosError) {
+        if (!err?.response) {
+          setErrMsg("No server response");
+        } else if (err.response?.status === 409) {
+          setErrMsg("Username taken");
+        } else {
+          setErrMsg("Registration failed");
+        }
       }
-      errRef.current.focus();
+      errRef.current?.focus();
       setIsLoading(false);
     }
   }
@@ -261,13 +266,12 @@ export default function Register() {
                 </div>
 
                 <button
-                  className={`rounded-sm py-2 ${
-                    isLoading
-                      ? `animate-pulse bg-neutral-200 rounded-sm py-2 text-neutral-500 hover:cursor-not-allowed hover:cursor-not-allowed`
-                      : !validName || !validPwd || !validMatch
+                  className={`rounded-sm py-2 ${isLoading
+                    ? `animate-pulse bg-neutral-200 rounded-sm py-2 text-neutral-500 hover:cursor-not-allowed hover:cursor-not-allowed`
+                    : !validName || !validPwd || !validMatch
                       ? "bg-neutral-200 dark:bg-neutral-800 rounded-sm py-2 text-neutral-500 hover:cursor-not-allowed"
                       : "bg-neutral-800 dark:bg-neutral-300 rounded-sm py-2 text-neutral-50 dark:text-neutral-900 hover:bg-neutral-600 cursor-pointer"
-                  }`}
+                    }`}
                   disabled={
                     !validName || !validPwd || !validMatch ? true : false
                   }>
