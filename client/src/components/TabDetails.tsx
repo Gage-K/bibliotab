@@ -1,18 +1,12 @@
 import { useState } from "react";
-import { TuningNoteType, TabDetailsType, TuningType } from "../shared/types/tab.types";
+import { TuningNoteType, TuningType } from "../shared/types/tab.types";
 import { TUNING_NOTES } from "../shared/types/consts";
+import { useTabEditor } from "../hooks/useTabEditor";
 
 const STRINGS = [1, 2, 3, 4, 5, 6];
 
-interface TabDetailsProps {
-  details: TabDetailsType;
-  updateDetails: (name: string, value: string | TuningType) => void;
-}
-
-export default function TabDetails({
-  details,
-  updateDetails,
-}: TabDetailsProps) {
+export default function TabDetails() {
+  const { details, updateDetails } = useTabEditor();
   const [isShown, setIsShown] = useState(false);
 
   function handleTuning(
@@ -20,11 +14,11 @@ export default function TabDetails({
     string: number,
     value: TuningNoteType
   ) {
-    const newTuning: TuningType = details.tuning.map(
+    const newTuning = details.tuning.map(
       (note: TuningNoteType, index: number) =>
-        index === string ? (value as TuningNoteType) : note
-    );
-    updateDetails(event.target.name, newTuning as TuningType);
+        index === string ? value : note
+    ) as TuningType;
+    updateDetails(event.target.name, newTuning);
   }
 
   return (
@@ -85,7 +79,6 @@ export default function TabDetails({
           </label>
           <fieldset className="border border-neutral-300 dark:border-neutral-600 rounded-sm">
             <legend
-              name="legend"
               className="sr-only font-semibold text-neutral-800 dark:text-neutral-400">
               Tuning
             </legend>
@@ -103,7 +96,7 @@ export default function TabDetails({
                     name="tuning"
                     value={details.tuning[string - 1]}
                     onChange={(event) =>
-                      handleTuning(event, string - 1, event.target.value)
+                      handleTuning(event, string - 1, event.target.value as TuningNoteType)
                     }
                     className="bg-neutral-100 dark:bg-neutral-800 dark:text-neutral-300 p-1 rounded">
                     {TUNING_NOTES.map((note) => (

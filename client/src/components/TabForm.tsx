@@ -1,36 +1,29 @@
 import { useState, useEffect, useMemo } from "react";
+import { useTabEditor } from "../hooks/useTabEditor";
+import type { NoteFretType } from "../shared/types/tab.types";
 
 const STRINGS = [1, 2, 3, 4, 5, 6];
 const FRETS = [
-  -2, -1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
-  20, 21, 22, 23, 24,
+  -2, -1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18,
+  19, 20, 21, 22, 23, 24,
 ];
 
-export default function TabForm({
-  tab,
-  updateTabData,
-  measure,
-  frame,
-  getEmptyFrame,
-}) {
+export default function TabForm() {
+  const { tab, position, updateTabData, getEmptyFrame } = useTabEditor();
+
   const currentNotes = useMemo(
-    () => tab[measure][frame]?.notes,
-    [tab, measure, frame]
+    () => tab[position.measure][position.frame]?.notes,
+    [tab, position.measure, position.frame]
   );
 
-  // STATES
-  const [formData, setFormData] = useState(currentNotes);
-
-  // HOOKS
+  const [formData, setFormData] = useState<NoteFretType[]>(currentNotes);
 
   useEffect(() => {
-    // Whenever user's current position changes, update formData to current position
     setFormData(currentNotes);
   }, [currentNotes]);
 
-  // FUNCTIONS
-  function updateFret(Event, string) {
-    const { value } = Event.target;
+  function updateFret(event: React.ChangeEvent<HTMLSelectElement>, string: number) {
+    const { value } = event.target;
     setFormData((prev) =>
       prev.map((item, index) =>
         index === string - 1 ? { ...item, fret: parseInt(value) } : item
@@ -38,25 +31,23 @@ export default function TabForm({
     );
   }
 
-  function updateStyle(Event, string) {
-    const { value } = Event.target;
+  function updateStyle(event: React.ChangeEvent<HTMLSelectElement>, string: number) {
+    const { value } = event.target;
     setFormData((prev) =>
       prev.map((item, index) =>
-        index === string - 1 ? { ...item, style: value } : item
+        index === string - 1 ? { ...item, style: value as NoteFretType["style"] } : item
       )
     );
   }
 
-  function clearHandler(Event) {
-    Event.preventDefault();
+  function clearHandler(event: React.MouseEvent<HTMLButtonElement>) {
+    event.preventDefault();
     setFormData(getEmptyFrame().notes);
   }
 
-  function saveFormData(Event) {
-    // prevent page reload from pressing save
-    Event.preventDefault();
-    // updates tab with formData
-    updateTabData(measure, frame, formData);
+  function saveFormData(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    updateTabData(position.measure, position.frame, formData);
   }
 
   const buttonStyle =
@@ -86,7 +77,7 @@ export default function TabForm({
               <select
                 className="bg-neutral-700 p-1 rounded w-full"
                 value={formData[string - 1].fret}
-                onChange={(Event) => updateFret(Event, string)}>
+                onChange={(event) => updateFret(event, string)}>
                 {FRETS.map((fret) => (
                   <option key={fret} value={fret}>
                     {fret === -2 ? " " : fret === -1 ? "X" : fret}
@@ -103,7 +94,7 @@ export default function TabForm({
                 disabled={formData[string - 1].fret < 0}
                 className="tf-style-selector bg-neutral-700 p-1 rounded w-full disabled:invisible"
                 value={formData[string - 1].style}
-                onChange={(Event) => updateStyle(Event, string)}>
+                onChange={(event) => updateStyle(event, string)}>
                 <option
                   value="none"
                   className="tf-style-option"
@@ -152,4 +143,3 @@ export default function TabForm({
     </div>
   );
 }
-

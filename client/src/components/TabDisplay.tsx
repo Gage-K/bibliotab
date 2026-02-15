@@ -1,14 +1,11 @@
-import { nanoid } from "nanoid";
 import { Fragment } from "react";
+import { useTabEditor } from "../hooks/useTabEditor";
 
-export default function TabDisplay({
-  tab,
-  position,
-  updatePosition,
-  addNewFrame,
-  addNewMeasure,
-}) {
-  function interpretNote(note, style) {
+export default function TabDisplay() {
+  const { tab, position, updatePosition, addFrameAndAdvance, addNewMeasure } =
+    useTabEditor();
+
+  function interpretNote(note: number, style: string) {
     const newNote = note === -2 ? "\u00A0\u00A0" : note === -1 ? "X" : note;
     const interpretedNote =
       style === "none"
@@ -21,8 +18,6 @@ export default function TabDisplay({
         ? `p${newNote}`
         : style === "slide"
         ? `${newNote}/`
-        : style === "slide"
-        ? `${newNote}/`
         : style === "harmonic"
         ? `<${newNote}>`
         : style === "tap"
@@ -32,7 +27,6 @@ export default function TabDisplay({
     return interpretedNote;
   }
 
-  // Removes tab nesting in JSON/Object and creates one continuous tab array
   const flattenedTab = tab.flatMap((measure, measureIndex) =>
     measure.map((frame, frameIndex) => ({
       frame,
@@ -45,7 +39,7 @@ export default function TabDisplay({
     <>
       <section className="td-grid">
         {flattenedTab.map((tabChunk, tabChunkIndex) => (
-          <Fragment key={nanoid()}>
+          <Fragment key={`${tabChunk.measureIndex}-${tabChunk.frameIndex}`}>
             {tabChunkIndex === 0 && (
               <button
                 className="td-grid-button-measure hidden"
@@ -66,12 +60,11 @@ export default function TabDisplay({
               {tabChunk.frameIndex === 0 && (
                 <button
                   className="td-grid-button hidden"
-                  onClick={() => addNewFrame(tabChunk.measureIndex, -1, true)}>
+                  onClick={() => addFrameAndAdvance(tabChunk.measureIndex, -1, true)}>
                   +
                 </button>
               )}
               <button
-                key={nanoid()}
                 aria-label={`Measure ${tabChunk.measureIndex + 1} Frame ${
                   tabChunk.frameIndex + 1
                 }`}
@@ -95,7 +88,7 @@ export default function TabDisplay({
               <button
                 className="td-grid-button hidden"
                 onClick={() =>
-                  addNewFrame(tabChunk.measureIndex, tabChunk.frameIndex, true)
+                  addFrameAndAdvance(tabChunk.measureIndex, tabChunk.frameIndex, true)
                 }>
                 +
               </button>

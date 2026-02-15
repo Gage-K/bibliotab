@@ -2,21 +2,28 @@ import { Fragment, useEffect, useState, useRef } from "react";
 import Header from "../components/Header";
 import PageWrapper from "../layouts/PageWrapper";
 import Footer from "../components/Footer";
-import axios from "../api/axios";
-import useAuth from "../hooks/useAuth";
-import { Link, redirect, useNavigate } from "react-router";
+import useAxiosPrivate from "../hooks/useAxiosPrivate";
+import useTypedAuth from "../hooks/useTypedAuth";
+import { AxiosError } from "axios";
+import { redirect, useNavigate } from "react-router";
 import { SkeletonText } from "../components/Skeleton";
 
+interface UserProfile {
+  id: string;
+  username: string;
+  email: string;
+  created_at: string;
+  last_login: string | null;
+}
+
 const USER_URL = "/api/user";
-const LOGOUT_URL = "/api/logout";
 
 export default function Profile() {
-  const { auth, setAuth } = useAuth();
-  const errRef = useRef();
+  const { setAuth } = useTypedAuth();
+  const axiosPrivate = useAxiosPrivate();
   const [isLoading, setIsLoading] = useState(false);
-  const [user, setUser] = useState({});
-  const [newUser, setNewUser] = useState(user?.username);
-  const [email, setEmail] = useState(user?.email);
+  const [user, setUser] = useState<UserProfile | null>(null);
+  const [email, setEmail] = useState("");
   const [isEditing, setIsEditing] = useState(false);
 
   const [errMsg, setErrMsg] = useState("");
@@ -30,12 +37,7 @@ export default function Profile() {
 
     const getUser = async () => {
       try {
-        const response = await axios.get(USER_URL, {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: auth.accessToken,
-          },
-        });
+        const response = await axiosPrivate.get(USER_URL);
         setUser(response.data);
         setEmail(response.data.email);
         setIsLoading(false);
@@ -53,42 +55,42 @@ export default function Profile() {
     };
   }, []);
 
-  function handleEmailChange(event) {
-    setEmail(event.target.value);
+  function handleEmailChange(e: React.ChangeEvent<HTMLInputElement>) {
+    setEmail(e.target.value);
     setIsEditing(true);
   }
 
-  async function handleEmailSubmission(event) {
+  async function handleEmailSubmission(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     try {
-      const response = await axios.put(
+      const response = await axiosPrivate.put(
         USER_URL,
-        JSON.stringify({ email: email }),
-        {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: auth.accessToken,
-          },
-          withCredentials: true,
-        }
+        JSON.stringify({ email: email })
       );
     } catch (err) {
-      if (!err?.response) {
-        setErrMsg("No server response");
-      } else if (err.response?.status === 409) {
-        setErrMsg("Email already taken");
+      if (err instanceof AxiosError) {
+        if (!err.response) {
+          setErrMsg("No server response");
+        } else if (err.response.status === 409) {
+          setErrMsg("Email already taken");
+        } else {
+          setErrMsg("Update failed. Please try again.");
+        }
       } else {
         setErrMsg("Update failed. Please try again.");
       }
     }
     setIsEditing(false);
-    // errRef.current.focus();
   }
 
   async function handleLogout() {
-    setAuth({});
-    redirect("/");
+    try {
+      await axiosPrivate.post('/api/auth/logout', {});
+    } finally {
+      setAuth({});
+      redirect("/");
+    }
   }
 
   return (

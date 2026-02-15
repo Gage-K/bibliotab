@@ -4,7 +4,6 @@ import Header from "../components/Header";
 import PageWrapper from "../layouts/PageWrapper";
 import {
   TextTSlash,
-  Palette,
   CloudX,
   CursorClick,
 } from "@phosphor-icons/react";

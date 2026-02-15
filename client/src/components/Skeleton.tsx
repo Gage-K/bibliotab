@@ -9,10 +9,10 @@ export function SkeletonText() {
 
   return (
     <div className="animate-pulse">
-      {elements.map((element, index) => (
+      {elements.map((_element, index) => (
         <div
           key={index}
-          className={`max-w-full h-8 my-4 bg-neutral-300 dark:bg-neutral-700  rounded-sm`}></div>
+          className="max-w-full h-8 my-4 bg-neutral-300 dark:bg-neutral-700 rounded-sm"></div>
       ))}
     </div>
   );

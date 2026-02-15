@@ -1,9 +1,6 @@
 // REACT IMPORTS
 import { BrowserRouter, Routes, Route, Navigate } from "react-router";
 
-// STYLE IMPORTS
-import "./App.css";
-
 import MainTabEditor from "./components/MainTabEditor";
 import Dashboard from "./pages/Dashboard";
 import Home from "./pages/Home";

@@ -26,7 +26,7 @@ export type TuningType = [
   TuningNoteType
 ];
 
-type NoteStyleType =
+export type NoteStyleType =
   | "none"
   | "hammerOn"
   | "pullOff"
@@ -39,6 +39,16 @@ export type NoteFretType = {
   fret: number;
   style: NoteStyleType;
 };
+
+export type EditorFrameType = {
+  id: string;
+  notes: NoteFretType[];
+};
+
+export type EditorMeasureType = EditorFrameType[];
+
+export type EditorTabBodyType = EditorMeasureType[];
+
 export type FrameType = [
   NoteFretType,
   NoteFretType,
@@ -58,6 +68,13 @@ export type TabDetailsType = {
   creator: string;
   dateCreated: string;
   dateModified: string;
+  tuning: TuningType;
+};
+
+export type EditorDetailsType = {
+  id: string;
+  artist: string;
+  song: string;
   tuning: TuningType;
 };
 

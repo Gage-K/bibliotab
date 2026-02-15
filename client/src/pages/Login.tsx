@@ -3,20 +3,21 @@ import Footer from "../components/Footer";
 import PageWrapper from "../layouts/PageWrapper";
 import { Fragment, useEffect, useState, useRef } from "react";
 import { Link, useNavigate, useLocation } from "react-router";
+import { AxiosError } from "axios";
 import axios from "../api/axios";
-import useAuth from "../hooks/useAuth";
+import useTypedAuth from "../hooks/useTypedAuth";
 
-const LOGIN_URL = "/api/login";
+const LOGIN_URL = "/api/auth/login";
 
 export default function Login() {
-  const { setAuth } = useAuth();
+  const { setAuth } = useTypedAuth();
 
   const navigate = useNavigate();
   const location = useLocation();
   const from = location.state?.from?.pathname || "/";
 
-  const userRef = useRef();
-  const errRef = useRef();
+  const userRef = useRef<HTMLInputElement | null>(null);
+  const errRef = useRef<HTMLParagraphElement | null>(null);
 
   const [user, setUser] = useState("");
   const [pwd, setPwd] = useState("");
@@ -26,14 +27,14 @@ export default function Login() {
   const isFilled = user && pwd;
 
   useEffect(() => {
-    userRef.current.focus();
+    userRef.current?.focus();
   }, []);
 
   useEffect(() => {
     setErrMsg("");
   }, [user, pwd]);
 
-  async function handleSubmit(e) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     setIsLoading(true);
     e.preventDefault();
 
@@ -49,21 +50,26 @@ export default function Login() {
         }
       );
 
-      const accessToken = response.data.token;
-      setAuth({ user, pwd, accessToken });
+      const accessToken = response.data.accessToken;
+      const refreshToken = response.data.refreshToken;
+      setAuth({ user, accessToken, refreshToken });
       navigate(from, { replace: true });
       setIsLoading(false);
     } catch (err) {
-      if (!err?.response) {
-        setErrMsg("No server response.");
-      } else if (err.response?.status === 400) {
-        setErrMsg("Missing username or password");
-      } else if (err.response?.status === 401) {
-        setErrMsg("Incorrect login details");
+      if (err instanceof AxiosError) {
+        if (!err.response) {
+          setErrMsg("No server response.");
+        } else if (err.response.status === 400) {
+          setErrMsg("Missing username or password");
+        } else if (err.response.status === 401) {
+          setErrMsg("Incorrect login details");
+        } else {
+          setErrMsg("Login failed");
+        }
       } else {
         setErrMsg("Login failed");
       }
-      errRef.current.focus();
+      errRef.current?.focus();
 
       console.error(err);
       setIsLoading(false);
@@ -123,13 +129,12 @@ export default function Login() {
                 </div>
                 <button
                   disabled={!isFilled || isLoading}
-                  className={`rounded-sm py-2 ${
-                    isLoading
-                      ? `animate-pulse bg-neutral-200 rounded-sm py-2 text-neutral-500 hover:cursor-not-allowed hover:cursor-not-allowed`
-                      : isFilled
+                  className={`rounded-sm py-2 ${isLoading
+                    ? `animate-pulse bg-neutral-200 rounded-sm py-2 text-neutral-500 hover:cursor-not-allowed hover:cursor-not-allowed`
+                    : isFilled
                       ? `bg-neutral-800 dark:bg-neutral-300 rounded-sm py-2 text-neutral-50 dark:text-neutral-900 hover:bg-neutral-600 cursor-pointer`
                       : `bg-neutral-200 dark:bg-neutral-800 rounded-sm py-2 text-neutral-500 hover:cursor-not-allowed`
-                  }`}>
+                    }`}>
                   Sign in
                 </button>
               </form>

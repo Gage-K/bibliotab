@@ -9,9 +9,16 @@ CREATE TABLE IF NOT EXISTS users (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   username VARCHAR(255) UNIQUE NOT NULL,
   email VARCHAR(255) UNIQUE,
-  password_hash TEXT NOT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   last_login TIMESTAMP
+);
+
+-- Passwords table (separate for security)
+CREATE TABLE IF NOT EXISTS passwords (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  password TEXT NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Tabs table
@@ -31,6 +38,7 @@ CREATE INDEX IF NOT EXISTS idx_tabs_user_id ON tabs(user_id);
 CREATE INDEX IF NOT EXISTS idx_tabs_modified_at ON tabs(modified_at DESC);
 CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+CREATE INDEX IF NOT EXISTS idx_passwords_user_id ON passwords(user_id);
 
 -- Update modified_at trigger
 CREATE OR REPLACE FUNCTION update_modified_at()

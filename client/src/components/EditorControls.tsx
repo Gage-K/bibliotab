@@ -10,20 +10,29 @@ import {
   FloppyDisk,
   Check,
 } from "@phosphor-icons/react";
+import { useTabEditor } from "../hooks/useTabEditor";
 
-export default function EditorControls({
-  handleOpeningEditor,
-  isOpen,
-  movePrev,
-  moveNext,
-  duplicate,
-  deleteFrame,
-  insertFrame,
-  insertMeasure,
-  isEditing,
-  saveChanges,
-  isSaving,
-}) {
+export default function EditorControls() {
+  const {
+    position,
+    editorIsOpen,
+    isEditing,
+    isSaving,
+    handleOpeningEditor,
+    updatePosition,
+    addFrameAndAdvance,
+    deleteFrame,
+    addNewMeasure,
+    saveChanges,
+  } = useTabEditor();
+
+  const movePrev = () => updatePosition(position.measure, position.frame - 1);
+  const moveNext = () => updatePosition(position.measure, position.frame + 1);
+  const duplicate = () => addFrameAndAdvance(position.measure, position.frame, false);
+  const insertFrame = () => addFrameAndAdvance(position.measure, position.frame, true);
+  const insertMeasure = () => addNewMeasure(position.measure + 1);
+  const handleDeleteFrame = () => deleteFrame(position.frame, position.measure);
+
   const baseButton =
     "border border-none p-2 font-medium rounded grid place-items-center duration-150 ease-in-out";
 
@@ -38,7 +47,7 @@ export default function EditorControls({
     <div className="flex justify-between p-2 place-content-center">
       <div className="tf-editor-controls flex flex-wrap gap-3">
         <button className={editButtonStyle} onClick={handleOpeningEditor}>
-          {isOpen ? (
+          {editorIsOpen ? (
             <XCircle size={iconSize} />
           ) : (
             <PencilSimple size={iconSize} />
@@ -67,14 +76,14 @@ export default function EditorControls({
           <span className="hidden">Duplicate Frame</span>
           <Copy size={iconSize} />
         </button>
-        <button className={buttonStyles} onClick={deleteFrame}>
+        <button className={buttonStyles} onClick={handleDeleteFrame}>
           <Trash size={iconSize} />
         </button>
       </div>
       <div>
         <button
           className={`${saveButtonStyle} ${isSaving && `animate-pulse`} `}
-          onClick={saveChanges}
+          onClick={() => saveChanges()}
           disabled={!isEditing || isSaving}>
           {isEditing ? (
             <>

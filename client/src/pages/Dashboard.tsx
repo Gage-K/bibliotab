@@ -1,77 +1,34 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router";
-import { nanoid } from "nanoid";
-import axios from "../api/axios";
+import { AxiosError } from "axios";
+import useAxiosPrivate from "../hooks/useAxiosPrivate";
+import { tabService } from "../api/services/tabService";
+import { DEFAULT_TAB } from "../shared/types/consts";
 
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import PageWrapper from "../layouts/PageWrapper";
-import useAuth from "../hooks/useAuth";
-import { SkeletonLine, SkeletonText } from "../components/Skeleton";
-
-const TABS_URL = "/api/tabs";
-const DEFAULT_TAB = {
-  tabName: "Untitled",
-  tabArtist: "Untitled",
-  tuning: ["E", "B", "G", "D", "A", "E"],
-  tab: [
-    [
-      {
-        id: 1,
-        notes: [
-          {
-            fret: -2,
-            style: "none",
-          },
-          {
-            fret: -2,
-            style: "none",
-          },
-          {
-            fret: -2,
-            style: "none",
-          },
-          {
-            fret: -2,
-            style: "none",
-          },
-          {
-            fret: -2,
-            style: "none",
-          },
-          {
-            fret: -2,
-            style: "none",
-          },
-        ],
-      },
-    ],
-  ],
-};
+import { SkeletonText } from "../components/Skeleton";
+import { TabType } from "../shared/types/tab.types";
 
 export default function Dashboard() {
   const detailStyle =
     "p-3 dark:text-neutral-200 border-t border-neutral-300 dark:border-neutral-800 truncate";
   const buttonStyle =
     "w-full max-w-16 py-2 flex justify-center text-xs flex-none border border-transparent  rounded font-semibold hover:shadow-sm duration-150 ease-in-out";
-  const { auth } = useAuth();
   const navigate = useNavigate();
+  const axiosPrivate = useAxiosPrivate();
 
-  const [allTabs, setAllTabs] = useState([]);
+  const [allTabs, setAllTabs] = useState<TabType[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [isDeletingId, setIsDeletingId] = useState(null);
+  const [isDeletingId, setIsDeletingId] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
 
   async function getTabs() {
     setIsLoading(true);
     try {
-      const response = await axios.get(TABS_URL, {
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: auth.accessToken,
-        },
-      });
-      setAllTabs(response.data);
+      const response = await tabService.getAll(axiosPrivate);
+      setAllTabs(response.data.data);
       setIsLoading(false);
     } catch (err) {
       console.error(err);
@@ -95,36 +52,26 @@ export default function Dashboard() {
     setIsCreating(true);
 
     try {
-      const response = await axios.post(TABS_URL, JSON.stringify(DEFAULT_TAB), {
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: auth.accessToken,
-        },
-        withCredentials: true,
-      });
-      if (response.status === 200) {
-        const tabId = response.data.tabId;
+      const response = await tabService.create(axiosPrivate, DEFAULT_TAB);
+      if (response.status === 201) {
+        const tabId = response.data.data.id;
         setIsCreating(false);
-        navigate(`/editor/${tabId}`, { tabId: tabId });
+        navigate(`/editor/${tabId}`, { state: { tabId } });
       }
     } catch (err) {
-      console.error(err);
+      console.error("Error creating tab:", err);
+      if (err instanceof AxiosError) {
+        console.error("Error response:", err.response?.data);
+      }
       setIsCreating(false);
     }
   }
 
-  async function deleteTab(id) {
+  async function deleteTab(id: string) {
     setIsDeletingId(id);
 
     try {
-      const URL = TABS_URL + "/" + id;
-      const response = await axios.delete(URL, {
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: auth.accessToken,
-        },
-        withCredentials: true,
-      });
+      await tabService.delete(axiosPrivate, id);
       getTabs();
       setIsDeletingId(null);
     } catch (err) {
@@ -145,11 +92,10 @@ export default function Dashboard() {
             <button
               onClick={createTab}
               disabled={isCreating}
-              className={`${
-                isCreating
-                  ? "animate-pulse bg-indigo-400 hover:cursor-not-allowed"
-                  : "bg-indigo-600 hover:bg-indigo-400 hover:shadow-lg duration-150 ease-in-out hover:cursor-pointer"
-              } text-xs py-4 h-fit px-3 rounded-md text-neutral-50 font-semibold`}>
+              className={`${isCreating
+                ? "animate-pulse bg-indigo-400 hover:cursor-not-allowed"
+                : "bg-indigo-600 hover:bg-indigo-400 hover:shadow-lg duration-150 ease-in-out hover:cursor-pointer"
+                } text-xs py-4 h-fit px-3 rounded-md text-neutral-50 font-semibold`}>
               Create New Tab
             </button>
           </div>
@@ -178,11 +124,11 @@ export default function Dashboard() {
                 <tbody>
                   {allTabs.map((tab) => (
                     <tr
-                      key={nanoid()}
+                      key={tab.id}
                       className="grid grid-cols-4 text-neutral-700 font-normal">
-                      <td className={detailStyle}>{tab.tab_name}</td>
-                      <td className={detailStyle}>{tab.tab_artist}</td>
-                      <td className={detailStyle}>{tab.tuning.toReversed()}</td>
+                      <td className={detailStyle}>{tab.details.song}</td>
+                      <td className={detailStyle}>{tab.details.artist}</td>
+                      <td className={detailStyle}>{[...tab.details.tuning].reverse().join("")}</td>
                       <td className={`${detailStyle} flex flex-wrap gap-1`}>
                         <Link
                           to={`/editor/${tab.id}`}

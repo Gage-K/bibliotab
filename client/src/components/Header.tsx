@@ -1,10 +1,9 @@
 import { Link, NavLink, redirect } from "react-router";
 import PageWrapper from "../layouts/PageWrapper";
-import useAuth from "../hooks/useAuth";
-import { Circle } from "@phosphor-icons/react";
+import useTypedAuth from "../hooks/useTypedAuth";
 
 export default function Header() {
-  const { auth, setAuth } = useAuth();
+  const { auth, setAuth } = useTypedAuth();
 
   function logout() {
     setAuth({});
@@ -29,13 +28,6 @@ export default function Header() {
                 }>
                 tabs
               </NavLink>
-              {/*<NavLink
-                to="/updates"
-                className={(isActive) =>
-                  isActive.isActive ? activeStyle : linkBaseStyle
-                }>
-                updates
-              </NavLink>*/}
             </nav>
           </div>
           <div className="flex gap-4 text-neutral-500 dark:text-neutral-400 text-sm font-medium items-center">
