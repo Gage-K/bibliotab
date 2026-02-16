@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { useTabEditor } from "../hooks/useTabEditor";
+import { useTabEditor } from "../context/tabEditorProvider";
 import type { NoteFretType } from "../shared/types/tab.types";
 
 const STRINGS = [1, 2, 3, 4, 5, 6];

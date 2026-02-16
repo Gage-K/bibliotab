@@ -1,6 +1,6 @@
 import TabForm from "./TabForm";
 import EditorControls from "./EditorControls";
-import { useTabEditor } from "../hooks/useTabEditor";
+import { useTabEditor } from "../context/tabEditorProvider";
 
 export default function Editor() {
   const { editorIsOpen } = useTabEditor();

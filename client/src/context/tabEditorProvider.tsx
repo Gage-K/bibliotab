@@ -1,18 +1,6 @@
-import { createContext, useState, useEffect, useContext } from "react";
-import useAxiosPrivate from "../hooks/useAxiosPrivate";
-import { tabService } from "../api/services/tabService";
-import {
-  createEmptyFrame,
-  isExistingPosition,
-  isOnlyFrame,
-  isOnlyMeasure,
-  insertMeasure,
-  insertFrame,
-  removeMeasure,
-  removeFrame,
-  updateFrameNotes,
-  resolvePositionAfterFrameDelete,
-} from "../utils/tabOperations";
+import { createContext, useReducer, useEffect, useContext, useRef } from "react";
+import { createEmptyFrame } from "../utils/tabOperations";
+import { useTab, useUpdateTab } from "../hooks/useTabs";
 import type {
   EditorTabBodyType,
   EditorDetailsType,
@@ -21,6 +9,7 @@ import type {
   TuningType,
 } from "../shared/types/tab.types";
 import type { TabPositionType } from "../shared/types/utilities.types";
+import { tabEditorReducer, initialTabEditorState } from "./tabEditorReducer";
 
 interface TabEditorContextType {
   tab: EditorTabBodyType;
@@ -52,56 +41,39 @@ export function TabEditorProvider({
   tabId: string;
   children: React.ReactNode;
 }) {
-  const axiosPrivate = useAxiosPrivate();
+  const [state, dispatch] = useReducer(tabEditorReducer, initialTabEditorState);
+  const { tab, details, position, editorIsOpen, isEditing, isSaving } = state;
 
-  const [tab, setTab] = useState<EditorTabBodyType>([]);
-  const [details, setDetails] = useState<EditorDetailsType>({
-    id: "",
-    artist: "",
-    song: "",
-    tuning: ["E", "B", "G", "D", "A", "E"],
-  });
-  const isLoading = tab.length === 0;
-  const [position, setPosition] = useState<TabPositionType>({ measure: 0, frame: 0 });
-  const [editorIsOpen, setEditorIsOpen] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
+  const { data: serverTab, isLoading: isQueryLoading } = useTab(tabId);
+  const updateTabMutation = useUpdateTab(tabId);
+
+  const hasLoaded = useRef(false);
+  useEffect(() => {
+    if (serverTab && !hasLoaded.current) {
+      hasLoaded.current = true;
+      dispatch({
+        type: "SET_TAB_DATA",
+        payload: {
+          details: {
+            id: serverTab.id,
+            artist: serverTab.details.artist,
+            song: serverTab.details.song,
+            tuning: serverTab.details.tuning,
+          },
+          tab: serverTab.body,
+        },
+      });
+    }
+  }, [serverTab]);
+
+  const isLoading = isQueryLoading || tab.length === 0;
 
   function updateDetails(name: string, value: string | TuningType) {
-    setDetails((prev) => ({ ...prev, [name]: value }));
-    setIsEditing(true);
+    dispatch({ type: "UPDATE_DETAILS", payload: { name, value } });
   }
 
-  useEffect(() => {
-    const controller = new AbortController();
-
-    const getTab = async () => {
-      try {
-        const response = await tabService.getById(axiosPrivate, tabId, controller.signal);
-        const data = response.data.data;
-        setDetails({
-          id: data.id,
-          artist: data.details.artist,
-          song: data.details.song,
-          tuning: data.details.tuning,
-        });
-        setTab(data.body);
-      } catch (err) {
-        if (!controller.signal.aborted) {
-          console.error(err);
-        }
-      }
-    };
-
-    getTab();
-
-    return () => {
-      controller.abort();
-    };
-  }, [tabId, axiosPrivate]);
-
   async function saveChanges() {
-    setIsSaving(true);
+    dispatch({ type: "SAVE_START" });
     const data = {
       tab_name: details.song,
       tab_artist: details.artist,
@@ -109,102 +81,47 @@ export function TabEditorProvider({
       tab_data: tab,
     };
 
-    try {
-      await tabService.update(axiosPrivate, tabId, data);
-      setIsSaving(false);
-    } catch (err) {
-      console.error(err);
-      setIsSaving(false);
-    }
-
-    setIsEditing(false);
+    updateTabMutation.mutate(data, {
+      onSuccess: () => {
+        dispatch({ type: "SAVE_SUCCESS" });
+      },
+      onError: (err) => {
+        console.error(err);
+        dispatch({ type: "SAVE_FAILURE" });
+      },
+    });
   }
 
   function handleOpeningEditor() {
-    setEditorIsOpen((prev) => !prev);
+    dispatch({ type: "TOGGLE_EDITOR" });
   }
 
   function updatePosition(measure: number, frame: number) {
-    if (isExistingPosition(tab, measure, frame)) {
-      setPosition({ measure, frame });
-      return;
-    }
-
-    if (frame >= tab[measure]?.length) {
-      const nextMeasure = measure + 1;
-      if (nextMeasure < tab.length) {
-        setPosition({ measure: nextMeasure, frame: 0 });
-      }
-      return;
-    }
-
-    if (frame < 0) {
-      const prevMeasure = measure - 1;
-      if (prevMeasure >= 0) {
-        setPosition({
-          measure: prevMeasure,
-          frame: tab[prevMeasure]?.length - 1 || 0,
-        });
-      }
-      return;
-    }
+    dispatch({ type: "SET_POSITION", payload: { measure, frame } });
   }
 
   function addNewMeasure(measure: number) {
-    const newTab = insertMeasure(tab, measure);
-    setTab(newTab);
-    setPosition({ measure: measure === -1 ? 0 : measure, frame: 0 });
-    setIsEditing(true);
+    dispatch({ type: "ADD_MEASURE", payload: { measure } });
   }
 
   function addNewFrame(measure: number, frame: number, isEmpty: boolean) {
-    const newTab = insertFrame(tab, measure, frame, isEmpty);
-    setTab(newTab);
-    setIsEditing(true);
+    dispatch({ type: "ADD_FRAME", payload: { measure, frame, isEmpty } });
   }
 
   function addFrameAndAdvance(measure: number, frame: number, isEmpty: boolean) {
-    const newTab = insertFrame(tab, measure, frame, isEmpty);
-    setTab(newTab);
-    if (isExistingPosition(newTab, measure, frame + 1)) {
-      setPosition({ measure, frame: frame + 1 });
-    }
-    setIsEditing(true);
+    dispatch({ type: "ADD_FRAME_AND_ADVANCE", payload: { measure, frame, isEmpty } });
   }
 
   function deleteMeasure(measure: number) {
-    if (isOnlyMeasure(tab)) {
-      return;
-    }
-    const newTab = removeMeasure(tab, measure);
-    setTab(newTab);
-    const prevMeasure = measure - 1;
-    setPosition({
-      measure: prevMeasure,
-      frame: newTab[prevMeasure]?.length - 1 || 0,
-    });
-    setIsEditing(true);
+    dispatch({ type: "DELETE_FRAME", payload: { frame: 0, measure } });
   }
 
   function deleteFrame(frame: number, measure: number) {
-    if (isOnlyFrame(tab, measure)) {
-      if (isOnlyMeasure(tab)) {
-        return;
-      } else {
-        deleteMeasure(measure);
-        return;
-      }
-    }
-
-    const newTab = removeFrame(tab, measure, frame);
-    setTab(newTab);
-    setPosition(resolvePositionAfterFrameDelete(newTab, measure, frame));
-    setIsEditing(true);
+    dispatch({ type: "DELETE_FRAME", payload: { frame, measure } });
   }
 
   function updateTabData(measure: number, index: number, formData: NoteFretType[]) {
-    setTab(updateFrameNotes(tab, measure, index, formData));
-    setIsEditing(true);
+    dispatch({ type: "UPDATE_TAB_FRAME", payload: { measure, frame: index, formData } });
   }
 
   return (

@@ -1,5 +1,5 @@
 import { Fragment } from "react";
-import { useTabEditor } from "../hooks/useTabEditor";
+import { useTabEditor } from "../context/tabEditorProvider";
 
 export default function TabDisplay() {
   const { tab, position, updatePosition, addFrameAndAdvance, addNewMeasure } =

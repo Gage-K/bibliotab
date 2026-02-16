@@ -10,7 +10,7 @@ import {
   FloppyDisk,
   Check,
 } from "@phosphor-icons/react";
-import { useTabEditor } from "../hooks/useTabEditor";
+import { useTabEditor } from "../context/tabEditorProvider";
 
 export default function EditorControls() {
   const {

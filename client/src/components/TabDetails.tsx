@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { TuningNoteType, TuningType } from "../shared/types/tab.types";
 import { TUNING_NOTES } from "../shared/types/consts";
-import { useTabEditor } from "../hooks/useTabEditor";
+import { useTabEditor } from "../context/tabEditorProvider";
 
 const STRINGS = [1, 2, 3, 4, 5, 6];
 
