@@ -14,6 +14,7 @@ import RequireAuth from "./components/RequireAuth";
 import { AuthProvider } from "./context/authProvider";
 import AppLayout from "./layouts/AppLayout";
 import AppLayoutNoFooter from "./layouts/AppLayoutNoFooter";
+import SidebarLayout from "./layouts/SidebarLayout";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -28,22 +29,24 @@ function App() {
         <BrowserRouter>
           <AuthProvider>
             <Routes>
-              {/* Pages with Header + Footer */}
+              {/* Public pages with Header + Footer */}
               <Route element={<AppLayout />}>
                 <Route path="/" element={<Home />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
                 <Route path="/notfound" element={<NotFound />} />
-                <Route element={<RequireAuth />}>
-                  <Route path="/profile" element={<Profile />} />
-                  <Route path="/dashboard" element={<Dashboard />} />
-                </Route>
               </Route>
 
               {/* Pages with Header only (no Footer) */}
               <Route element={<AppLayoutNoFooter />}>
                 <Route path="/updates" element={<Updates />} />
-                <Route element={<RequireAuth />}>
+              </Route>
+
+              {/* Authenticated pages with sidebar */}
+              <Route element={<RequireAuth />}>
+                <Route element={<SidebarLayout />}>
+                  <Route path="/dashboard" element={<Dashboard />} />
+                  <Route path="/profile" element={<Profile />} />
                   <Route path="/editor/:tabId" element={<MainTabEditor />} />
                   <Route
                     path="/editor/*"

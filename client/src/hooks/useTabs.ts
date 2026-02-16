@@ -17,7 +17,7 @@ export function useTabs() {
   });
 }
 
-export function useTab(tabId: string) {
+export function useTab(tabId: string, options?: { enabled?: boolean }) {
   const axiosPrivate = useAxiosPrivate();
 
   return useQuery({
@@ -27,6 +27,7 @@ export function useTab(tabId: string) {
       return response.data.data;
     },
     refetchOnWindowFocus: false,
+    ...options,
   });
 }
 
@@ -71,6 +72,7 @@ export function useUpdateTab(tabId: string) {
       await tabService.update(axiosPrivate, tabId, data);
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.tabs.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.tabs.byId(tabId) });
     },
   });

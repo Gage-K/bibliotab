@@ -6,7 +6,7 @@ export default function MainTabEditor() {
   const { tabId } = useParams();
 
   return (
-    <TabEditorProvider tabId={tabId!}>
+    <TabEditorProvider key={tabId} tabId={tabId!}>
       <TabEditorLayout />
     </TabEditorProvider>
   );

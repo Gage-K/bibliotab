@@ -2,15 +2,18 @@ import { Link } from "react-router";
 import { DEFAULT_TAB } from "../shared/types/consts";
 import { useTabs, useCreateTab, useDeleteTab } from "../hooks/useTabs";
 
-import PageWrapper from "../layouts/PageWrapper";
 import { SkeletonText } from "../components/Skeleton";
+import { Button } from "../components/ui/button";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
 
 export default function Dashboard() {
-  const detailStyle =
-    "p-3 dark:text-neutral-200 border-t border-neutral-300 dark:border-neutral-800 truncate";
-  const buttonStyle =
-    "w-full max-w-16 py-2 flex justify-center text-xs flex-none border border-transparent  rounded font-semibold hover:shadow-sm duration-150 ease-in-out";
-
   const { data: allTabs = [], isLoading } = useTabs();
   const createTabMutation = useCreateTab();
   const deleteTabMutation = useDeleteTab();
@@ -27,20 +30,19 @@ export default function Dashboard() {
   }
 
   return (
-    <PageWrapper>
-      <div className="db-head-wrapper flex justify-between flex-wrap items-end">
-        <h1 className="text-5xl font-bold text-neutral-800 dark:text-neutral-200 mt-8">
-          Tabs
-        </h1>
-        <button
-          onClick={createTab}
-          disabled={isCreating}
-          className={`${isCreating
-            ? "animate-pulse bg-indigo-400 hover:cursor-not-allowed"
-            : "bg-indigo-600 hover:bg-indigo-400 hover:shadow-lg duration-150 ease-in-out hover:cursor-pointer"
-            } text-xs py-4 h-fit px-3 rounded-md text-neutral-50 font-semibold`}>
-          Create New Tab
-        </button>
+    <div className="grid gap-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-foreground">Tabs</h1>
+          <p className="text-sm text-muted-foreground">
+            Manage and edit your guitar tabs.
+          </p>
+        </div>
+        {allTabs.length > 0 && (
+          <Button onClick={createTab} disabled={isCreating}>
+            {isCreating ? "Creating..." : "Create New Tab"}
+          </Button>
+        )}
       </div>
       {isLoading ? (
         <>
@@ -48,50 +50,49 @@ export default function Dashboard() {
           <SkeletonText />
         </>
       ) : allTabs.length === 0 ? (
-        <div className="my-10 p-4 bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-sm grid place-items-center gap-y-2">
-          <h2 className="text-md dark:text-neutral-200">No current tabs</h2>
-        </div>
+        <button
+          onClick={createTab}
+          disabled={isCreating}
+          className="w-full rounded-lg py-12 border-2 border-dashed border-muted-foreground/25 hover:border-muted-foreground/50 text-muted-foreground hover:text-foreground transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-50">
+          <span className="text-lg font-medium">
+            {isCreating ? "Creating..." : "+ Create New Tab"}
+          </span>
+        </button>
       ) : (
-        <div className="border border-neutral-300 dark:border-neutral-800 rounded my-10">
-          <table className="w-full">
-            <thead className="bg-neutral-50 dark:bg-neutral-800 dark:text-neutral-200 rounded-sm">
-              <tr className="grid grid-cols-4">
-                <th className="p-3 font-semibold text-left">Title</th>
-                <th className="p-3 font-semibold text-left">Artist</th>
-                <th className="p-3 font-semibold text-left">Tuning</th>
-                <th className="p-3 font-semibold text-left hidden">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {allTabs.map((tab) => (
-                <tr
-                  key={tab.id}
-                  className="grid grid-cols-4 text-neutral-700 font-normal">
-                  <td className={detailStyle}>{tab.details.song}</td>
-                  <td className={detailStyle}>{tab.details.artist}</td>
-                  <td className={detailStyle}>{[...tab.details.tuning].reverse().join("")}</td>
-                  <td className={`${detailStyle} flex flex-wrap gap-1`}>
-                    <Link
-                      to={`/editor/${tab.id}`}
-                      className={`${buttonStyle} bg-neutral-800 text-neutral-50 hover:bg-neutral-400`}
-                      viewTransition>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Title</TableHead>
+              <TableHead>Artist</TableHead>
+              <TableHead>Tuning</TableHead>
+              <TableHead>Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {allTabs.map((tab) => (
+              <TableRow key={tab.id}>
+                <TableCell>{tab.details.song}</TableCell>
+                <TableCell>{tab.details.artist}</TableCell>
+                <TableCell>{[...tab.details.tuning].reverse().join("")}</TableCell>
+                <TableCell className="flex gap-2">
+                  <Button asChild variant="secondary" size="sm">
+                    <Link to={`/editor/${tab.id}`} viewTransition>
                       Edit
                     </Link>
-                    <button
-                      disabled={isDeletingId === tab.id}
-                      onClick={() => deleteTab(tab.id)}
-                      className={`${buttonStyle} text-neutral-500 dark:text-neutral-400 hover:bg-red-500 not-disabled:hover:text-red-50 hover:cursor-pointer disabled:bg-neutral-300 disabled:animate-pulse disabled:hover:cursor-not-allowed`}>
-                      {isDeletingId === tab.id ? "Deleting" : "Delete"}
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    disabled={isDeletingId === tab.id}
+                    onClick={() => deleteTab(tab.id)}>
+                    {isDeletingId === tab.id ? "Deleting" : "Delete"}
+                  </Button>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
       )}
-    </PageWrapper>
+    </div>
   );
 }

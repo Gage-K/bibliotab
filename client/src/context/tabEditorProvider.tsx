@@ -159,4 +159,8 @@ export function useTabEditor() {
   return context;
 }
 
+export function useOptionalTabEditor() {
+  return useContext(TabEditorContext);
+}
+
 export default TabEditorContext;
