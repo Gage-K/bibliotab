@@ -107,10 +107,10 @@ export function resolvePositionAfterFrameDelete(
   frame: number
 ): TabPositionType {
   if (isExistingPosition(tab, measure, frame)) {
-    return { measure, frame };
+    return { measure, frame, string: 0 };
   }
   if (isExistingPosition(tab, measure + 1, 0)) {
-    return { measure: measure + 1, frame: 0 };
+    return { measure: measure + 1, frame: 0, string: 0 };
   }
-  return { measure, frame: frame - 1 };
+  return { measure, frame: frame - 1, string: 0 };
 }
