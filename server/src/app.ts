@@ -18,7 +18,7 @@ const pool = new Pool({
   database: env.DB_NAME,
   password: env.DB_PASSWORD,
   port: env.DB_PORT,
-  ssl: { rejectUnauthorized: false },
+  ssl: env.NODE_ENV === "production" && env.DB_HOST !== "postgres" ? { rejectUnauthorized: false } : false,
 });
 
 // Initialize repositories
