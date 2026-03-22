@@ -32,7 +32,7 @@ export default function TabDisplay() {
             : style === "pullOff"
               ? `p${newNote}`
               : style === "slide"
-                ? `${newNote}/`
+                ? `/${newNote}`
                 : style === "harmonic"
                   ? `<${newNote}>`
                   : style === "tap"
