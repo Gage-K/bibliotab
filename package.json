@@ -1,0 +1,23 @@
+{
+  "name": "tablab-v2",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Guitar tab editor application",
+  "scripts": {
+    "dev:backend": "pnpm --filter server dev",
+    "dev:frontend": "pnpm --filter client dev",
+    "build": "pnpm --filter server build && pnpm --filter client build",
+    "db:start": "brew services start postgresql@14",
+    "db:stop": "brew services stop postgresql@14",
+    "db:status": "brew services list | grep postgres",
+    "docker:up": "docker-compose up",
+    "docker:down": "docker-compose down",
+    "docker:rebuild": "docker-compose up --build",
+    "docker:logs": "docker-compose logs -f",
+    "install:all": "pnpm install && pnpm --filter server install && pnpm --filter client install"
+  },
+  "workspaces": [
+    "server",
+    "client"
+  ]
+}

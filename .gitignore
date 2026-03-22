@@ -12,6 +12,7 @@ dist
 dist-ssr
 *.local
 todos.md
+.claude/*
 
 # Editor directories and files
 .vscode/*
@@ -23,6 +24,10 @@ todos.md
 *.njsproj
 *.sln
 *.sw?
+dist/
 
 # Secrets
 .env
+
+# Compiled JS files in shared directory (TypeScript source only)
+shared/**/*.js
