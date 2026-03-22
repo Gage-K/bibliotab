@@ -26,18 +26,18 @@ export default function TabDisplay() {
       style === "none"
         ? newNote
         : style === "hammerOn"
-        ? `h${newNote}`
-        : style === "bend"
-        ? `${newNote}b`
-        : style === "pullOff"
-        ? `p${newNote}`
-        : style === "slide"
-        ? `${newNote}/`
-        : style === "harmonic"
-        ? `<${newNote}>`
-        : style === "tap"
-        ? `${newNote}t`
-        : newNote;
+          ? `h${newNote}`
+          : style === "bend"
+            ? `${newNote}b`
+            : style === "pullOff"
+              ? `p${newNote}`
+              : style === "slide"
+                ? `${newNote}/`
+                : style === "harmonic"
+                  ? `<${newNote}>`
+                  : style === "tap"
+                    ? `${newNote}t`
+                    : newNote;
 
     return interpretedNote;
   }
@@ -72,8 +72,8 @@ export default function TabDisplay() {
                     ? "td-grid-frame-wrapper td-measure-start td-measure-end"
                     : "td-grid-frame-wrapper td-measure-end"
                   : tabChunk.frameIndex === 0
-                  ? "td-grid-frame-wrapper td-measure-start"
-                  : "td-grid-frame-wrapper"
+                    ? "td-grid-frame-wrapper td-measure-start"
+                    : "td-grid-frame-wrapper"
               }>
               {tabChunk.frameIndex === 0 && (
                 <button
@@ -83,29 +83,25 @@ export default function TabDisplay() {
                 </button>
               )}
               <button
-                aria-label={`Measure ${tabChunk.measureIndex + 1} Frame ${
-                  tabChunk.frameIndex + 1
-                }`}
-                className={`flex flex-col gap-4 justify-center w-full border border-transparent hover:border-neutral-300 rounded ${
-                  isCurrentFrame(tabChunk.measureIndex, tabChunk.frameIndex)
-                    ? "rounded-sm bg-neutral-300/20"
-                    : ""
-                } ${
-                  isInSelection(tabChunk.measureIndex, tabChunk.frameIndex, selection)
+                aria-label={`Measure ${tabChunk.measureIndex + 1} Frame ${tabChunk.frameIndex + 1
+                  }`}
+                className={`flex flex-col gap-4 justify-center w-full border border-transparent hover:border-neutral-300 rounded ${isCurrentFrame(tabChunk.measureIndex, tabChunk.frameIndex)
+                  ? "rounded-sm bg-neutral-300/20"
+                  : ""
+                  } ${isInSelection(tabChunk.measureIndex, tabChunk.frameIndex, selection)
                     ? "bg-blue-500/20"
                     : ""
-                }`}
+                  }`}
                 onClick={() =>
                   updatePosition(tabChunk.measureIndex, tabChunk.frameIndex)
                 }>
                 {tabChunk.frame.notes.map((note, noteIndex) => (
                   <p
-                    className={`td-grid-note z-2 dark:text-neutral-200 ${
-                      isCurrentFrame(tabChunk.measureIndex, tabChunk.frameIndex) &&
+                    className={`td-grid-note z-2 dark:text-neutral-200 ${isCurrentFrame(tabChunk.measureIndex, tabChunk.frameIndex) &&
                       position.string === noteIndex
-                        ? "bg-amber-400/30 rounded-sm"
-                        : ""
-                    }`}
+                      ? "bg-indigo-400/30 rounded-sm"
+                      : ""
+                      }`}
                     key={noteIndex}>
                     {interpretNote(note.fret, note.style)}
                   </p>
