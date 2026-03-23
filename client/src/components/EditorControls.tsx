@@ -1,16 +1,17 @@
 import {
-  FastForward,
-  Rewind,
-  Copy,
-  PencilSimple,
-  XCircle,
-  ColumnsPlusRight,
-  Plus,
-  Trash,
-  FloppyDisk,
-  Check,
+  FastForwardIcon,
+  RewindIcon,
+  CopyIcon,
+  PencilSimpleIcon,
+  XCircleIcon,
+  ColumnsPlusRightIcon,
+  PlusIcon,
+  TrashIcon,
+  FloppyDiskIcon,
+  CheckIcon,
 } from "@phosphor-icons/react";
 import { useTabEditor } from "../context/tabEditorProvider";
+import { KeybindDialog } from "./KeybindDialog";
 
 export default function EditorControls() {
   const {
@@ -48,51 +49,52 @@ export default function EditorControls() {
       <div className="tf-editor-controls flex flex-wrap gap-3">
         <button className={editButtonStyle} onClick={handleOpeningEditor}>
           {editorIsOpen ? (
-            <XCircle size={iconSize} />
+            <XCircleIcon size={iconSize} />
           ) : (
-            <PencilSimple size={iconSize} />
+            <PencilSimpleIcon size={iconSize} />
           )}
         </button>
 
         <button className={buttonStyles} onClick={movePrev}>
           <span className="hidden">Previous Position</span>
-          <Rewind size={iconSize} />
+          <RewindIcon size={iconSize} />
         </button>
         <button className={buttonStyles} onClick={moveNext}>
           <span className="hidden">Next Position</span>
-          <FastForward size={iconSize} />
+          <FastForwardIcon size={iconSize} />
         </button>
         <button className={buttonStyles} onClick={insertFrame}>
           <span className="hidden">New Frame</span>
-          <Plus size={iconSize} />
+          <PlusIcon size={iconSize} />
         </button>
         <button className={buttonStyles} onClick={insertMeasure}>
           <div className="flex">
             <span className="hidden">New Measure</span>
-            <ColumnsPlusRight size={iconSize} />
+            <ColumnsPlusRightIcon size={iconSize} />
           </div>
         </button>
         <button className={buttonStyles} onClick={duplicate}>
           <span className="hidden">Duplicate Frame</span>
-          <Copy size={iconSize} />
+          <CopyIcon size={iconSize} />
         </button>
         <button className={buttonStyles} onClick={handleDeleteFrame}>
-          <Trash size={iconSize} />
+          <TrashIcon size={iconSize} />
         </button>
       </div>
-      <div>
+      <div className="flex gap-2">
+        <KeybindDialog />
         <button
           className={`${saveButtonStyle} ${isSaving && `animate-pulse`} `}
           onClick={() => saveChanges()}
           disabled={!isEditing || isSaving}>
           {isEditing ? (
             <>
-              <FloppyDisk size={iconSize} />{" "}
+              <FloppyDiskIcon size={iconSize} />{" "}
               <span className="sr-only">Save changes</span>
             </>
           ) : (
             <>
-              <Check size={iconSize} />{" "}
+              <CheckIcon size={iconSize} />{" "}
               <span className="sr-only">Up to date</span>
             </>
           )}
