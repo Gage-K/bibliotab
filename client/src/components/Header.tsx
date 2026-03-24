@@ -18,7 +18,7 @@ export default function Header() {
         <div className="flex justify-between items-baseline">
           <div className="flex items-center gap-8">
             <Link to="/" className="font-semibold dark:text-neutral-300">
-              tablab
+              bibliotab
             </Link>
             <nav className="flex gap-2 text-neutral-500 dark:text-neutral-400 text-sm font-medium">
               <NavLink

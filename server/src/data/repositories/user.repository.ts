@@ -98,6 +98,19 @@ export class UserRepository {
     }
   }
 
+  async updateUsername(
+    id: string,
+    newUsername: UpdateUserDto["username"]
+  ): Promise<User | null> {
+    try {
+      const query = "UPDATE users SET username = $1 WHERE id = $2 RETURNING *";
+      const result = await this.pool.query<User>(query, [newUsername, id]);
+      return result.rows[0] ?? null;
+    } catch (error) {
+      throw new InternalServerError("Failed to update username");
+    }
+  }
+
   async updateEmail(
     id: string,
     newEmail: UpdateUserDto["email"]

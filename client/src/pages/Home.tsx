@@ -1,101 +1,82 @@
 import { Link } from "react-router";
-import PageWrapper from "../layouts/PageWrapper";
-import {
-  TextTSlash,
-  CloudX,
-  CursorClick,
-} from "@phosphor-icons/react";
+import { ArrowRight, GithubLogo } from "@phosphor-icons/react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { TabEditorProvider } from "../context/tabEditorProvider";
+import Editor from "../components/Editor";
+import TabDisplay from "../components/TabDisplay";
+import useTypedAuth from "../hooks/useTypedAuth";
+import { createEmptyFrame } from "../utils/tabOperations";
+import type { TabBodyType, EditorDetailsType } from "../shared/types/tab.types";
+
+const DEMO_TAB: TabBodyType = [
+  [createEmptyFrame(), createEmptyFrame(), createEmptyFrame(), createEmptyFrame()],
+  [createEmptyFrame(), createEmptyFrame(), createEmptyFrame(), createEmptyFrame()],
+];
+
+const DEMO_DETAILS: EditorDetailsType = {
+  id: "demo",
+  artist: "",
+  song: "Try it out",
+  tuning: ["E", "B", "G", "D", "A", "E"],
+};
 
 export default function Home() {
-  const h2Style =
-    "text-3xl font-semibold text-neutral-800 dark:text-neutral-200 my-8 py-4";
-  const cardStyle = "max-w-full grid grid-cols-[1fr_6fr] gap-2";
-  const cardText = "font-semibold dark:text-neutral-200";
+  const { auth } = useTypedAuth();
+  const isLoggedIn = !!auth.user;
 
   return (
-    <div className="text-lg">
-      <PageWrapper>
-        <div className="text-center min-h-[75vh] grid place-items-center">
-          <div className="container">
-            <h1 className="text-5xl font-bold text-neutral-800 dark:text-neutral-200 pt-8 mb-10 ">
-              Create{" "}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-indigo-600 dark:from-indigo-200 dark:to-indigo-400">
-                guitar tablature
-              </span>{" "}
-              with ease
-            </h1>
-            <p className="my-8 dark:text-neutral-200">
-              Tablab is a free web application for creating guitar tablature
-              that is minimalist and easy to use on any device.
-            </p>
-            <Link
-              to="/register"
-              className="px-4 py-2 bg-indigo-600 text-neutral-50 dark:text-neutral-200 rounded-sm hover:bg-indigo-400 duration-150 ease-in-out">
-              Sign up
-            </Link>
-          </div>
+    <div className="flex flex-col items-center px-4 py-16 gap-12">
+      <div className="max-w-lg w-full text-center space-y-6">
+        <h1 className="text-4xl font-bold tracking-tight">bibliotab</h1>
+        <p className="text-muted-foreground text-lg">
+          Free guitar tablature editor that runs in your browser.
+        </p>
+        <div className="flex justify-center gap-3">
+          {isLoggedIn ? (
+            <Button asChild size="lg">
+              <Link to="/dashboard">
+                Go to dashboard
+                <ArrowRight className="ml-2 size-4" />
+              </Link>
+            </Button>
+          ) : (
+            <>
+              <Button asChild size="lg">
+                <Link to="/register">
+                  Get started
+                  <ArrowRight className="ml-2 size-4" />
+                </Link>
+              </Button>
+              <Button asChild variant="outline" size="lg">
+                <Link to="/login">Log in</Link>
+              </Button>
+            </>
+          )}
         </div>
-      </PageWrapper>
-
-      <div className="pb-16">
-        <PageWrapper>
-          <h2 className={h2Style}>Why use tablab?</h2>
-
-          <ul className="grid grid-cols-1 md:grid-cols-2 last:col-span-full gap-8">
-            <li className={cardStyle}>
-              <CursorClick
-                size={36}
-                className="p-2 rounded-md bg-indigo-600 text-neutral-50 dark:text-neutral-200"
-              />
-              <div className="flex flex-col justify-start gap-2">
-                <p className={cardText}>User-friendly interface</p>
-                <p className="dark:text-neutral-300">
-                  Create tabs easily using a clean, minimalist design
-                </p>
-              </div>
-            </li>
-
-            <li className={cardStyle}>
-              <CloudX
-                size={36}
-                className="p-2 rounded-md bg-indigo-600 text-neutral-50"
-              />
-              <div className="flex flex-col justify-start gap-2">
-                <p className={cardText}>No installation required</p>
-                <p className="dark:text-neutral-300">
-                  Just use your browser. No need to download any apps or
-                  plugins
-                </p>
-              </div>
-            </li>
-
-            <li className={cardStyle}>
-              <TextTSlash
-                size={36}
-                className="p-2 rounded-md bg-indigo-600 text-neutral-50"
-              />
-              <div className="flex flex-col justify-start gap-2">
-                <p className={cardText}>ASCII clunkiness-free</p>
-                <p className="dark:text-neutral-300">
-                  Say goodbye to writing tabs out in plaintext
-                </p>
-              </div>
-            </li>
-          </ul>
-        </PageWrapper>
       </div>
 
-      <PageWrapper>
-        <h2 className={h2Style}>Who is tablab for?</h2>
-        <ul className="list-disc list-outside pl-4 dark:text-neutral-200">
-          <li>Guitarists who compose original music</li>
-          <li>
-            Teachers and students who need a simple way to write down songs,
-            scales, and exercises
-          </li>
-          <li>Hobbyists transcribing their favorite songs</li>
-        </ul>
-      </PageWrapper>
+      <Card className="w-full max-w-3xl">
+        <CardContent className="p-4">
+          <TabEditorProvider demoData={{ tab: DEMO_TAB, details: DEMO_DETAILS }}>
+            <Editor />
+            <TabDisplay />
+          </TabEditorProvider>
+        </CardContent>
+      </Card>
+
+      <Separator className="max-w-3xl w-full" />
+
+      <a
+        href="https://github.com/Gage-K/bibliotab/issues"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+      >
+        <GithubLogo className="size-4" />
+        Report an issue
+      </a>
     </div>
   );
 }

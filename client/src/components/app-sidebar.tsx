@@ -56,7 +56,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   <MusicNotes className="size-4" />
                 </div>
                 <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-medium">tablab</span>
+                  <span className="truncate font-medium">bibliotab</span>
                 </div>
               </Link>
             </SidebarMenuButton>

@@ -10,6 +10,7 @@ import { createAuthRouter } from "./api/routes/auth.routes";
 import { authMiddleware } from "./api/middleware/auth.middleware";
 import { errorHandler } from "./api/middleware/error.middleware";
 import { createTabRouter } from "./api/routes/tab.routes";
+import { createUserRouter } from "./api/routes/user.routes";
 
 // Create database pool
 const pool = new Pool({
@@ -42,6 +43,7 @@ app.use(
 
 // Create routes
 app.use("/api/auth", createAuthRouter(authService));
+app.use("/api/user", createUserRouter(userRepository, authService));
 app.use("/api/tabs", createTabRouter(tabService, userRepository));
 
 // Error middleware

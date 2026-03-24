@@ -19,6 +19,7 @@ export default function EditorControls() {
     editorIsOpen,
     isEditing,
     isSaving,
+    isDemo,
     handleOpeningEditor,
     updatePosition,
     addFrameAndAdvance,
@@ -83,22 +84,24 @@ export default function EditorControls() {
       </div>
       <div className="flex gap-2">
         <KeybindDialog />
-        <button
-          className={`${saveButtonStyle} ${isSaving && `animate-pulse`} `}
-          onClick={() => saveChanges()}
-          disabled={!isEditing || isSaving}>
-          {isEditing ? (
-            <>
-              <FloppyDiskIcon size={iconSize} />{" "}
-              <span className="sr-only">Save changes</span>
-            </>
-          ) : (
-            <>
-              <CheckIcon size={iconSize} />{" "}
-              <span className="sr-only">Up to date</span>
-            </>
-          )}
-        </button>
+        {!isDemo && (
+          <button
+            className={`${saveButtonStyle} ${isSaving && `animate-pulse`} `}
+            onClick={() => saveChanges()}
+            disabled={!isEditing || isSaving}>
+            {isEditing ? (
+              <>
+                <FloppyDiskIcon size={iconSize} />{" "}
+                <span className="sr-only">Save changes</span>
+              </>
+            ) : (
+              <>
+                <CheckIcon size={iconSize} />{" "}
+                <span className="sr-only">Up to date</span>
+              </>
+            )}
+          </button>
+        )}
       </div>
     </div>
   );

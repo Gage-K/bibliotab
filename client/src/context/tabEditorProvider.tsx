@@ -28,6 +28,7 @@ interface TabEditorContextType {
   editorIsOpen: boolean;
   isEditing: boolean;
   isSaving: boolean;
+  isDemo: boolean;
   updateDetails: (name: string, value: string | TuningType) => void;
   saveChanges: () => Promise<void>;
   handleOpeningEditor: () => void;
@@ -45,20 +46,26 @@ const TabEditorContext = createContext<TabEditorContextType | null>(null);
 
 export function TabEditorProvider({
   tabId,
+  demoData,
   children,
 }: {
-  tabId: string;
+  tabId?: string;
+  demoData?: { tab: TabBodyType; details: EditorDetailsType };
   children: React.ReactNode;
 }) {
+  const isDemo = !!demoData;
   const [state, dispatch] = useReducer(tabEditorReducer, initialTabEditorState);
   const { tab, details, position, selection, editorIsOpen, isEditing, isSaving } = state;
 
-  const { data: serverTab, isLoading: isQueryLoading } = useTab(tabId);
-  const updateTabMutation = useUpdateTab(tabId);
+  const { data: serverTab, isLoading: isQueryLoading } = useTab(tabId ?? "", { enabled: !isDemo && !!tabId });
+  const updateTabMutation = useUpdateTab(tabId ?? "");
 
   const hasLoaded = useRef(false);
   useEffect(() => {
-    if (serverTab && !hasLoaded.current) {
+    if (demoData && !hasLoaded.current) {
+      hasLoaded.current = true;
+      dispatch({ type: "SET_TAB_DATA", payload: demoData });
+    } else if (serverTab && !hasLoaded.current) {
       hasLoaded.current = true;
       dispatch({
         type: "SET_TAB_DATA",
@@ -73,15 +80,16 @@ export function TabEditorProvider({
         },
       });
     }
-  }, [serverTab]);
+  }, [serverTab, demoData]);
 
-  const isLoading = isQueryLoading || tab.length === 0;
+  const isLoading = isDemo ? false : isQueryLoading || tab.length === 0;
 
   function updateDetails(name: string, value: string | TuningType) {
     dispatch({ type: "UPDATE_DETAILS", payload: { name, value } });
   }
 
   async function saveChanges() {
+    if (isDemo) return;
     dispatch({ type: "SAVE_START" });
     const data = {
       tab_name: details.song,
@@ -356,6 +364,7 @@ export function TabEditorProvider({
         editorIsOpen,
         isEditing,
         isSaving,
+        isDemo,
         updateDetails,
         saveChanges,
         handleOpeningEditor,
