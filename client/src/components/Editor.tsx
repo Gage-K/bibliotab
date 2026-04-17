@@ -6,7 +6,7 @@ export default function Editor() {
   const { editorIsOpen } = useTabEditor();
 
   return (
-    <section className="sticky top-12 border border-neutral-800 px-1 md:px-3 rounded bg-neutral-800 text-neutral-50 font-medium text-xs z-10 shadow-md">
+    <section className="sticky top-12 border border-border px-1 md:px-3 rounded bg-secondary text-secondary-foreground font-medium text-xs z-10 shadow-md">
       <EditorControls />
       {editorIsOpen && <TabForm />}
     </section>

@@ -1,6 +1,6 @@
 export function SkeletonLine() {
   return (
-    <div className="max-w-lg h-16 my-8 bg-neutral-300 dark:bg-neutral-700 animate-pulse rounded-sm"></div>
+    <div className="max-w-lg h-16 my-8 bg-muted animate-pulse rounded-sm"></div>
   );
 }
 
@@ -12,7 +12,7 @@ export function SkeletonText() {
       {elements.map((_element, index) => (
         <div
           key={index}
-          className="max-w-full h-8 my-4 bg-neutral-300 dark:bg-neutral-700 rounded-sm"></div>
+          className="max-w-full h-8 my-4 bg-muted rounded-sm"></div>
       ))}
     </div>
   );

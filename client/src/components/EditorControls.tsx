@@ -36,13 +36,13 @@ export default function EditorControls() {
   const handleDeleteFrame = () => deleteFrame(position.frame, position.measure);
 
   const baseButton =
-    "border border-none p-2 font-medium rounded grid place-items-center duration-150 ease-in-out";
+    "border border-none p-2 font-medium rounded grid place-items-center duration-150 ease-in-out size-8 cursor-pointer";
 
-  const buttonStyles = `${baseButton} hover:bg-neutral-700`;
+  const buttonStyles = `${baseButton} hover:bg-foreground/10`;
   const saveButtonStyle = isEditing
     ? `${baseButton} bg-yellow-800 text-yellow-200 hover:bg-yellow-900`
-    : `${baseButton} bg-neutral-800 text-neutral-200 hover:bg-neutral-900`;
-  const editButtonStyle = `${baseButton} bg-neutral-100 text-neutral-700 hover:text-neutral-700 hover:bg-neutral-300`;
+    : `${baseButton}`;
+  const editButtonStyle = `${baseButton} bg-secondary text-secondary-foreground hover:bg-secondary/80`;
 
   const iconSize = 16;
   return (

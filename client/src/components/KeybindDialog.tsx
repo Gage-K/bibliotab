@@ -82,7 +82,7 @@ export function KeybindDialog() {
   return (
     <Sheet>
       <SheetTrigger asChild>
-        <Button variant="ghost"><KeyboardIcon /></Button>
+        <Button variant="ghost" className="hidden md:flex"><KeyboardIcon /></Button>
       </SheetTrigger>
       <SheetContent>
         <SheetHeader>

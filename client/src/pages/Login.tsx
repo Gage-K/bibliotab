@@ -4,6 +4,10 @@ import { Link, useNavigate, useLocation } from "react-router";
 import { AxiosError } from "axios";
 import axios from "../api/axios";
 import useTypedAuth from "../hooks/useTypedAuth";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
+import { Input } from "../components/ui/input";
+import { Label } from "../components/ui/label";
+import { Button } from "../components/ui/button";
 
 const LOGIN_URL = "/api/auth/login";
 
@@ -77,29 +81,29 @@ export default function Login() {
   return (
     <PageWrapper>
       <div className="flex justify-center py-16">
-        <section>
-          <div className="bg-neutral-50 dark:bg-neutral-900 p-8 rounded-sm shadow-md border border-neutral-200 dark:border-neutral-700 dark:text-neutral-200">
-            <h1 className="text-2xl font-bold mb-4">Log in</h1>
+        <Card className="w-full max-w-sm">
+          <CardHeader>
+            <CardTitle className="text-2xl">Log in</CardTitle>
+            <CardDescription>
+              Enter your credentials to access your account.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
             <p
               ref={errRef}
               className={
                 errMsg
-                  ? "flex border border-red-600 bg-red-50 text-red-600 px-2 py-1 rounded-sm"
+                  ? "mb-4 rounded-md border border-destructive bg-destructive/10 px-3 py-2 text-sm text-destructive"
                   : "hidden"
               }
               aria-live="assertive">
               {errMsg}
             </p>
             <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-              <div>
-                <label
-                  htmlFor="username"
-                  className="flex dark:text-neutral-300">
-                  Username:
-                </label>
-                <input
+              <div className="grid gap-2">
+                <Label htmlFor="username">Username</Label>
+                <Input
                   type="text"
-                  className="border border-neutral-300 dark:border-neutral-700 rounded-sm px-2 py-1"
                   id="username"
                   ref={userRef}
                   autoComplete="off"
@@ -108,42 +112,31 @@ export default function Login() {
                   required
                 />
               </div>
-              <div>
-                <label
-                  htmlFor="password"
-                  className="flex dark:text-neutral-300">
-                  Password:
-                </label>
-                <input
+              <div className="grid gap-2">
+                <Label htmlFor="password">Password</Label>
+                <Input
                   type="password"
-                  className="border border-neutral-300 dark:border-neutral-700 rounded-sm px-2 py-1"
                   id="password"
                   onChange={(e) => setPwd(e.target.value)}
                   value={pwd}
                   required
                 />
               </div>
-              <button
-                disabled={!isFilled || isLoading}
-                className={`rounded-sm py-2 ${isLoading
-                  ? `animate-pulse bg-neutral-200 rounded-sm py-2 text-neutral-500 hover:cursor-not-allowed hover:cursor-not-allowed`
-                  : isFilled
-                    ? `bg-neutral-800 dark:bg-neutral-300 rounded-sm py-2 text-neutral-50 dark:text-neutral-900 hover:bg-neutral-600 cursor-pointer`
-                    : `bg-neutral-200 dark:bg-neutral-800 rounded-sm py-2 text-neutral-500 hover:cursor-not-allowed`
-                  }`}>
-                Sign in
-              </button>
+              <Button
+                type="submit"
+                className="w-full"
+                disabled={!isFilled || isLoading}>
+                {isLoading ? "Signing in..." : "Sign in"}
+              </Button>
             </form>
-            <p className="my-2 text-md text-neutral-700 dark:text-neutral-400">
+            <p className="mt-4 text-center text-sm text-muted-foreground">
               Don't have an account?{" "}
-              <Link
-                to="/register"
-                className="font-medium underline hover:text-neutral-500">
+              <Link to="/register" className="text-primary underline underline-offset-4 hover:text-primary/80">
                 Sign up
               </Link>
             </p>
-          </div>
-        </section>
+          </CardContent>
+        </Card>
       </div>
     </PageWrapper>
   );

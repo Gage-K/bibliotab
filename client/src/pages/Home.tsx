@@ -1,5 +1,5 @@
 import { Link } from "react-router";
-import { ArrowRight, GithubLogo } from "@phosphor-icons/react";
+import { ArrowRightIcon, GithubLogoIcon } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -35,10 +35,10 @@ export default function Home() {
         </p>
         <div className="flex justify-center gap-3">
           {isLoggedIn ? (
-            <Button asChild size="lg">
+            <Button asChild size="lg" className="bg-blue text-blue-foreground hover:bg-blue/90">
               <Link to="/dashboard">
                 Go to dashboard
-                <ArrowRight className="ml-2 size-4" />
+                <ArrowRightIcon className="ml-2 size-4" />
               </Link>
             </Button>
           ) : (
@@ -46,7 +46,7 @@ export default function Home() {
               <Button asChild size="lg">
                 <Link to="/register">
                   Get started
-                  <ArrowRight className="ml-2 size-4" />
+                  <ArrowRightIcon className="ml-2 size-4" />
                 </Link>
               </Button>
               <Button asChild variant="outline" size="lg">
@@ -74,7 +74,7 @@ export default function Home() {
         rel="noopener noreferrer"
         className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
       >
-        <GithubLogo className="size-4" />
+        <GithubLogoIcon className="size-4" />
         Report an issue
       </a>
     </div>

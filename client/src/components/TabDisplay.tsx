@@ -2,18 +2,42 @@ import { Fragment } from "react";
 import { useTabEditor } from "../context/tabEditorProvider";
 import type { TabSelectionType } from "../shared/types/utilities.types";
 
+function selectionBounds(selection: TabSelectionType): { start: number; end: number } | null {
+  if (!selection) return null;
+  const { anchor, head } = selection;
+  const flatten = (m: number, f: number) => m * 10000 + f;
+  return {
+    start: Math.min(flatten(anchor.measure, anchor.frame), flatten(head.measure, head.frame)),
+    end: Math.max(flatten(anchor.measure, anchor.frame), flatten(head.measure, head.frame)),
+  };
+}
+
 function isInSelection(
   measureIndex: number,
   frameIndex: number,
   selection: TabSelectionType
 ): boolean {
-  if (!selection) return false;
-  const { anchor, head } = selection;
-  const flatten = (m: number, f: number) => m * 10000 + f;
-  const pos = flatten(measureIndex, frameIndex);
-  const start = Math.min(flatten(anchor.measure, anchor.frame), flatten(head.measure, head.frame));
-  const end = Math.max(flatten(anchor.measure, anchor.frame), flatten(head.measure, head.frame));
-  return pos >= start && pos <= end;
+  const bounds = selectionBounds(selection);
+  if (!bounds) return false;
+  const pos = measureIndex * 10000 + frameIndex;
+  return pos >= bounds.start && pos <= bounds.end;
+}
+
+function selectionRounding(
+  measureIndex: number,
+  frameIndex: number,
+  selection: TabSelectionType
+): string {
+  const bounds = selectionBounds(selection);
+  if (!bounds) return "rounded";
+  const pos = measureIndex * 10000 + frameIndex;
+  if (pos < bounds.start || pos > bounds.end) return "rounded";
+  const isStart = pos === bounds.start;
+  const isEnd = pos === bounds.end;
+  if (isStart && isEnd) return "rounded-sm";
+  if (isStart) return "rounded-l-sm rounded-r-none";
+  if (isEnd) return "rounded-r-sm rounded-l-none";
+  return "rounded-none";
 }
 
 export default function TabDisplay() {
@@ -85,11 +109,11 @@ export default function TabDisplay() {
               <button
                 aria-label={`Measure ${tabChunk.measureIndex + 1} Frame ${tabChunk.frameIndex + 1
                   }`}
-                className={`flex flex-col gap-4 justify-center w-full border border-transparent hover:border-neutral-300 rounded ${isCurrentFrame(tabChunk.measureIndex, tabChunk.frameIndex)
-                  ? "rounded-sm bg-neutral-300/20"
+                className={`flex flex-col gap-4 justify-center w-full border border-transparent hover:border-border ${selectionRounding(tabChunk.measureIndex, tabChunk.frameIndex, selection)} ${isCurrentFrame(tabChunk.measureIndex, tabChunk.frameIndex)
+                  ? "bg-accent"
                   : ""
                   } ${isInSelection(tabChunk.measureIndex, tabChunk.frameIndex, selection)
-                    ? "bg-blue-500/20"
+                    ? "bg-primary/20"
                     : ""
                   }`}
                 onClick={() =>
@@ -97,9 +121,9 @@ export default function TabDisplay() {
                 }>
                 {tabChunk.frame.notes.map((note, noteIndex) => (
                   <p
-                    className={`td-grid-note z-2 dark:text-neutral-200 ${isCurrentFrame(tabChunk.measureIndex, tabChunk.frameIndex) &&
+                    className={`td-grid-note z-2 text-foreground ${isCurrentFrame(tabChunk.measureIndex, tabChunk.frameIndex) &&
                       position.string === noteIndex
-                      ? "bg-indigo-400/30 rounded-sm"
+                      ? "bg-primary/20 rounded-sm"
                       : ""
                       }`}
                     key={noteIndex}>

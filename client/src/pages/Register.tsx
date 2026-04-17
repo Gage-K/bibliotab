@@ -5,6 +5,10 @@ import { Link, useNavigate, useLocation } from "react-router";
 import axios from "../api/axios";
 import { AxiosError } from "axios";
 import useTypedAuth from "../hooks/useTypedAuth";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
+import { Input } from "../components/ui/input";
+import { Label } from "../components/ui/label";
+import { Button } from "../components/ui/button";
 
 const USER_REGEX = /^[A-z][A-z0-9-_]{3,23}$/;
 const PWD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#$%]).{8,24}$/;
@@ -98,47 +102,45 @@ export default function Register() {
     }
   }
 
+  const canSubmit = validName && validPwd && validMatch;
+
   return (
     <PageWrapper>
       <div className="flex justify-center py-16">
-        <section>
-          <div className="bg-neutral-50 dark:bg-neutral-900 p-8 rounded-sm shadow-md border border-neutral-200 dark:border-neutral-700">
-            <h1 className="text-2xl font-bold mb-4 dark:text-neutral-200">
-              Register
-            </h1>
+        <Card className="w-full max-w-sm">
+          <CardHeader>
+            <CardTitle className="text-2xl">Register</CardTitle>
+            <CardDescription>
+              Create an account to get started.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
             <p
               ref={errRef}
               className={
                 errMsg
-                  ? "flex border border-red-600 bg-red-50 text-red-600 px-2 py-1 mb-2 rounded-sm"
+                  ? "mb-4 rounded-md border border-destructive bg-destructive/10 px-3 py-2 text-sm text-destructive"
                   : "hidden"
               }
               aria-live="assertive">
               {errMsg}
             </p>
-            <form
-              onSubmit={handleSubmit}
-              className="flex flex-col gap-4 dark:text-neutral-300">
-              <div>
-                <label htmlFor="username" className="flex items-center gap-2">
+            <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="username" className="flex items-center gap-2">
                   Username
                   <Check
                     size={16}
-                    className={
-                      validName ? "valid text-emerald-600" : "hidden"
-                    }
+                    className={validName ? "text-emerald-600" : "hidden"}
                   />
                   <X
                     size={16}
-                    className={
-                      validName || !user ? "hidden" : "invalid text-red-600"
-                    }
+                    className={validName || !user ? "hidden" : "text-destructive"}
                   />
-                </label>
-                <input
+                </Label>
+                <Input
                   type="text"
                   id="username"
-                  className="border border-neutral-300 rounded-sm px-2 py-1 dark:border-neutral-700"
                   ref={userRef}
                   autoComplete="off"
                   onChange={(e) => setUser(e.target.value)}
@@ -148,40 +150,33 @@ export default function Register() {
                   onFocus={() => setUserFocus(true)}
                   onBlur={() => setUserFocus(false)}
                 />
-                <div className="max-w-58 text-sm text-neutral-600 mt-2">
-                  <p
-                    id="uidnote"
-                    className={
-                      userFocus && user && !validName
-                        ? "instructions dark:text-neutral-400"
-                        : "hidden"
-                    }>
-                    4 to 24 characters.
-                    <br />
-                    Must begin with a letter.
-                    <br />
-                    Letters, numbers, underscores, hyphens allowed.
-                  </p>
-                </div>
+                <p
+                  id="uidnote"
+                  className={
+                    userFocus && user && !validName
+                      ? "text-sm text-muted-foreground"
+                      : "hidden"
+                  }>
+                  4 to 24 characters. Must begin with a letter.
+                  <br />
+                  Letters, numbers, underscores, hyphens allowed.
+                </p>
               </div>
 
-              <div>
-                <label htmlFor="password" className="flex items-center">
-                  Password:
+              <div className="grid gap-2">
+                <Label htmlFor="password" className="flex items-center gap-2">
+                  Password
                   <Check
                     size={16}
-                    className={validPwd ? "valid text-emerald-600" : "hidden"}
+                    className={validPwd ? "text-emerald-600" : "hidden"}
                   />
                   <X
                     size={16}
-                    className={
-                      validPwd || !pwd ? "hidden" : "invalid text-red-600"
-                    }
+                    className={validPwd || !pwd ? "hidden" : "text-destructive"}
                   />
-                </label>
-                <input
+                </Label>
+                <Input
                   type="password"
-                  className="border border-neutral-300 rounded-sm px-2 py-1 dark:border-neutral-700"
                   id="password"
                   onChange={(e) => setPwd(e.target.value)}
                   value={pwd}
@@ -191,52 +186,39 @@ export default function Register() {
                   onFocus={() => setPwdFocus(true)}
                   onBlur={() => setPwdFocus(false)}
                 />
-                <div className="max-w-58 text-sm text-neutral-600 mt-2">
-                  <p
-                    id="pwdnote"
-                    className={
-                      pwdFocus && !validPwd
-                        ? "instructions dark:text-neutral-400"
-                        : "hidden"
-                    }>
-                    8 to 24 characters.
-                    <br />
-                    Must include uppercase and lowercase letters, a number and
-                    a special character.
-                    <br />
-                    Allowed special characters:{" "}
-                    <span aria-label="exclamation mark">!</span>{" "}
-                    <span aria-label="at symbol">@</span>{" "}
-                    <span aria-label="hashtag">#</span>{" "}
-                    <span aria-label="dollar sign">$</span>{" "}
-                    <span aria-label="percent">%</span>
-                  </p>
-                </div>
+                <p
+                  id="pwdnote"
+                  className={
+                    pwdFocus && !validPwd
+                      ? "text-sm text-muted-foreground"
+                      : "hidden"
+                  }>
+                  8 to 24 characters. Must include uppercase and lowercase
+                  letters, a number and a special character.
+                  <br />
+                  Allowed special characters:{" "}
+                  <span aria-label="exclamation mark">!</span>{" "}
+                  <span aria-label="at symbol">@</span>{" "}
+                  <span aria-label="hashtag">#</span>{" "}
+                  <span aria-label="dollar sign">$</span>{" "}
+                  <span aria-label="percent">%</span>
+                </p>
               </div>
 
-              <div>
-                <label htmlFor="confirm_pwd" className="flex">
-                  Confirm Password:
+              <div className="grid gap-2">
+                <Label htmlFor="confirm_pwd" className="flex items-center gap-2">
+                  Confirm Password
                   <Check
                     size={16}
-                    className={
-                      validMatch && matchPwd
-                        ? "valid text-emerald-600"
-                        : "hidden"
-                    }
+                    className={validMatch && matchPwd ? "text-emerald-600" : "hidden"}
                   />
                   <X
                     size={16}
-                    className={
-                      validMatch || !matchPwd
-                        ? "hidden"
-                        : "invalid text-red-600"
-                    }
+                    className={validMatch || !matchPwd ? "hidden" : "text-destructive"}
                   />
-                </label>
-                <input
+                </Label>
+                <Input
                   type="password"
-                  className="border border-neutral-300 rounded-sm px-2 py-1 dark:border-neutral-700"
                   id="confirm_pwd"
                   onChange={(e) => setMatchPwd(e.target.value)}
                   value={matchPwd}
@@ -246,42 +228,32 @@ export default function Register() {
                   onFocus={() => setMatchFocus(true)}
                   onBlur={() => setMatchFocus(false)}
                 />
-                <div className="max-w-58 text-sm text-neutral-600 mt-2">
-                  <p
-                    id="confirmnote"
-                    className={
-                      matchFocus && !validMatch
-                        ? "instructions dark:text-neutral-400"
-                        : "hidden"
-                    }>
-                    Must match the first password input field.
-                  </p>
-                </div>
+                <p
+                  id="confirmnote"
+                  className={
+                    matchFocus && !validMatch
+                      ? "text-sm text-muted-foreground"
+                      : "hidden"
+                  }>
+                  Must match the first password input field.
+                </p>
               </div>
 
-              <button
-                className={`rounded-sm py-2 ${isLoading
-                  ? `animate-pulse bg-neutral-200 rounded-sm py-2 text-neutral-500 hover:cursor-not-allowed hover:cursor-not-allowed`
-                  : !validName || !validPwd || !validMatch
-                    ? "bg-neutral-200 dark:bg-neutral-800 rounded-sm py-2 text-neutral-500 hover:cursor-not-allowed"
-                    : "bg-neutral-800 dark:bg-neutral-300 rounded-sm py-2 text-neutral-50 dark:text-neutral-900 hover:bg-neutral-600 cursor-pointer"
-                  }`}
-                disabled={
-                  !validName || !validPwd || !validMatch ? true : false
-                }>
-                Sign up
-              </button>
+              <Button
+                type="submit"
+                className="w-full"
+                disabled={!canSubmit || isLoading}>
+                {isLoading ? "Signing up..." : "Sign up"}
+              </Button>
             </form>
-            <p className="my-2 text-md text-neutral-700 dark:text-neutral-400">
+            <p className="mt-4 text-center text-sm text-muted-foreground">
               Already registered?{" "}
-              <Link
-                to="/login"
-                className="font-medium underline hover:text-neutral-500">
+              <Link to="/login" className="text-primary underline underline-offset-4 hover:text-primary/80">
                 Log in
               </Link>
             </p>
-          </div>
-        </section>
+          </CardContent>
+        </Card>
       </div>
     </PageWrapper>
   );

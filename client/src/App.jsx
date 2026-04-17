@@ -27,7 +27,7 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider defaultTheme="system" storageKey="pinniped-theme">
-        <div className="bg-neutral-50 dark:bg-neutral-900 w-full">
+        <div className="bg-background text-foreground w-full">
           <BrowserRouter>
             <AuthProvider>
               <Routes>
