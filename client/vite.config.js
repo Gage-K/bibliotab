@@ -2,7 +2,7 @@ import { defineConfig } from "vite";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 
-import path from "path"
+import path from "path";
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), tailwindcss()],
@@ -12,7 +12,11 @@ export default defineConfig({
     },
   },
   server: {
-    host: true, // Listen on all interfaces (0.0.0.0) - needed for Docker
+    host: true,
     port: 5173,
+    watch: {
+      usePolling: true,
+      interval: 100,
+    },
   },
 });
