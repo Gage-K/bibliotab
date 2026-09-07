@@ -1,6 +1,8 @@
 import { useState, useEffect, useMemo } from "react";
 import { useTabEditor } from "../context/tabEditorProvider";
 import type { NoteFretType } from "../shared/types/tab.types";
+import { chordNameForFrame } from "../utils/chords";
+import { noteNamesForFrame } from "../utils/pitch";
 import { Input } from "@/components/ui/input";
 import { Toggle } from "@/components/ui/toggle";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -17,7 +19,8 @@ const STYLES: { value: NoteFretType["style"]; label: string }[] = [
 ];
 
 export default function TabForm() {
-  const { tab, position, updateTabData, getEmptyFrame } = useTabEditor();
+  const { tab, position, details, updateTabData, getEmptyFrame } =
+    useTabEditor();
 
   const currentNotes = useMemo(
     () => tab[position.measure][position.frame]?.notes,
@@ -29,6 +32,15 @@ export default function TabForm() {
   useEffect(() => {
     setFormData(currentNotes);
   }, [currentNotes]);
+
+  const chord = useMemo(
+    () => chordNameForFrame(formData, details.tuning),
+    [formData, details.tuning],
+  );
+  const noteNames = useMemo(
+    () => noteNamesForFrame(formData, details.tuning),
+    [formData, details.tuning],
+  );
 
   function updateFret(value: string, string: number) {
     const parsed = parseInt(value);
@@ -79,6 +91,12 @@ export default function TabForm() {
   return (
     <form className="my-4" onSubmit={saveFormData}>
       <hr className="border-border mb-3" />
+      <div className="flex items-center justify-between mb-3 px-1">
+        <span className="text-xs font-medium text-muted-foreground">Chord</span>
+        <span className="text-sm font-semibold tabular-nums">
+          {chord ?? "—"}
+        </span>
+      </div>
       <div className="flex flex-col gap-0.5 mb-3">
         {STRINGS.toReversed().map((string) => {
           const note = formData[string - 1];
@@ -93,6 +111,9 @@ export default function TabForm() {
             >
               <span className="text-xs font-medium text-muted-foreground w-14 shrink-0">
                 String {string}
+              </span>
+              <span className="text-xs font-semibold text-foreground/70 w-6 shrink-0 text-center tabular-nums">
+                {noteNames[string - 1] ?? ""}
               </span>
               <Input
                 type="number"
