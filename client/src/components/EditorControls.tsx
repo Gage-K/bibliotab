@@ -14,6 +14,7 @@ import {
 } from "@phosphor-icons/react";
 import { useTabEditor } from "../context/tabEditorProvider";
 import { KeybindDialog } from "./KeybindDialog";
+import PlaybackControls from "./PlaybackControls";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -171,7 +172,8 @@ export default function EditorControls() {
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-      <div className="flex gap-2">
+      <div className="flex items-center gap-2">
+        <PlaybackControls buttonClassName={buttonStyles} iconSize={iconSize} />
         <KeybindDialog />
         {!isDemo && (
           <button
