@@ -6,6 +6,7 @@ import MainTabEditor from "./components/MainTabEditor";
 import Dashboard from "./pages/Dashboard";
 import Home from "./pages/Home";
 import NotFound from "./pages/NotFound";
+import Orchid from "./pages/Orchid";
 import Updates from "./pages/Updates";
 import Login from "./pages/Login";
 import Profile from "./pages/Profile";
@@ -42,6 +43,8 @@ function App() {
                 {/* Pages with Header only (no Footer) */}
                 <Route element={<AppLayoutNoFooter />}>
                   <Route path="/updates" element={<Updates />} />
+                  {/* Standalone play surface — no tab context needed. */}
+                  <Route path="/orchid" element={<Orchid />} />
                 </Route>
 
                 {/* Authenticated pages with sidebar */}

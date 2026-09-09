@@ -6,6 +6,7 @@ import { chordNameForFrame } from "../utils/chords";
 import { noteNamesForFrame } from "../utils/pitch";
 import { NOTE_VALUES } from "../shared/types/consts";
 import { frameDuration } from "../utils/tabOperations";
+import ChordInserter from "./ChordInserter";
 import { Input } from "@/components/ui/input";
 import { Toggle } from "@/components/ui/toggle";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -123,6 +124,8 @@ export default function TabForm() {
           {chord ?? "—"}
         </span>
       </div>
+
+      <ChordInserter />
 
       <div className="flex items-center gap-2 mb-3 px-1">
         <span className="text-xs font-medium text-muted-foreground shrink-0">
