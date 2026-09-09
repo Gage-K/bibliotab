@@ -50,24 +50,41 @@ export type TabBodyType = {
   sections: SectionType[];
 };
 
+// Tuning lives on the track, not here — each instrument tunes independently.
 export type TabDetailsType = {
   song: string;
   artist: string;
   creator: string;
   dateCreated: string;
   dateModified: string;
-  tuning: TuningType;
 };
 
 export type EditorDetailsType = {
   id: string;
   artist: string;
   song: string;
+};
+
+/**
+ * One instrument's part. A tab is a list of these; a plain guitar tab is a tab with a
+ * single track. Mirrors TrackType in shared/types/tab.types.ts.
+ */
+export type TrackType = {
+  id: string;
+  name: string;
+  instrument: string;
   tuning: TuningType;
+  /** Octave of each open string, parallel to `tuning`. Playback needs absolute pitch. */
+  octaves: number[];
+  body: TabBodyType;
+};
+
+export type TabTracksType = {
+  tracks: TrackType[];
 };
 
 export type TabType = {
   id: IdType;
   details: TabDetailsType;
-  body: TabBodyType;
+  tracks: TrackType[];
 };

@@ -18,8 +18,10 @@ const STYLES: { value: NoteFretType["style"]; label: string }[] = [
 ];
 
 export default function TabForm() {
-  const { tab, position, details, stringCount, updateTabData, getEmptyFrame } =
+  const { tab, position, track, stringCount, updateTabData, getEmptyFrame } =
     useTabEditor();
+
+  const tuning = track?.tuning ?? [];
 
   // String 1 is the highest-pitched (tuning index 0); rows render lowest-first.
   const strings = useMemo(
@@ -41,12 +43,12 @@ export default function TabForm() {
   }, [currentNotes]);
 
   const chord = useMemo(
-    () => chordNameForFrame(formData, details.tuning),
-    [formData, details.tuning],
+    () => chordNameForFrame(formData, tuning),
+    [formData, tuning],
   );
   const noteNames = useMemo(
-    () => noteNamesForFrame(formData, details.tuning),
-    [formData, details.tuning],
+    () => noteNamesForFrame(formData, tuning),
+    [formData, tuning],
   );
 
   function updateFret(value: string, string: number) {

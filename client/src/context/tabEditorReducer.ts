@@ -1,5 +1,6 @@
 import type {
   TabBodyType,
+  TrackType,
   EditorDetailsType,
   NoteFretType,
   NoteStyleType,
@@ -26,10 +27,17 @@ import {
   resolveMoveTarget,
   resizeFrames,
 } from "../utils/tabOperations";
-import { STANDARD_TUNINGS } from "../shared/types/consts";
+import {
+  createTrack,
+  reconcileOctaves,
+  trackStringCount,
+} from "../utils/trackOperations";
+import { MAX_TRACKS } from "../shared/types/consts";
 
 export interface TabEditorState {
-  tab: TabBodyType;
+  tracks: TrackType[];
+  /** Index into `tracks` — every edit applies to this one. */
+  activeTrack: number;
   details: EditorDetailsType;
   position: TabPositionType;
   selection: TabSelectionType;
@@ -39,8 +47,9 @@ export interface TabEditorState {
 }
 
 export const initialTabEditorState: TabEditorState = {
-  tab: { sections: [] },
-  details: { id: "", artist: "", song: "", tuning: STANDARD_TUNINGS.standard },
+  tracks: [],
+  activeTrack: 0,
+  details: { id: "", artist: "", song: "" },
   position: { section: 0, measure: 0, frame: 0, string: 0 },
   selection: null,
   editorIsOpen: false,
@@ -49,8 +58,8 @@ export const initialTabEditorState: TabEditorState = {
 };
 
 export type TabEditorAction =
-  | { type: "SET_TAB_DATA"; payload: { tab: TabBodyType; details: EditorDetailsType } }
-  | { type: "UPDATE_DETAILS"; payload: { name: string; value: string | TuningType } }
+  | { type: "SET_TAB_DATA"; payload: { tracks: TrackType[]; details: EditorDetailsType } }
+  | { type: "UPDATE_DETAILS"; payload: { name: string; value: string } }
   | { type: "UPDATE_TAB_FRAME"; payload: { section: number; measure: number; frame: number; formData: NoteFretType[] } }
   | { type: "ADD_MEASURE"; payload: { section: number; measure: number } }
   | { type: "ADD_FRAME"; payload: { section: number; measure: number; frame: number; isEmpty: boolean } }
@@ -71,14 +80,74 @@ export type TabEditorAction =
         to: { section: number; measure: number };
       };
     }
+  | { type: "SET_ACTIVE_TRACK"; payload: { index: number } }
+  | {
+      type: "ADD_TRACK";
+      payload: { name: string; instrument: string; tuning: TuningType; octaves?: number[] };
+    }
+  | { type: "REMOVE_TRACK"; payload: { index: number } }
+  | { type: "RENAME_TRACK"; payload: { index: number; name: string } }
+  | {
+      type: "SET_TRACK_TUNING";
+      payload: {
+        index: number;
+        tuning: TuningType;
+        instrument?: string;
+        octaves?: number[];
+      };
+    }
   | { type: "TOGGLE_EDITOR" }
   | { type: "SAVE_START" }
   | { type: "SAVE_SUCCESS" }
   | { type: "SAVE_FAILURE" };
 
-/** String count for the tab being edited — the tuning is the source of truth. */
+// ============================================================================
+// Active-track accessors
+//
+// Every edit below goes through these rather than indexing
+// tracks[activeTrack].body.sections[...] by hand: the path is long enough that
+// repeating it invites drift, and bounds-checking belongs in one place.
+// ============================================================================
+
+const EMPTY_BODY: TabBodyType = { sections: [] };
+
+export function activeTrack(state: TabEditorState): TrackType | undefined {
+  return state.tracks[state.activeTrack];
+}
+
+/** The body being edited. Empty (not undefined) before the tab loads. */
+export function activeBody(state: TabEditorState): TabBodyType {
+  return activeTrack(state)?.body ?? EMPTY_BODY;
+}
+
+/** String count of the track being edited — its tuning is the source of truth. */
 function stringCount(state: TabEditorState): number {
-  return state.details.tuning.length;
+  return trackStringCount(activeTrack(state));
+}
+
+/** Replaces the active track's body, leaving every other track identical. */
+function withBody(state: TabEditorState, body: TabBodyType): TabEditorState {
+  return {
+    ...state,
+    tracks: state.tracks.map((track, i) =>
+      i === state.activeTrack ? { ...track, body } : track
+    ),
+  };
+}
+
+/** Patches one track by index. */
+function patchTrack(
+  state: TabEditorState,
+  index: number,
+  patch: Partial<TrackType>
+): TabEditorState {
+  if (!state.tracks[index]) return state;
+  return {
+    ...state,
+    tracks: state.tracks.map((track, i) =>
+      i === index ? { ...track, ...patch } : track
+    ),
+  };
 }
 
 export function tabEditorReducer(state: TabEditorState, action: TabEditorAction): TabEditorState {
@@ -86,53 +155,41 @@ export function tabEditorReducer(state: TabEditorState, action: TabEditorAction)
     case "SET_TAB_DATA":
       return {
         ...state,
-        tab: action.payload.tab,
+        tracks: action.payload.tracks,
+        activeTrack: 0,
         details: action.payload.details,
+        position: { section: 0, measure: 0, frame: 0, string: 0 },
+        selection: null,
       };
 
-    case "UPDATE_DETAILS": {
-      const { name, value } = action.payload;
-      const details = { ...state.details, [name]: value };
-
-      // Switching to an instrument with a different string count has to reshape every
-      // frame, or the notes array and the tuning disagree about how many rows exist.
-      if (name === "tuning" && Array.isArray(value)) {
-        const newStringCount = value.length;
-        return {
-          ...state,
-          details,
-          tab: resizeFrames(state.tab, newStringCount),
-          position: {
-            ...state.position,
-            string: Math.min(state.position.string, newStringCount - 1),
-          },
-          selection: null,
-          isEditing: true,
-        };
-      }
-
-      return { ...state, details, isEditing: true };
-    }
+    case "UPDATE_DETAILS":
+      // Song and artist only — tuning belongs to a track (see SET_TRACK_TUNING).
+      return {
+        ...state,
+        details: { ...state.details, [action.payload.name]: action.payload.value },
+        isEditing: true,
+      };
 
     case "UPDATE_TAB_FRAME":
       return {
-        ...state,
-        tab: updateFrameNotes(
-          state.tab,
+        ...withBody(
+          state,
+          updateFrameNotes(
+            activeBody(state),
           action.payload.section,
           action.payload.measure,
-          action.payload.frame,
-          action.payload.formData
+            action.payload.frame,
+            action.payload.formData
+          )
         ),
         isEditing: true,
       };
 
     case "ADD_MEASURE": {
       const { section, measure } = action.payload;
-      const newTab = insertMeasure(state.tab, section, measure, stringCount(state));
+      const newTab = insertMeasure(activeBody(state), section, measure, stringCount(state));
       return {
-        ...state,
-        tab: newTab,
+        ...withBody(state, newTab),
         position: { section, measure: measure === -1 ? 0 : measure, frame: 0, string: 0 },
         isEditing: true,
       };
@@ -141,8 +198,10 @@ export function tabEditorReducer(state: TabEditorState, action: TabEditorAction)
     case "ADD_FRAME": {
       const { section, measure, frame, isEmpty } = action.payload;
       return {
-        ...state,
-        tab: insertFrame(state.tab, section, measure, frame, isEmpty, stringCount(state)),
+        ...withBody(
+          state,
+          insertFrame(activeBody(state), section, measure, frame, isEmpty, stringCount(state))
+        ),
         isEditing: true,
       };
     }
@@ -150,7 +209,7 @@ export function tabEditorReducer(state: TabEditorState, action: TabEditorAction)
     case "ADD_FRAME_AND_ADVANCE": {
       const { section, measure, frame, isEmpty } = action.payload;
       const newTab = insertFrame(
-        state.tab,
+        activeBody(state),
         section,
         measure,
         frame,
@@ -161,8 +220,7 @@ export function tabEditorReducer(state: TabEditorState, action: TabEditorAction)
         ? { section, measure, frame: frame + 1, string: state.position.string }
         : state.position;
       return {
-        ...state,
-        tab: newTab,
+        ...withBody(state, newTab),
         position: newPosition,
         isEditing: true,
       };
@@ -171,16 +229,15 @@ export function tabEditorReducer(state: TabEditorState, action: TabEditorAction)
     case "DELETE_FRAME": {
       const { section, measure, frame } = action.payload;
 
-      if (isOnlyFrame(state.tab, section, measure)) {
+      if (isOnlyFrame(activeBody(state), section, measure)) {
         // A section always keeps at least one measure; empty it out via DELETE_SECTION.
-        if (isOnlyMeasure(state.tab, section)) {
+        if (isOnlyMeasure(activeBody(state), section)) {
           return state;
         }
-        const newTab = removeMeasure(state.tab, section, measure);
+        const newTab = removeMeasure(activeBody(state), section, measure);
         const prevMeasure = Math.max(measure - 1, 0);
         return {
-          ...state,
-          tab: newTab,
+          ...withBody(state, newTab),
           position: {
             section,
             measure: prevMeasure,
@@ -191,10 +248,9 @@ export function tabEditorReducer(state: TabEditorState, action: TabEditorAction)
         };
       }
 
-      const newTab = removeFrame(state.tab, section, measure, frame);
+      const newTab = removeFrame(activeBody(state), section, measure, frame);
       return {
-        ...state,
-        tab: newTab,
+        ...withBody(state, newTab),
         position: resolvePositionAfterFrameDelete(newTab, section, measure, frame),
         isEditing: true,
       };
@@ -202,7 +258,7 @@ export function tabEditorReducer(state: TabEditorState, action: TabEditorAction)
 
     case "SET_POSITION": {
       const { section, measure, frame } = action.payload;
-      const { tab } = state;
+      const tab = activeBody(state);
 
       if (isExistingPosition(tab, section, measure, frame)) {
         return {
@@ -283,7 +339,7 @@ export function tabEditorReducer(state: TabEditorState, action: TabEditorAction)
 
     case "SET_NOTE_FRET": {
       const { section, measure, frame, string: stringIdx, fret } = action.payload;
-      const currentFrame = getFrame(state.tab, section, measure, frame);
+      const currentFrame = getFrame(activeBody(state), section, measure, frame);
       if (!currentFrame) return state;
       const newNotes = currentFrame.notes.map((note, i) =>
         i === stringIdx
@@ -291,15 +347,17 @@ export function tabEditorReducer(state: TabEditorState, action: TabEditorAction)
           : note
       );
       return {
-        ...state,
-        tab: updateFrameNotes(state.tab, section, measure, frame, newNotes),
+        ...withBody(
+          state,
+          updateFrameNotes(activeBody(state), section, measure, frame, newNotes)
+        ),
         isEditing: true,
       };
     }
 
     case "SET_NOTE_STYLE": {
       const { section, measure, frame, string: stringIdx, style } = action.payload;
-      const currentFrame = getFrame(state.tab, section, measure, frame);
+      const currentFrame = getFrame(activeBody(state), section, measure, frame);
       if (!currentFrame) return state;
       const note = currentFrame.notes[stringIdx];
       if (!note || note.fret === -2 || note.fret === -1) return state;
@@ -307,15 +365,17 @@ export function tabEditorReducer(state: TabEditorState, action: TabEditorAction)
         i === stringIdx ? { ...n, style } : n
       );
       return {
-        ...state,
-        tab: updateFrameNotes(state.tab, section, measure, frame, newNotes),
+        ...withBody(
+          state,
+          updateFrameNotes(activeBody(state), section, measure, frame, newNotes)
+        ),
         isEditing: true,
       };
     }
 
     case "EXTEND_SELECTION": {
       const { section, measure, frame } = action.payload;
-      const { tab } = state;
+      const tab = activeBody(state);
       if (!isExistingPosition(tab, section, measure, frame)) return state;
 
       const newPosition = { ...state.position, section, measure, frame };
@@ -339,12 +399,11 @@ export function tabEditorReducer(state: TabEditorState, action: TabEditorAction)
 
     case "ADD_SECTION": {
       const { index, name } = action.payload;
-      const newTab = insertSection(state.tab, index, name, stringCount(state));
-      if (newTab === state.tab) return state;
+      const newTab = insertSection(activeBody(state), index, name, stringCount(state));
+      if (newTab === activeBody(state)) return state;
       const newSection = Math.max(Math.min(index, newTab.sections.length - 1), 0);
       return {
-        ...state,
-        tab: newTab,
+        ...withBody(state, newTab),
         position: { section: newSection, measure: 0, frame: 0, string: state.position.string },
         selection: null,
         isEditing: true,
@@ -352,16 +411,16 @@ export function tabEditorReducer(state: TabEditorState, action: TabEditorAction)
     }
 
     case "RENAME_SECTION": {
-      const newTab = renameSection(state.tab, action.payload.index, action.payload.name);
-      if (newTab === state.tab) return state;
-      return { ...state, tab: newTab, isEditing: true };
+      const newTab = renameSection(activeBody(state), action.payload.index, action.payload.name);
+      if (newTab === activeBody(state)) return state;
+      return { ...withBody(state, newTab), isEditing: true };
     }
 
     case "DELETE_SECTION": {
       const { index } = action.payload;
-      if (isOnlySection(state.tab)) return state;
-      const newTab = removeSection(state.tab, index);
-      if (newTab === state.tab) return state;
+      if (isOnlySection(activeBody(state))) return state;
+      const newTab = removeSection(activeBody(state), index);
+      if (newTab === activeBody(state)) return state;
 
       // Deleting a section the cursor isn't in leaves the cursor on the same frame,
       // shifted if the deletion was above it. Deleting the cursor's own section lands
@@ -372,8 +431,7 @@ export function tabEditorReducer(state: TabEditorState, action: TabEditorAction)
             ? state.position.section - 1
             : state.position.section;
         return {
-          ...state,
-          tab: newTab,
+          ...withBody(state, newTab),
           position: { ...state.position, section: shifted },
           selection: null,
           isEditing: true,
@@ -382,8 +440,7 @@ export function tabEditorReducer(state: TabEditorState, action: TabEditorAction)
 
       const newSection = Math.min(index, newTab.sections.length - 1);
       return {
-        ...state,
-        tab: newTab,
+        ...withBody(state, newTab),
         position: { section: newSection, measure: 0, frame: 0, string: 0 },
         selection: null,
         isEditing: true,
@@ -392,14 +449,98 @@ export function tabEditorReducer(state: TabEditorState, action: TabEditorAction)
 
     case "MOVE_MEASURE": {
       const { from, to } = action.payload;
-      const newTab = moveMeasure(state.tab, from, to);
-      if (newTab === state.tab) return state;
+      const newTab = moveMeasure(activeBody(state), from, to);
+      if (newTab === activeBody(state)) return state;
 
-      const landed = resolveMoveTarget(state.tab, from, to);
+      const landed = resolveMoveTarget(activeBody(state), from, to);
+      return {
+        ...withBody(state, newTab),
+        position: { ...landed, frame: 0, string: state.position.string },
+        selection: null,
+        isEditing: true,
+      };
+    }
+
+    case "SET_ACTIVE_TRACK": {
+      const { index } = action.payload;
+      if (!state.tracks[index] || index === state.activeTrack) return state;
+      // Positions are per-track, so switching resets rather than carrying an index
+      // that may not exist in the new track.
       return {
         ...state,
-        tab: newTab,
-        position: { ...landed, frame: 0, string: state.position.string },
+        activeTrack: index,
+        position: { section: 0, measure: 0, frame: 0, string: 0 },
+        selection: null,
+      };
+    }
+
+    case "ADD_TRACK": {
+      const { name, instrument, tuning, octaves } = action.payload;
+      if (state.tracks.length >= MAX_TRACKS) return state;
+      const track = createTrack({ name, instrument, tuning, octaves });
+      return {
+        ...state,
+        tracks: [...state.tracks, track],
+        activeTrack: state.tracks.length,
+        position: { section: 0, measure: 0, frame: 0, string: 0 },
+        selection: null,
+        isEditing: true,
+      };
+    }
+
+    case "REMOVE_TRACK": {
+      const { index } = action.payload;
+      // A tab always has at least one track — there would be nothing to edit.
+      if (state.tracks.length === 1 || !state.tracks[index]) return state;
+
+      const tracks = state.tracks.filter((_track, i) => i !== index);
+      const activeTrack =
+        state.activeTrack > index
+          ? state.activeTrack - 1
+          : Math.min(state.activeTrack, tracks.length - 1);
+
+      return {
+        ...state,
+        tracks,
+        activeTrack,
+        position:
+          state.activeTrack === index
+            ? { section: 0, measure: 0, frame: 0, string: 0 }
+            : state.position,
+        selection: null,
+        isEditing: true,
+      };
+    }
+
+    case "RENAME_TRACK": {
+      const next = patchTrack(state, action.payload.index, { name: action.payload.name });
+      if (next === state) return state;
+      return { ...next, isEditing: true };
+    }
+
+    case "SET_TRACK_TUNING": {
+      const { index, tuning, instrument, octaves } = action.payload;
+      const track = state.tracks[index];
+      if (!track) return state;
+
+      // Switching to an instrument with a different string count has to reshape every
+      // frame, or the notes array and the tuning disagree about how many rows exist.
+      const newStringCount = tuning.length;
+      const next = patchTrack(state, index, {
+        tuning,
+        octaves: octaves ?? reconcileOctaves(tuning, track.octaves),
+        ...(instrument ? { instrument } : {}),
+        body: resizeFrames(track.body, newStringCount),
+      });
+
+      if (index !== state.activeTrack) return { ...next, isEditing: true };
+
+      return {
+        ...next,
+        position: {
+          ...state.position,
+          string: Math.min(state.position.string, newStringCount - 1),
+        },
         selection: null,
         isEditing: true,
       };

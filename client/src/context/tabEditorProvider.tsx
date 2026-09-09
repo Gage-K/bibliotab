@@ -1,18 +1,24 @@
 import { createContext, useReducer, useEffect, useContext, useRef, useCallback } from "react";
-import { createEmptyFrame, getFrame, getMeasures, normalizeBody } from "../utils/tabOperations";
+import { createEmptyFrame, getFrame, getMeasures } from "../utils/tabOperations";
 import { useTab, useUpdateTab } from "../hooks/useTabs";
 import { useEditorKeybindings } from "../hooks/useEditorKeybindings";
 import type { EditorAction } from "../shared/keymaps/defaultKeymap";
 import type { NoteStyleType } from "../shared/types/tab.types";
 import type {
   TabBodyType,
+  TrackType,
   EditorDetailsType,
   FrameType,
   NoteFretType,
   TuningType,
 } from "../shared/types/tab.types";
 import type { TabPositionType, TabSelectionType } from "../shared/types/utilities.types";
-import { tabEditorReducer, initialTabEditorState } from "./tabEditorReducer";
+import {
+  tabEditorReducer,
+  initialTabEditorState,
+  activeBody,
+} from "./tabEditorReducer";
+import { normalizeTracks, trackStringCount } from "../utils/trackOperations";
 
 const FRET_EMPTY = -2;
 const FRET_MUTED = -1;
@@ -22,7 +28,12 @@ const DIGIT_BUFFER_TIMEOUT_MS = 200;
 type MeasureRef = { section: number; measure: number };
 
 interface TabEditorContextType {
+  /** The active track's body — what the tab display and editing actions operate on. */
   tab: TabBodyType;
+  tracks: TrackType[];
+  activeTrack: number;
+  /** The track being edited, or undefined before the tab loads. */
+  track: TrackType | undefined;
   details: EditorDetailsType;
   isLoading: boolean;
   position: TabPositionType;
@@ -33,7 +44,7 @@ interface TabEditorContextType {
   isDemo: boolean;
   /** Number of strings on the current instrument — the tuning's length. */
   stringCount: number;
-  updateDetails: (name: string, value: string | TuningType) => void;
+  updateDetails: (name: string, value: string) => void;
   saveChanges: () => Promise<void>;
   handleOpeningEditor: () => void;
   updatePosition: (section: number, measure: number, frame: number) => void;
@@ -48,6 +59,20 @@ interface TabEditorContextType {
   renameSection: (index: number, name: string) => void;
   deleteSection: (index: number) => void;
   moveMeasure: (from: MeasureRef, to: MeasureRef) => void;
+  setActiveTrack: (index: number) => void;
+  addTrack: (options: {
+    name: string;
+    instrument: string;
+    tuning: TuningType;
+    octaves?: number[];
+  }) => void;
+  removeTrack: (index: number) => void;
+  renameTrack: (index: number, name: string) => void;
+  setTrackTuning: (
+    index: number,
+    tuning: TuningType,
+    options?: { instrument?: string; octaves?: number[] },
+  ) => void;
 }
 
 const TabEditorContext = createContext<TabEditorContextType | null>(null);
@@ -58,12 +83,16 @@ export function TabEditorProvider({
   children,
 }: {
   tabId?: string;
-  demoData?: { tab: TabBodyType; details: EditorDetailsType };
+  demoData?: { tracks: TrackType[]; details: EditorDetailsType };
   children: React.ReactNode;
 }) {
   const isDemo = !!demoData;
   const [state, dispatch] = useReducer(tabEditorReducer, initialTabEditorState);
-  const { tab, details, position, selection, editorIsOpen, isEditing, isSaving } = state;
+  const { tracks, activeTrack, details, position, selection, editorIsOpen, isEditing, isSaving } =
+    state;
+
+  const track = tracks[activeTrack];
+  const tab = activeBody(state);
 
   const { data: serverTab, isLoading: isQueryLoading } = useTab(tabId ?? "", { enabled: !isDemo && !!tabId });
   const updateTabMutation = useUpdateTab(tabId ?? "");
@@ -74,7 +103,7 @@ export function TabEditorProvider({
       hasLoaded.current = true;
       dispatch({
         type: "SET_TAB_DATA",
-        payload: { ...demoData, tab: normalizeBody(demoData.tab) },
+        payload: { ...demoData, tracks: normalizeTracks({ tracks: demoData.tracks }) },
       });
     } else if (serverTab && !hasLoaded.current) {
       hasLoaded.current = true;
@@ -85,20 +114,49 @@ export function TabEditorProvider({
             id: serverTab.id,
             artist: serverTab.details.artist,
             song: serverTab.details.song,
-            tuning: serverTab.details.tuning,
           },
-          // Legacy flat bodies are wrapped in a default section (see normalizeBody).
-          tab: normalizeBody(serverTab.body),
+          // The server already normalizes, but a response cached from an older client
+          // can still be a pre-tracks shape (see normalizeTracks).
+          tracks: normalizeTracks({ tracks: serverTab.tracks }),
         },
       });
     }
   }, [serverTab, demoData]);
 
-  const isLoading = isDemo ? false : isQueryLoading || tab.sections.length === 0;
-  const stringCount = details.tuning.length;
+  const isLoading = isDemo ? false : isQueryLoading || tracks.length === 0;
+  const stringCount = trackStringCount(track);
 
-  function updateDetails(name: string, value: string | TuningType) {
+  function updateDetails(name: string, value: string) {
     dispatch({ type: "UPDATE_DETAILS", payload: { name, value } });
+  }
+
+  function setActiveTrack(index: number) {
+    dispatch({ type: "SET_ACTIVE_TRACK", payload: { index } });
+  }
+
+  function addTrack(options: {
+    name: string;
+    instrument: string;
+    tuning: TuningType;
+    octaves?: number[];
+  }) {
+    dispatch({ type: "ADD_TRACK", payload: options });
+  }
+
+  function removeTrack(index: number) {
+    dispatch({ type: "REMOVE_TRACK", payload: { index } });
+  }
+
+  function renameTrack(index: number, name: string) {
+    dispatch({ type: "RENAME_TRACK", payload: { index, name } });
+  }
+
+  function setTrackTuning(
+    index: number,
+    tuning: TuningType,
+    options?: { instrument?: string; octaves?: number[] },
+  ) {
+    dispatch({ type: "SET_TRACK_TUNING", payload: { index, tuning, ...options } });
   }
 
   async function saveChanges() {
@@ -107,8 +165,10 @@ export function TabEditorProvider({
     const data = {
       tab_name: details.song,
       tab_artist: details.artist,
-      tuning: details.tuning,
-      tab_data: tab,
+      // `tuning` is vestigial on the server (NOT NULL column) but still required by the
+      // API; it mirrors track 0.
+      tuning: tracks[0]?.tuning ?? [],
+      tab_data: { tracks },
     };
 
     updateTabMutation.mutate(data, {
@@ -411,6 +471,9 @@ export function TabEditorProvider({
     <TabEditorContext.Provider
       value={{
         tab,
+        tracks,
+        activeTrack,
+        track,
         details,
         isLoading,
         position,
@@ -435,6 +498,11 @@ export function TabEditorProvider({
         renameSection,
         deleteSection,
         moveMeasure,
+        setActiveTrack,
+        addTrack,
+        removeTrack,
+        renameTrack,
+        setTrackTuning,
       }}>
       {children}
     </TabEditorContext.Provider>

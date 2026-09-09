@@ -1,22 +1,26 @@
 import type { AxiosInstance } from "axios";
 import { API_ENDPOINTS } from "../endpoints";
-import type { TabBodyType, TabType, TuningType } from "../../shared/types/tab.types";
+import type { TabTracksType, TabType, TuningType } from "../../shared/types/tab.types";
 
 /** Every tab endpoint wraps its payload in `{ data }`. */
 type ApiEnvelope<T> = { data: T };
 
+/**
+ * `tuning` is vestigial server-side — tuning lives on each track — but the column is
+ * NOT NULL, so the API still requires it and it mirrors tracks[0].
+ */
 export interface CreateTabPayload {
   tab_name: string;
   tab_artist: string;
-  tuning: string[];
-  tab_data: TabBodyType;
+  tuning: TuningType;
+  tab_data: TabTracksType;
 }
 
 export interface SaveTabPayload {
   tab_name: string;
   tab_artist: string;
   tuning: TuningType;
-  tab_data: TabBodyType;
+  tab_data: TabTracksType;
 }
 
 export const tabService = {

@@ -4,8 +4,11 @@ import { INSTRUMENT_PRESETS, TUNING_NOTES } from "../shared/types/consts";
 import { useTabEditor } from "../context/tabEditorProvider";
 
 export default function TabDetails() {
-  const { details, stringCount, updateDetails } = useTabEditor();
+  const { details, track, activeTrack, stringCount, updateDetails, setTrackTuning } =
+    useTabEditor();
   const [isShown, setIsShown] = useState(false);
+
+  const tuning = track?.tuning ?? [];
 
   // String 1 is the highest-pitched (tuning index 0); columns render lowest-first.
   const strings = useMemo(
@@ -16,30 +19,34 @@ export default function TabDetails() {
   // A preset is "current" only if the whole tuning matches, not just the instrument.
   const activePreset = INSTRUMENT_PRESETS.find(
     (preset) =>
-      preset.tuning.length === details.tuning.length &&
-      preset.tuning.every((note, i) => note === details.tuning[i])
+      preset.tuning.length === tuning.length &&
+      preset.tuning.every((note, i) => note === tuning[i])
   );
 
   function handleTuning(
-    event: React.ChangeEvent<HTMLSelectElement>,
+    _event: React.ChangeEvent<HTMLSelectElement>,
     string: number,
     value: TuningNoteType
   ) {
-    const newTuning = details.tuning.map(
-      (note: TuningNoteType, index: number) =>
-        index === string ? value : note
+    const newTuning = tuning.map((note: TuningNoteType, index: number) =>
+      index === string ? value : note
     ) as TuningType;
-    updateDetails(event.target.name, newTuning);
+    // Retuning one string keeps the existing octaves — the string count is unchanged.
+    setTrackTuning(activeTrack, newTuning);
   }
 
   /**
-   * Picking a preset can change the string count, which reshapes every frame in the
-   * tab (see resizeFrames) — added strings arrive empty, removed ones drop their notes.
+   * Picking a preset can change the string count, which reshapes every frame in this
+   * track (see resizeFrames) — added strings arrive empty, removed ones drop their
+   * notes. The preset's octaves come along, since they are hand-checked.
    */
   function handlePreset(event: React.ChangeEvent<HTMLSelectElement>) {
     const preset = INSTRUMENT_PRESETS.find((p) => p.id === event.target.value);
     if (!preset) return;
-    updateDetails("tuning", [...preset.tuning] as TuningType);
+    setTrackTuning(activeTrack, [...preset.tuning] as TuningType, {
+      instrument: preset.instrument,
+      octaves: [...preset.octaves],
+    });
   }
 
   return (
@@ -51,7 +58,7 @@ export default function TabDetails() {
 
         <div className="flex flex-wrap gap-2 items-baseline text-muted-foreground font-medium mt-1">
           <p>
-            By {details.artist}, tuning: {details.tuning.toReversed().join("")}
+            By {details.artist}, tuning: {tuning.toReversed().join("")}
           </p>
 
           <button
@@ -135,7 +142,7 @@ export default function TabDetails() {
                   </label>
                   <select
                     name="tuning"
-                    value={details.tuning[string - 1]}
+                    value={tuning[string - 1]}
                     onChange={(event) =>
                       handleTuning(event, string - 1, event.target.value as TuningNoteType)
                     }

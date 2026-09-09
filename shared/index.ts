@@ -6,3 +6,4 @@ export * from "./constants/tab.constants";
 
 // Utils
 export * from "./utils/tab.serializer";
+export * from "./utils/tuning";

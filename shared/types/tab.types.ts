@@ -46,14 +46,14 @@ export type FrameType = {
 
 export type MeasureType = FrameType[];
 
-// Tab metadata
+// Tab metadata. Tuning lives on the track, not here — each instrument tunes
+// independently.
 export type TabDetailsType = {
   song: string;
   artist: string;
   creator: string;
   dateCreated: string;
   dateModified: string;
-  tuning: TuningType;
 };
 
 export type SectionType = { id: string; name: string; measures: MeasureType[] };
@@ -62,11 +62,36 @@ export type TabBodyType = {
   sections: SectionType[];
 };
 
+/**
+ * One instrument's part. A tab is a list of these; a plain guitar tab is a tab with a
+ * single track.
+ */
+export type TrackType = {
+  id: string;
+  /** Display name, e.g. "Rhythm guitar". Distinct from `instrument`. */
+  name: string;
+  /** Instrument family — "guitar" | "bass" | "ukulele" | ... Drives the sound preset. */
+  instrument: string;
+  tuning: TuningType;
+  /**
+   * Octave of each open string, parallel to `tuning`. Note names alone give pitch
+   * classes, which is enough to name a chord but not to sound one, so playback needs
+   * absolute pitch.
+   */
+  octaves: number[];
+  body: TabBodyType;
+};
+
+/** The shape stored in `tabs.tab_data`. */
+export type TabTracksType = {
+  tracks: TrackType[];
+};
+
 // Complete tab document
 export type TabType = {
   id: IdType;
   details: TabDetailsType;
-  body: TabBodyType;
+  tracks: TrackType[];
 };
 
 // ============================================================================
@@ -75,8 +100,10 @@ export type TabType = {
 
 /**
  * Tab as stored in the database.
- * - tuning: JSON array of open notes, one per string
- * - tab_data: JSON blob containing TabBodyType
+ * - tab_data: JSON blob containing TabTracksType
+ * - tuning: vestigial. Tuning moved onto each track in the tracks migration; the
+ *   column is NOT NULL, so it is still written as a mirror of `tracks[0].tuning` and
+ *   never read back. Drop it in a follow-up migration.
  */
 export interface TabEntity {
   id: string;
@@ -84,7 +111,7 @@ export interface TabEntity {
   tab_name: string;
   tab_artist: string;
   tuning: TuningType;
-  tab_data: TabBodyType;
+  tab_data: TabTracksType;
   created_at: Date;
   modified_at: Date;
 }
@@ -96,15 +123,16 @@ export interface TabEntity {
 export type CreateTabDto = {
   tab_name: string;
   tab_artist: string;
+  /** Mirrors tracks[0].tuning; see the note on TabEntity. */
   tuning: TuningType;
-  tab_data: TabBodyType;
+  tab_data: TabTracksType;
 };
 
 export type UpdateTabDto = {
   tab_name?: string;
   tab_artist?: string;
   tuning?: TuningType;
-  tab_data?: TabBodyType;
+  tab_data?: TabTracksType;
 };
 
 // ============================================================================

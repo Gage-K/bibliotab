@@ -2,11 +2,13 @@ import { pgTable, uuid, varchar, jsonb, timestamp, index } from "drizzle-orm/pg-
 import { users } from "./users.schema";
 // Type-only import: erased at build, keeps the JSONB columns typed as the shared
 // domain types without pulling the shared package into drizzle-kit's loader.
-import type { TabBodyType, TuningType } from "@tablab/shared";
+import type { TabTracksType, TuningType } from "@tablab/shared";
 
 /**
  * tabs — mirrors server/db/init.sql.
  * `tuning` and `tab_data` are JSONB, typed via .$type<>() to the shared domain types.
+ * `tuning` is vestigial since the tracks migration — tuning lives on each track now —
+ * but the column is NOT NULL, so it is still written as a mirror of tracks[0].
  *
  * NOTE: init.sql also defines an `update_modified_at` BEFORE UPDATE trigger on this
  * table. It is intentionally NOT modeled here — TabRepository.update sets modified_at
@@ -23,7 +25,7 @@ export const tabs = pgTable(
     tabName: varchar("tab_name", { length: 255 }).notNull(),
     tabArtist: varchar("tab_artist", { length: 255 }),
     tuning: jsonb("tuning").$type<TuningType>().notNull(),
-    tabData: jsonb("tab_data").$type<TabBodyType>().notNull(),
+    tabData: jsonb("tab_data").$type<TabTracksType>().notNull(),
     createdAt: timestamp("created_at").defaultNow(),
     modifiedAt: timestamp("modified_at").defaultNow(),
   },

@@ -40,6 +40,8 @@ export type InstrumentPreset = {
   /** Free-text instrument name stored on a track. */
   instrument: string;
   tuning: TuningNoteType[];
+  /** Octave of each open string, parallel to `tuning`. */
+  octaves: number[];
 };
 
 /**
@@ -52,53 +54,62 @@ export const INSTRUMENT_PRESETS: InstrumentPreset[] = [
     label: "Guitar — standard (EADGBE)",
     instrument: "guitar",
     tuning: STANDARD_TUNINGS.standard,
+    octaves: [4, 3, 3, 3, 2, 2],
   },
   {
     id: "guitar-drop-d",
     label: "Guitar — drop D (DADGBE)",
     instrument: "guitar",
     tuning: STANDARD_TUNINGS.dropD,
+    octaves: [4, 3, 3, 3, 2, 2],
   },
   {
     id: "guitar-half-step-down",
     label: "Guitar — half step down (E♭A♭D♭G♭B♭E♭)",
     instrument: "guitar",
     tuning: STANDARD_TUNINGS.halfStepDown,
+    octaves: [4, 3, 3, 3, 2, 2],
   },
   {
     id: "guitar-open-g",
     label: "Guitar — open G (DGDGBD)",
     instrument: "guitar",
     tuning: STANDARD_TUNINGS.openG,
+    octaves: [4, 3, 3, 3, 2, 2],
   },
   {
     id: "guitar-7-string",
     label: "7-string guitar (BEADGBE)",
     instrument: "guitar",
     tuning: ["E", "B", "G", "D", "A", "E", "B"] as TuningNoteType[],
+    octaves: [4, 3, 3, 3, 2, 2, 1],
   },
   {
     id: "bass-4",
     label: "Bass — 4-string (EADG)",
     instrument: "bass",
     tuning: ["G", "D", "A", "E"] as TuningNoteType[],
+    octaves: [2, 2, 1, 1],
   },
   {
     id: "bass-5",
     label: "Bass — 5-string (BEADG)",
     instrument: "bass",
     tuning: ["G", "D", "A", "E", "B"] as TuningNoteType[],
+    octaves: [2, 2, 1, 1, 0],
   },
   {
     id: "ukulele",
     label: "Ukulele — standard (GCEA)",
     instrument: "ukulele",
     tuning: ["A", "E", "C", "G"] as TuningNoteType[],
+    octaves: [4, 4, 4, 4],
   },
 ];
 
 export const MIN_STRINGS = 3;
 export const MAX_STRINGS = 12;
+export const MAX_TRACKS = 16;
 
 export const FRET_EMPTY = -2;
 export const FRET_MUTED = -1;

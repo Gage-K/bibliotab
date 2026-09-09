@@ -36,12 +36,15 @@ export const STANDARD_TUNINGS = {
 export const DEFAULT_STRING_COUNT = 6;
 export const MIN_STRINGS = 3;
 export const MAX_STRINGS = 12;
+export const MAX_TRACKS = 16;
 
 export type InstrumentPreset = {
   id: string;
   label: string;
   instrument: string;
   tuning: TuningNoteType[];
+  /** Octave of each open string, parallel to `tuning`. */
+  octaves: number[];
 };
 
 /**
@@ -54,48 +57,56 @@ export const INSTRUMENT_PRESETS: InstrumentPreset[] = [
     label: "Guitar — standard",
     instrument: "guitar",
     tuning: STANDARD_TUNINGS.standard,
+    octaves: [4, 3, 3, 3, 2, 2],
   },
   {
     id: "guitar-drop-d",
     label: "Guitar — drop D",
     instrument: "guitar",
     tuning: STANDARD_TUNINGS.dropD,
+    octaves: [4, 3, 3, 3, 2, 2],
   },
   {
     id: "guitar-half-step-down",
     label: "Guitar — half step down",
     instrument: "guitar",
     tuning: STANDARD_TUNINGS.halfStepDown,
+    octaves: [4, 3, 3, 3, 2, 2],
   },
   {
     id: "guitar-open-g",
     label: "Guitar — open G",
     instrument: "guitar",
     tuning: STANDARD_TUNINGS.openG,
+    octaves: [4, 3, 3, 3, 2, 2],
   },
   {
     id: "guitar-7-string",
     label: "7-string guitar",
     instrument: "guitar",
     tuning: ["E", "B", "G", "D", "A", "E", "B"] as TuningNoteType[],
+    octaves: [4, 3, 3, 3, 2, 2, 1],
   },
   {
     id: "bass-4",
     label: "Bass — 4-string",
     instrument: "bass",
     tuning: ["G", "D", "A", "E"] as TuningNoteType[],
+    octaves: [2, 2, 1, 1],
   },
   {
     id: "bass-5",
     label: "Bass — 5-string",
     instrument: "bass",
     tuning: ["G", "D", "A", "E", "B"] as TuningNoteType[],
+    octaves: [2, 2, 1, 1, 0],
   },
   {
     id: "ukulele",
     label: "Ukulele",
     instrument: "ukulele",
     tuning: ["A", "E", "C", "G"] as TuningNoteType[],
+    octaves: [4, 4, 4, 4],
   },
 ];
 
@@ -108,27 +119,35 @@ export const FRET_MUTED_LABEL = "X";
 export const DEFAULT_TAB: CreateTabPayload = {
   tab_name: "Untitled",
   tab_artist: "Untitled",
-  tuning: ["E", "B", "G", "D", "A", "E"],
+  // Mirrors tracks[0].tuning; the server ignores it on read.
+  tuning: STANDARD_TUNINGS.standard,
   tab_data: {
-    sections: [
+    tracks: [
       {
         id: "1",
-        name: "Section 1",
-        measures: [
-          [
+        name: "Track 1",
+        instrument: "guitar",
+        tuning: STANDARD_TUNINGS.standard,
+        octaves: [4, 3, 3, 3, 2, 2],
+        body: {
+          sections: [
             {
               id: "1",
-              notes: [
-                { fret: -2, style: "none" },
-                { fret: -2, style: "none" },
-                { fret: -2, style: "none" },
-                { fret: -2, style: "none" },
-                { fret: -2, style: "none" },
-                { fret: -2, style: "none" },
+              name: "Section 1",
+              measures: [
+                [
+                  {
+                    id: "1",
+                    notes: Array.from({ length: 6 }, () => ({
+                      fret: FRET_EMPTY,
+                      style: "none" as const,
+                    })),
+                  },
+                ],
               ],
             },
           ],
-        ],
+        },
       },
     ],
   },

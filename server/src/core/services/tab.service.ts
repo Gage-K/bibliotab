@@ -4,7 +4,7 @@ import { CreateTabDto, TabResponse, UpdateTabDto } from "../types/tab.types";
 import {
   tabEntityToResponse,
   tabEntitiesToResponses,
-  normalizeTabBody,
+  normalizeTabTracks,
 } from "@tablab/shared";
 
 export class TabService {
@@ -42,10 +42,13 @@ export class TabService {
   }
 
   async createTab(tabData: CreateTabDto, userId: string): Promise<TabResponse> {
-    // Store the sectioned shape regardless of what the client sent.
+    // Store the tracked shape regardless of which generation the client sent.
+    const tab_data = normalizeTabTracks(tabData.tab_data, tabData.tuning);
     const created = await this.tabRepo.create(userId, {
       ...tabData,
-      tab_data: normalizeTabBody(tabData.tab_data),
+      // `tuning` is vestigial but NOT NULL; keep it mirroring track 0.
+      tuning: tab_data.tracks[0]?.tuning ?? tabData.tuning,
+      tab_data,
     });
     return tabEntityToResponse(created);
   }
@@ -57,10 +60,18 @@ export class TabService {
   ): Promise<TabResponse> {
     await this.verifyOwnership(tabId, userId);
 
+    const normalized =
+      tabData.tab_data !== undefined
+        ? normalizeTabTracks(tabData.tab_data, tabData.tuning)
+        : undefined;
+
     const updatedTab = await this.tabRepo.update(tabId, {
       ...tabData,
-      ...(tabData.tab_data !== undefined
-        ? { tab_data: normalizeTabBody(tabData.tab_data) }
+      ...(normalized
+        ? {
+            tab_data: normalized,
+            tuning: normalized.tracks[0]?.tuning ?? tabData.tuning,
+          }
         : {}),
     });
     if (!updatedTab) {

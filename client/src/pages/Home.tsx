@@ -8,22 +8,28 @@ import Editor from "../components/Editor";
 import TabDisplay from "../components/TabDisplay";
 import useTypedAuth from "../hooks/useTypedAuth";
 import { createEmptyFrame, createSection } from "../utils/tabOperations";
-import type { TabBodyType, EditorDetailsType } from "../shared/types/tab.types";
+import { createTrack } from "../utils/trackOperations";
+import type { TrackType, EditorDetailsType } from "../shared/types/tab.types";
 
-const DEMO_TAB: TabBodyType = {
-  sections: [
-    createSection("Intro", [
-      [createEmptyFrame(), createEmptyFrame(), createEmptyFrame(), createEmptyFrame()],
-      [createEmptyFrame(), createEmptyFrame(), createEmptyFrame(), createEmptyFrame()],
-    ]),
-  ],
-};
+const DEMO_TRACKS: TrackType[] = [
+  createTrack({
+    name: "Guitar",
+    instrument: "guitar",
+    body: {
+      sections: [
+        createSection("Intro", [
+          [createEmptyFrame(), createEmptyFrame(), createEmptyFrame(), createEmptyFrame()],
+          [createEmptyFrame(), createEmptyFrame(), createEmptyFrame(), createEmptyFrame()],
+        ]),
+      ],
+    },
+  }),
+];
 
 const DEMO_DETAILS: EditorDetailsType = {
   id: "demo",
   artist: "",
   song: "Try it out",
-  tuning: ["E", "B", "G", "D", "A", "E"],
 };
 
 export default function Home() {
@@ -63,7 +69,7 @@ export default function Home() {
 
       <Card className="w-full max-w-3xl">
         <CardContent className="p-4">
-          <TabEditorProvider demoData={{ tab: DEMO_TAB, details: DEMO_DETAILS }}>
+          <TabEditorProvider demoData={{ tracks: DEMO_TRACKS, details: DEMO_DETAILS }}>
             <Editor />
             <TabDisplay />
           </TabEditorProvider>

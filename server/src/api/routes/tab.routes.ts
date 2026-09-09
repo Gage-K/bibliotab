@@ -7,32 +7,25 @@ import { UserRepository } from "../../data/repositories/user.repository";
 import { authMiddleware } from "../middleware/auth.middleware";
 import { body, param, query } from "express-validator";
 import {
-  normalizeTabBody,
-  validateTabSize,
+  normalizeTabTracks,
+  validateTabTracks,
   validateTuning,
 } from "@tablab/shared";
 
 /**
- * Rejects tab bodies that aren't the sectioned `{ sections: [...] }` shape or that blow
- * past the size limits. Legacy flat arrays are normalized first so an old client can
- * still write (the value is re-normalized on the way into the DB).
- *
- * When the request also carries a tuning, every frame must have exactly one note per
- * string — that pairing is what keeps a 4-string bass tab from being saved with
- * 6-note frames.
+ * Validates tab_data in whichever generation the client sent it — legacy flat array,
+ * sectioned body, or tracks — by normalizing first and validating the result. That
+ * keeps an older client able to write while still enforcing the current invariants:
+ * a known tuning per track, and one note per string in every frame.
  */
 const tabDataValidator = (value: unknown, { req }: { req: any }) => {
-  const tabBody = normalizeTabBody(value);
-  if (tabBody.sections.length === 0) {
-    // normalizeTabBody yields no sections only for input that is neither a legacy
-    // measures array nor a `{ sections }` object — i.e. junk.
-    throw new Error("tab_data must be an object with a non-empty sections array");
-  }
-
   const tuning = req.body?.tuning;
-  const expectedStringCount = Array.isArray(tuning) ? tuning.length : undefined;
+  const tracks = normalizeTabTracks(
+    value,
+    Array.isArray(tuning) ? tuning : undefined
+  );
 
-  const result = validateTabSize(tabBody, expectedStringCount);
+  const result = validateTabTracks(tracks);
   if (!result.valid) {
     throw new Error(result.error);
   }

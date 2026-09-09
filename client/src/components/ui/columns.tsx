@@ -51,7 +51,9 @@ export const columns: ColumnDef<TabType>[] = [
   },
   {
     id: "tuning",
-    accessorFn: (row) => [...row.details.tuning].reverse().join(""),
+    // Tuning is per-track; show the first track's, which is the only one for a
+    // single-instrument tab.
+    accessorFn: (row) => [...(row.tracks[0]?.tuning ?? [])].reverse().join(""),
     header: "Tuning",
   },
   {

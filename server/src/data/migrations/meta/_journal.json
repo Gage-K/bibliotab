@@ -15,6 +15,13 @@
       "when": 1788827891582,
       "tag": "0001_wrap_tab_data_in_sections",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1788916152176,
+      "tag": "0002_wrap_tab_data_in_tracks",
+      "breakpoints": true
     }
   ]
 }

@@ -1,8 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { tabEditorReducer, initialTabEditorState } from "../tabEditorReducer";
+import { tabEditorReducer, initialTabEditorState, activeBody } from "../tabEditorReducer";
 import type { TabEditorState } from "../tabEditorReducer";
 import { createEmptyFrame, createSection } from "../../utils/tabOperations";
-import type { MeasureType, TabBodyType } from "@/shared/types/tab.types";
+import { createTrack } from "../../utils/trackOperations";
+import type { MeasureType, TabBodyType, TuningType } from "@/shared/types/tab.types";
 
 function measure(frames: number): MeasureType {
   return Array.from({ length: frames }, () => createEmptyFrame());
@@ -19,13 +20,16 @@ function body(...sections: { name: string; measures: number[] }[]): TabBodyType 
   };
 }
 
+// Single-track state, which is what every pre-tracks assertion is really about.
 function stateWith(
   tab: TabBodyType,
   position: Partial<TabEditorState["position"]> = {},
+  tuning?: TuningType,
 ): TabEditorState {
   return {
     ...initialTabEditorState,
-    tab,
+    tracks: [createTrack({ name: "Track 1", body: tab, tuning })],
+    activeTrack: 0,
     position: { section: 0, measure: 0, frame: 0, string: 0, ...position },
   };
 }
@@ -81,8 +85,8 @@ describe("frame and measure edits stay inside their section", () => {
       payload: { section: 1, measure: 0, frame: 0, string: 0, fret: 5 },
     });
 
-    expect(next.tab.sections[1].measures[0][0].notes[0].fret).toBe(5);
-    expect(next.tab.sections[0]).toBe(tab.sections[0]);
+    expect(activeBody(next).sections[1].measures[0][0].notes[0].fret).toBe(5);
+    expect(activeBody(next).sections[0]).toBe(tab.sections[0]);
     expect(next.isEditing).toBe(true);
   });
 
@@ -93,7 +97,7 @@ describe("frame and measure edits stay inside their section", () => {
       payload: { section: 0, measure: 1, frame: 0 },
     });
 
-    expect(next.tab.sections[0].measures).toHaveLength(1);
+    expect(activeBody(next).sections[0].measures).toHaveLength(1);
     expect(next.position).toMatchObject({ section: 0, measure: 0, frame: 0 });
   });
 
@@ -114,7 +118,7 @@ describe("section actions", () => {
       payload: { index: 1, name: "Verse" },
     });
 
-    expect(next.tab.sections.map((s) => s.name)).toEqual(["Intro", "Verse"]);
+    expect(activeBody(next).sections.map((s) => s.name)).toEqual(["Intro", "Verse"]);
     expect(next.position).toMatchObject({ section: 1, measure: 0, frame: 0 });
   });
 
@@ -124,7 +128,7 @@ describe("section actions", () => {
       type: "RENAME_SECTION",
       payload: { index: 0, name: "Chorus" },
     });
-    expect(next.tab.sections[0].name).toBe("Chorus");
+    expect(activeBody(next).sections[0].name).toBe("Chorus");
   });
 
   it("deletes a section and pulls the cursor back into range", () => {
@@ -138,7 +142,7 @@ describe("section actions", () => {
       payload: { index: 1 },
     });
 
-    expect(next.tab.sections.map((s) => s.name)).toEqual(["Intro", "Outro"]);
+    expect(activeBody(next).sections.map((s) => s.name)).toEqual(["Intro", "Outro"]);
     expect(next.position).toMatchObject({ section: 1, measure: 0, frame: 0 });
   });
 
@@ -152,7 +156,7 @@ describe("section actions", () => {
       payload: { index: 1 },
     });
 
-    expect(next.tab.sections.map((s) => s.name)).toEqual(["Intro"]);
+    expect(activeBody(next).sections.map((s) => s.name)).toEqual(["Intro"]);
     expect(next.position).toMatchObject({ section: 0, measure: 0, frame: 1 });
   });
 
@@ -168,8 +172,8 @@ describe("section actions", () => {
       payload: { from: { section: 0, measure: 1 }, to: { section: 1, measure: 0 } },
     });
 
-    expect(next.tab.sections[0].measures).toHaveLength(1);
-    expect(next.tab.sections[1].measures.map((m) => m.length)).toEqual([2, 3]);
+    expect(activeBody(next).sections[0].measures).toHaveLength(1);
+    expect(activeBody(next).sections[1].measures.map((m) => m.length)).toEqual([2, 3]);
     expect(next.position).toMatchObject({ section: 1, measure: 0, frame: 0 });
   });
 });
@@ -195,40 +199,49 @@ describe("selection", () => {
   });
 });
 
-describe("changing tuning changes the string count", () => {
+const BASS_TUNING = ["G", "D", "A", "E"] as TuningType;
+
+describe("changing a track's tuning changes its string count", () => {
   const tab = body({ name: "Intro", measures: [2] });
 
   it("reshapes every frame and clamps the cursor when switching to a bass", () => {
     const state = stateWith(tab, { string: 5 });
     const next = tabEditorReducer(state, {
-      type: "UPDATE_DETAILS",
-      payload: { name: "tuning", value: ["G", "D", "A", "E"] },
+      type: "SET_TRACK_TUNING",
+      payload: { index: 0, tuning: BASS_TUNING },
     });
 
-    expect(next.details.tuning).toHaveLength(4);
-    for (const frame of next.tab.sections[0].measures[0]) {
+    expect(next.tracks[0].tuning).toHaveLength(4);
+    for (const frame of activeBody(next).sections[0].measures[0]) {
       expect(frame.notes).toHaveLength(4);
     }
     // The cursor was on string 6, which no longer exists.
     expect(next.position.string).toBe(3);
   });
 
-  it("leaves non-tuning detail edits alone", () => {
+  it("reconciles octaves with the new string count", () => {
+    const state = stateWith(tab);
+    const next = tabEditorReducer(state, {
+      type: "SET_TRACK_TUNING",
+      payload: { index: 0, tuning: BASS_TUNING },
+    });
+
+    expect(next.tracks[0].octaves).toHaveLength(4);
+  });
+
+  it("leaves detail edits alone", () => {
     const state = stateWith(tab);
     const next = tabEditorReducer(state, {
       type: "UPDATE_DETAILS",
       payload: { name: "song", value: "Renamed" },
     });
 
-    expect(next.tab).toBe(state.tab);
+    expect(activeBody(next)).toBe(activeBody(state));
     expect(next.details.song).toBe("Renamed");
   });
 
   it("clamps SET_STRING to the current string count", () => {
-    const state: TabEditorState = {
-      ...stateWith(tab),
-      details: { ...initialTabEditorState.details, tuning: ["G", "D", "A", "E"] },
-    };
+    const state = stateWith(tab, {}, BASS_TUNING);
 
     expect(
       tabEditorReducer(state, { type: "SET_STRING", payload: { string: 3 } }).position.string,
@@ -240,21 +253,116 @@ describe("changing tuning changes the string count", () => {
   });
 
   it("builds new sections and measures at the current string count", () => {
-    const state: TabEditorState = {
-      ...stateWith({ sections: [createSection("Intro", [[createEmptyFrame(4)]])] }),
-      details: { ...initialTabEditorState.details, tuning: ["G", "D", "A", "E"] },
-    };
+    const state = stateWith(
+      { sections: [createSection("Intro", [[createEmptyFrame(4)]])] },
+      {},
+      BASS_TUNING,
+    );
 
     const withSection = tabEditorReducer(state, {
       type: "ADD_SECTION",
       payload: { index: 1, name: "Verse" },
     });
-    expect(withSection.tab.sections[1].measures[0][0].notes).toHaveLength(4);
+    expect(activeBody(withSection).sections[1].measures[0][0].notes).toHaveLength(4);
 
     const withMeasure = tabEditorReducer(state, {
       type: "ADD_MEASURE",
       payload: { section: 0, measure: 1 },
     });
-    expect(withMeasure.tab.sections[0].measures[1][0].notes).toHaveLength(4);
+    expect(activeBody(withMeasure).sections[0].measures[1][0].notes).toHaveLength(4);
+  });
+});
+
+describe("track actions", () => {
+  function twoTrackState(): TabEditorState {
+    return {
+      ...initialTabEditorState,
+      tracks: [
+        createTrack({ name: "Guitar", body: body({ name: "Intro", measures: [2] }) }),
+        createTrack({
+          name: "Bass",
+          instrument: "bass",
+          tuning: BASS_TUNING,
+          body: {
+            sections: [createSection("Intro", [[createEmptyFrame(4)]])],
+          },
+        }),
+      ],
+      activeTrack: 0,
+      position: { section: 0, measure: 0, frame: 1, string: 3 },
+    };
+  }
+
+  it("edits only the active track", () => {
+    const state = twoTrackState();
+    const next = tabEditorReducer(state, {
+      type: "SET_NOTE_FRET",
+      payload: { section: 0, measure: 0, frame: 0, string: 0, fret: 5 },
+    });
+
+    expect(next.tracks[0].body.sections[0].measures[0][0].notes[0].fret).toBe(5);
+    expect(next.tracks[1]).toBe(state.tracks[1]);
+  });
+
+  it("resets the cursor when switching tracks", () => {
+    const state = twoTrackState();
+    const next = tabEditorReducer(state, {
+      type: "SET_ACTIVE_TRACK",
+      payload: { index: 1 },
+    });
+
+    expect(next.activeTrack).toBe(1);
+    // Frame 1 / string 3 exist in the guitar track but not in the one-frame bass track.
+    expect(next.position).toEqual({ section: 0, measure: 0, frame: 0, string: 0 });
+  });
+
+  it("ignores a switch to a track that does not exist", () => {
+    const state = twoTrackState();
+    expect(
+      tabEditorReducer(state, { type: "SET_ACTIVE_TRACK", payload: { index: 5 } }),
+    ).toBe(state);
+  });
+
+  it("adds a track and makes it active", () => {
+    const state = twoTrackState();
+    const next = tabEditorReducer(state, {
+      type: "ADD_TRACK",
+      payload: { name: "Uke", instrument: "ukulele", tuning: ["A", "E", "C", "G"] },
+    });
+
+    expect(next.tracks).toHaveLength(3);
+    expect(next.activeTrack).toBe(2);
+    expect(next.tracks[2].body.sections[0].measures[0][0].notes).toHaveLength(4);
+  });
+
+  it("shifts the active index when an earlier track is removed", () => {
+    const state = { ...twoTrackState(), activeTrack: 1 };
+    const next = tabEditorReducer(state, {
+      type: "REMOVE_TRACK",
+      payload: { index: 0 },
+    });
+
+    expect(next.tracks).toHaveLength(1);
+    expect(next.tracks[0].name).toBe("Bass");
+    expect(next.activeTrack).toBe(0);
+  });
+
+  it("refuses to remove the last track", () => {
+    const state = stateWith(body({ name: "Intro", measures: [1] }));
+    expect(tabEditorReducer(state, { type: "REMOVE_TRACK", payload: { index: 0 } })).toBe(
+      state,
+    );
+  });
+
+  it("retunes an inactive track without moving the cursor", () => {
+    const state = twoTrackState();
+    const next = tabEditorReducer(state, {
+      type: "SET_TRACK_TUNING",
+      payload: { index: 1, tuning: ["G", "D", "A", "E", "B"] },
+    });
+
+    expect(next.tracks[1].tuning).toHaveLength(5);
+    expect(next.tracks[1].body.sections[0].measures[0][0].notes).toHaveLength(5);
+    expect(next.position).toBe(state.position);
   });
 });
