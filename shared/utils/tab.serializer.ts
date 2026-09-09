@@ -1,10 +1,43 @@
+import { randomUUID } from "crypto";
 import {
   TabEntity,
   TabType,
   TabResponse,
   CreateTabDto,
   UpdateTabDto,
+  TabBodyType,
+  MeasureType,
 } from "../types/tab.types";
+
+export const DEFAULT_SECTION_NAME = "Section 1";
+
+/**
+ * Upgrades a legacy flat `MeasureType[]` tab body into the sectioned shape by
+ * wrapping it in a single default section. Already-sectioned bodies pass through
+ * untouched.
+ *
+ * The 0001 migration backfills every stored blob, so this is belt & suspenders for
+ * anything that slips past it (an old client posting a flat array, a restored dump).
+ */
+export function normalizeTabBody(raw: unknown): TabBodyType {
+  if (Array.isArray(raw)) {
+    return {
+      sections: [
+        {
+          id: randomUUID(),
+          name: DEFAULT_SECTION_NAME,
+          measures: raw as MeasureType[],
+        },
+      ],
+    };
+  }
+
+  if (raw && typeof raw === "object" && Array.isArray((raw as TabBodyType).sections)) {
+    return raw as TabBodyType;
+  }
+
+  return { sections: [] };
+}
 
 /**
  * Converts a database TabEntity to a frontend-friendly TabResponse
@@ -20,7 +53,7 @@ export function tabEntityToResponse(entity: TabEntity): TabResponse {
       dateModified: entity.modified_at.toISOString(),
       tuning: entity.tuning,
     },
-    body: entity.tab_data,
+    body: normalizeTabBody(entity.tab_data),
   };
 }
 
@@ -43,7 +76,7 @@ export function createDtoToEntity(
     tab_name: dto.tab_name,
     tab_artist: dto.tab_artist,
     tuning: dto.tuning,
-    tab_data: dto.tab_data,
+    tab_data: normalizeTabBody(dto.tab_data),
   };
 }
 
@@ -54,43 +87,79 @@ export function createDtoToEntity(
 export function validateTabSize(
   body: any
 ): { valid: false; error: string } | { valid: true } {
-  if (!Array.isArray(body)) {
-    return { valid: false, error: "Tab body must be an array of measures" };
-  }
-
-  const MAX_MEASURES = 500;
-  const MAX_FRAMES_PER_MEASURE = 64;
-
-  if (body.length > MAX_MEASURES) {
+  if (!body || typeof body !== "object" || !Array.isArray(body.sections)) {
     return {
       valid: false,
-      error: `Tab exceeds maximum of ${MAX_MEASURES} measures`,
+      error: "Tab body must be an object with a sections array",
     };
   }
 
-  for (let i = 0; i < body.length; i++) {
-    const measure = body[i];
-    if (!Array.isArray(measure)) {
+  const MAX_SECTIONS = 100;
+  const MAX_MEASURES = 500;
+  const MAX_FRAMES_PER_MEASURE = 64;
+  const MAX_STRINGS = 12;
+
+  if (body.sections.length > MAX_SECTIONS) {
+    return {
+      valid: false,
+      error: `Tab exceeds maximum of ${MAX_SECTIONS} sections`,
+    };
+  }
+
+  let measureCount = 0;
+
+  for (let s = 0; s < body.sections.length; s++) {
+    const section = body.sections[s];
+    if (
+      !section ||
+      typeof section !== "object" ||
+      !Array.isArray(section.measures)
+    ) {
       return {
         valid: false,
-        error: `Measure ${i} is not an array of frames`,
+        error: `Section ${s} must be an object with a measures array`,
       };
     }
 
-    if (measure.length > MAX_FRAMES_PER_MEASURE) {
+    measureCount += section.measures.length;
+    if (measureCount > MAX_MEASURES) {
       return {
         valid: false,
-        error: `Measure ${i} exceeds maximum of ${MAX_FRAMES_PER_MEASURE} frames`,
+        error: `Tab exceeds maximum of ${MAX_MEASURES} measures`,
       };
     }
 
-    for (let j = 0; j < measure.length; j++) {
-      const frame = measure[j];
-      if (!frame || typeof frame !== "object" || !Array.isArray(frame.notes) || frame.notes.length !== 6) {
+    for (let i = 0; i < section.measures.length; i++) {
+      const measure = section.measures[i];
+      if (!Array.isArray(measure)) {
         return {
           valid: false,
-          error: `Frame ${j} in measure ${i} must be an object with a notes array of 6 notes`,
+          error: `Measure ${i} in section ${s} is not an array of frames`,
         };
+      }
+
+      if (measure.length > MAX_FRAMES_PER_MEASURE) {
+        return {
+          valid: false,
+          error: `Measure ${i} in section ${s} exceeds maximum of ${MAX_FRAMES_PER_MEASURE} frames`,
+        };
+      }
+
+      for (let j = 0; j < measure.length; j++) {
+        const frame = measure[j];
+        if (!frame || typeof frame !== "object" || !Array.isArray(frame.notes)) {
+          return {
+            valid: false,
+            error: `Frame ${j} in measure ${i} of section ${s} must be an object with a notes array`,
+          };
+        }
+
+        if (frame.notes.length < 1 || frame.notes.length > MAX_STRINGS) {
+          return {
+            valid: false,
+            error: `Frame ${j} in measure ${i} of section ${s} must have between 1 and ${MAX_STRINGS} notes`,
+          };
+        }
       }
     }
   }

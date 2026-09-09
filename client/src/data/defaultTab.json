@@ -8,188 +8,203 @@
         "creator": "User",
         "dateCreated": 20250214,
         "dateModified": 20250215,
-        "tuning": ["E", "B", "G", "D", "A", "E"]
+        "tuning": [
+          "E",
+          "B",
+          "G",
+          "D",
+          "A",
+          "E"
+        ]
       },
-      "tab": [
-        [
+      "body": {
+        "sections": [
           {
-            "id": 1,
-            "notes": [
-              {
-                "fret": 0,
-                "style": "none"
-              },
-              {
-                "fret": -1,
-                "style": "slide"
-              },
-              {
-                "fret": 1,
-                "style": "hammerOn"
-              },
-              {
-                "fret": 2,
-                "style": "hammerOff"
-              },
-              {
-                "fret": 3,
-                "style": "harmonic"
-              },
-              {
-                "fret": 4,
-                "style": "bend"
-              }
-            ]
-          },
-          {
-            "id": 2,
-            "notes": [
-              {
-                "fret": 0,
-                "style": "none"
-              },
-              {
-                "fret": 10,
-                "style": "slide"
-              },
-              {
-                "fret": 0,
-                "style": "hammerOn"
-              },
-              {
-                "fret": 5,
-                "style": "hammerOff"
-              },
-              {
-                "fret": 3,
-                "style": "harmonic"
-              },
-              {
-                "fret": 8,
-                "style": "bend"
-              }
-            ]
-          },
-          {
-            "id": 3,
-            "notes": [
-              {
-                "fret": 0,
-                "style": "none"
-              },
-              {
-                "fret": 5,
-                "style": "slide"
-              },
-              {
-                "fret": 4,
-                "style": "hammerOn"
-              },
-              {
-                "fret": 6,
-                "style": "hammerOff"
-              },
-              {
-                "fret": 3,
-                "style": "harmonic"
-              },
-              {
-                "fret": 7,
-                "style": "bend"
-              }
-            ]
-          }
-        ],
-        [
-          {
-            "id": 4,
-            "notes": [
-              {
-                "fret": 0,
-                "style": "none"
-              },
-              {
-                "fret": -1,
-                "style": "slide"
-              },
-              {
-                "fret": 1,
-                "style": "hammerOn"
-              },
-              {
-                "fret": 2,
-                "style": "hammerOff"
-              },
-              {
-                "fret": 3,
-                "style": "harmonic"
-              },
-              {
-                "fret": 4,
-                "style": "bend"
-              }
-            ]
-          },
-          {
-            "id": 5,
-            "notes": [
-              {
-                "fret": 0,
-                "style": "none"
-              },
-              {
-                "fret": 10,
-                "style": "slide"
-              },
-              {
-                "fret": 0,
-                "style": "hammerOn"
-              },
-              {
-                "fret": 5,
-                "style": "hammerOff"
-              },
-              {
-                "fret": 3,
-                "style": "harmonic"
-              },
-              {
-                "fret": 8,
-                "style": "bend"
-              }
-            ]
-          },
-          {
-            "id": 6,
-            "notes": [
-              {
-                "fret": 0,
-                "style": "none"
-              },
-              {
-                "fret": 5,
-                "style": "slide"
-              },
-              {
-                "fret": 4,
-                "style": "hammerOn"
-              },
-              {
-                "fret": 6,
-                "style": "hammerOff"
-              },
-              {
-                "fret": 3,
-                "style": "harmonic"
-              },
-              {
-                "fret": 7,
-                "style": "bend"
-              }
+            "id": "1-s1",
+            "name": "Section 1",
+            "measures": [
+              [
+                {
+                  "id": 1,
+                  "notes": [
+                    {
+                      "fret": 0,
+                      "style": "none"
+                    },
+                    {
+                      "fret": -1,
+                      "style": "slide"
+                    },
+                    {
+                      "fret": 1,
+                      "style": "hammerOn"
+                    },
+                    {
+                      "fret": 2,
+                      "style": "hammerOff"
+                    },
+                    {
+                      "fret": 3,
+                      "style": "harmonic"
+                    },
+                    {
+                      "fret": 4,
+                      "style": "bend"
+                    }
+                  ]
+                },
+                {
+                  "id": 2,
+                  "notes": [
+                    {
+                      "fret": 0,
+                      "style": "none"
+                    },
+                    {
+                      "fret": 10,
+                      "style": "slide"
+                    },
+                    {
+                      "fret": 0,
+                      "style": "hammerOn"
+                    },
+                    {
+                      "fret": 5,
+                      "style": "hammerOff"
+                    },
+                    {
+                      "fret": 3,
+                      "style": "harmonic"
+                    },
+                    {
+                      "fret": 8,
+                      "style": "bend"
+                    }
+                  ]
+                },
+                {
+                  "id": 3,
+                  "notes": [
+                    {
+                      "fret": 0,
+                      "style": "none"
+                    },
+                    {
+                      "fret": 5,
+                      "style": "slide"
+                    },
+                    {
+                      "fret": 4,
+                      "style": "hammerOn"
+                    },
+                    {
+                      "fret": 6,
+                      "style": "hammerOff"
+                    },
+                    {
+                      "fret": 3,
+                      "style": "harmonic"
+                    },
+                    {
+                      "fret": 7,
+                      "style": "bend"
+                    }
+                  ]
+                }
+              ],
+              [
+                {
+                  "id": 4,
+                  "notes": [
+                    {
+                      "fret": 0,
+                      "style": "none"
+                    },
+                    {
+                      "fret": -1,
+                      "style": "slide"
+                    },
+                    {
+                      "fret": 1,
+                      "style": "hammerOn"
+                    },
+                    {
+                      "fret": 2,
+                      "style": "hammerOff"
+                    },
+                    {
+                      "fret": 3,
+                      "style": "harmonic"
+                    },
+                    {
+                      "fret": 4,
+                      "style": "bend"
+                    }
+                  ]
+                },
+                {
+                  "id": 5,
+                  "notes": [
+                    {
+                      "fret": 0,
+                      "style": "none"
+                    },
+                    {
+                      "fret": 10,
+                      "style": "slide"
+                    },
+                    {
+                      "fret": 0,
+                      "style": "hammerOn"
+                    },
+                    {
+                      "fret": 5,
+                      "style": "hammerOff"
+                    },
+                    {
+                      "fret": 3,
+                      "style": "harmonic"
+                    },
+                    {
+                      "fret": 8,
+                      "style": "bend"
+                    }
+                  ]
+                },
+                {
+                  "id": 6,
+                  "notes": [
+                    {
+                      "fret": 0,
+                      "style": "none"
+                    },
+                    {
+                      "fret": 5,
+                      "style": "slide"
+                    },
+                    {
+                      "fret": 4,
+                      "style": "hammerOn"
+                    },
+                    {
+                      "fret": 6,
+                      "style": "hammerOff"
+                    },
+                    {
+                      "fret": 3,
+                      "style": "harmonic"
+                    },
+                    {
+                      "fret": 7,
+                      "style": "bend"
+                    }
+                  ]
+                }
+              ]
             ]
           }
         ]
-      ]
+      }
     },
     {
       "id": "2",
@@ -199,188 +214,203 @@
         "creator": "User",
         "dateCreated": 20250214,
         "dateModified": 20250215,
-        "tuning": ["E", "B", "G", "D", "A", "E"]
+        "tuning": [
+          "E",
+          "B",
+          "G",
+          "D",
+          "A",
+          "E"
+        ]
       },
-      "tab": [
-        [
+      "body": {
+        "sections": [
           {
-            "id": 1,
-            "notes": [
-              {
-                "fret": 0,
-                "style": "none"
-              },
-              {
-                "fret": -1,
-                "style": "slide"
-              },
-              {
-                "fret": 1,
-                "style": "hammerOn"
-              },
-              {
-                "fret": 2,
-                "style": "hammerOff"
-              },
-              {
-                "fret": 3,
-                "style": "harmonic"
-              },
-              {
-                "fret": 4,
-                "style": "bend"
-              }
-            ]
-          },
-          {
-            "id": 2,
-            "notes": [
-              {
-                "fret": 0,
-                "style": "none"
-              },
-              {
-                "fret": 10,
-                "style": "slide"
-              },
-              {
-                "fret": 0,
-                "style": "hammerOn"
-              },
-              {
-                "fret": 5,
-                "style": "hammerOff"
-              },
-              {
-                "fret": 3,
-                "style": "harmonic"
-              },
-              {
-                "fret": 8,
-                "style": "bend"
-              }
-            ]
-          },
-          {
-            "id": 3,
-            "notes": [
-              {
-                "fret": 0,
-                "style": "none"
-              },
-              {
-                "fret": 5,
-                "style": "slide"
-              },
-              {
-                "fret": 4,
-                "style": "hammerOn"
-              },
-              {
-                "fret": 6,
-                "style": "hammerOff"
-              },
-              {
-                "fret": 3,
-                "style": "harmonic"
-              },
-              {
-                "fret": 7,
-                "style": "bend"
-              }
-            ]
-          }
-        ],
-        [
-          {
-            "id": 4,
-            "notes": [
-              {
-                "fret": 0,
-                "style": "none"
-              },
-              {
-                "fret": -1,
-                "style": "slide"
-              },
-              {
-                "fret": 1,
-                "style": "hammerOn"
-              },
-              {
-                "fret": 2,
-                "style": "hammerOff"
-              },
-              {
-                "fret": 3,
-                "style": "harmonic"
-              },
-              {
-                "fret": 4,
-                "style": "bend"
-              }
-            ]
-          },
-          {
-            "id": 5,
-            "notes": [
-              {
-                "fret": 0,
-                "style": "none"
-              },
-              {
-                "fret": 10,
-                "style": "slide"
-              },
-              {
-                "fret": 0,
-                "style": "hammerOn"
-              },
-              {
-                "fret": 5,
-                "style": "hammerOff"
-              },
-              {
-                "fret": 3,
-                "style": "harmonic"
-              },
-              {
-                "fret": 8,
-                "style": "bend"
-              }
-            ]
-          },
-          {
-            "id": 6,
-            "notes": [
-              {
-                "fret": 0,
-                "style": "none"
-              },
-              {
-                "fret": 5,
-                "style": "slide"
-              },
-              {
-                "fret": 4,
-                "style": "hammerOn"
-              },
-              {
-                "fret": 6,
-                "style": "hammerOff"
-              },
-              {
-                "fret": 3,
-                "style": "harmonic"
-              },
-              {
-                "fret": 7,
-                "style": "bend"
-              }
+            "id": "2-s1",
+            "name": "Section 1",
+            "measures": [
+              [
+                {
+                  "id": 1,
+                  "notes": [
+                    {
+                      "fret": 0,
+                      "style": "none"
+                    },
+                    {
+                      "fret": -1,
+                      "style": "slide"
+                    },
+                    {
+                      "fret": 1,
+                      "style": "hammerOn"
+                    },
+                    {
+                      "fret": 2,
+                      "style": "hammerOff"
+                    },
+                    {
+                      "fret": 3,
+                      "style": "harmonic"
+                    },
+                    {
+                      "fret": 4,
+                      "style": "bend"
+                    }
+                  ]
+                },
+                {
+                  "id": 2,
+                  "notes": [
+                    {
+                      "fret": 0,
+                      "style": "none"
+                    },
+                    {
+                      "fret": 10,
+                      "style": "slide"
+                    },
+                    {
+                      "fret": 0,
+                      "style": "hammerOn"
+                    },
+                    {
+                      "fret": 5,
+                      "style": "hammerOff"
+                    },
+                    {
+                      "fret": 3,
+                      "style": "harmonic"
+                    },
+                    {
+                      "fret": 8,
+                      "style": "bend"
+                    }
+                  ]
+                },
+                {
+                  "id": 3,
+                  "notes": [
+                    {
+                      "fret": 0,
+                      "style": "none"
+                    },
+                    {
+                      "fret": 5,
+                      "style": "slide"
+                    },
+                    {
+                      "fret": 4,
+                      "style": "hammerOn"
+                    },
+                    {
+                      "fret": 6,
+                      "style": "hammerOff"
+                    },
+                    {
+                      "fret": 3,
+                      "style": "harmonic"
+                    },
+                    {
+                      "fret": 7,
+                      "style": "bend"
+                    }
+                  ]
+                }
+              ],
+              [
+                {
+                  "id": 4,
+                  "notes": [
+                    {
+                      "fret": 0,
+                      "style": "none"
+                    },
+                    {
+                      "fret": -1,
+                      "style": "slide"
+                    },
+                    {
+                      "fret": 1,
+                      "style": "hammerOn"
+                    },
+                    {
+                      "fret": 2,
+                      "style": "hammerOff"
+                    },
+                    {
+                      "fret": 3,
+                      "style": "harmonic"
+                    },
+                    {
+                      "fret": 4,
+                      "style": "bend"
+                    }
+                  ]
+                },
+                {
+                  "id": 5,
+                  "notes": [
+                    {
+                      "fret": 0,
+                      "style": "none"
+                    },
+                    {
+                      "fret": 10,
+                      "style": "slide"
+                    },
+                    {
+                      "fret": 0,
+                      "style": "hammerOn"
+                    },
+                    {
+                      "fret": 5,
+                      "style": "hammerOff"
+                    },
+                    {
+                      "fret": 3,
+                      "style": "harmonic"
+                    },
+                    {
+                      "fret": 8,
+                      "style": "bend"
+                    }
+                  ]
+                },
+                {
+                  "id": 6,
+                  "notes": [
+                    {
+                      "fret": 0,
+                      "style": "none"
+                    },
+                    {
+                      "fret": 5,
+                      "style": "slide"
+                    },
+                    {
+                      "fret": 4,
+                      "style": "hammerOn"
+                    },
+                    {
+                      "fret": 6,
+                      "style": "hammerOff"
+                    },
+                    {
+                      "fret": 3,
+                      "style": "harmonic"
+                    },
+                    {
+                      "fret": 7,
+                      "style": "bend"
+                    }
+                  ]
+                }
+              ]
             ]
           }
         ]
-      ]
+      }
     }
   ]
 }

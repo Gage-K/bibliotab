@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useTabEditor } from "../context/tabEditorProvider";
 import type { NoteFretType } from "../shared/types/tab.types";
+import { getFrame } from "../utils/tabOperations";
 import { chordNameForFrame } from "../utils/chords";
 import { noteNamesForFrame } from "../utils/pitch";
 import { Input } from "@/components/ui/input";
@@ -23,8 +24,10 @@ export default function TabForm() {
     useTabEditor();
 
   const currentNotes = useMemo(
-    () => tab[position.measure][position.frame]?.notes,
-    [tab, position.measure, position.frame],
+    () =>
+      getFrame(tab, position.section, position.measure, position.frame)?.notes ??
+      getEmptyFrame().notes,
+    [tab, position.section, position.measure, position.frame, getEmptyFrame],
   );
 
   const [formData, setFormData] = useState<NoteFretType[]>(currentNotes);
@@ -82,7 +85,7 @@ export default function TabForm() {
 
   function saveFormData(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    updateTabData(position.measure, position.frame, formData);
+    updateTabData(position.section, position.measure, position.frame, formData);
   }
 
   const buttonStyle = "px-2 py-2 border border-border rounded font-semibold";

@@ -6,6 +6,27 @@ import { validateRequest } from "../middleware/validation.middleware";
 import { UserRepository } from "../../data/repositories/user.repository";
 import { authMiddleware } from "../middleware/auth.middleware";
 import { body, param, query } from "express-validator";
+import { normalizeTabBody, validateTabSize } from "@tablab/shared";
+
+/**
+ * Rejects tab bodies that aren't the sectioned `{ sections: [...] }` shape or that blow
+ * past the size limits. Legacy flat arrays are normalized first so an old client can
+ * still write (the value is re-normalized on the way into the DB).
+ */
+const tabDataValidator = (value: unknown) => {
+  const tabBody = normalizeTabBody(value);
+  if (tabBody.sections.length === 0) {
+    // normalizeTabBody yields no sections only for input that is neither a legacy
+    // measures array nor a `{ sections }` object — i.e. junk.
+    throw new Error("tab_data must be an object with a non-empty sections array");
+  }
+
+  const result = validateTabSize(tabBody);
+  if (!result.valid) {
+    throw new Error(result.error);
+  }
+  return true;
+};
 
 export const createTabRouter = (
   tabService: TabService,
@@ -53,7 +74,7 @@ export const createTabRouter = (
       body("tab_name").trim().isLength({ min: 1, max: 255 }),
       body("tab_artist").optional().trim().isLength({ max: 255 }),
       body("tuning").isArray(),
-      body("tab_data").isArray(),
+      body("tab_data").custom(tabDataValidator),
     ],
     validateRequest(),
     (async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
@@ -90,7 +111,7 @@ export const createTabRouter = (
       body("tab_name").optional().trim().isLength({ min: 1, max: 255 }),
       body("tab_artist").optional().trim().isLength({ max: 255 }),
       body("tuning").optional().isArray(),
-      body("tab_data").optional().isArray(),
+      body("tab_data").optional().custom(tabDataValidator),
     ],
     validateRequest(),
     (async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {

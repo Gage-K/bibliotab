@@ -10,7 +10,7 @@ unchanged — Drizzle is used here **only for schema/migrations**, not as an ORM
 |---|---|
 | `pnpm db:generate` | Diff the schema files against the last snapshot and write a new `NNNN_*.sql` migration. |
 | `pnpm db:migrate` | Apply any pending migrations to the DB in `.env` (tracked in `drizzle.__drizzle_migrations`). |
-| `pnpm db:baseline` | Mark existing migrations as already-applied **without running them** (for a DB that already has the schema). |
+| `pnpm db:baseline` | Mark the **baseline** migration (0000) as already-applied **without running it**, for a DB that already has the schema. Takes `--through <tag>` to stamp further, or `--all`. |
 | `pnpm db:studio` | Open Drizzle Studio to browse the DB. |
 
 DB connection comes from `DB_*` in `server/.env` (`drizzle.config.ts` reads
@@ -30,11 +30,21 @@ created by [`../../../db/init.sql`](../../../db/init.sql) — must be baselined 
 
 ```bash
 pnpm db:baseline     # stamp 0000 as applied
-pnpm db:migrate      # now a no-op; applies only NEW migrations going forward
+pnpm db:migrate      # applies 0001+ for real
 ```
+
+Skipping the baseline step is the usual cause of a silent `db:migrate` failure: with an
+empty `drizzle.__drizzle_migrations` table, drizzle-kit tries to run `0000` against tables
+that already exist, hits `relation "users" already exists`, and exits 1 **without printing
+the error**. If `db:migrate` fails with no message, check whether the DB was baselined.
 
 > ⚠️ Only run `db:baseline` on a DB that already has the tables. On an empty DB it would
 > mark migrations applied without creating anything — use `db:migrate` there instead.
+>
+> ⚠️ `db:baseline` deliberately stamps **only 0000**. Stamping a later migration marks it
+> applied without running it — for a data migration like `0001` that means the backfill
+> never happens and the rows stay in the old shape. Use `--through <tag>` only for
+> migrations you know are already reflected in that database.
 
 ## Adding a schema change (future phases)
 
@@ -50,6 +60,13 @@ pnpm db:migrate      # now a no-op; applies only NEW migrations going forward
   extension needed on PG13+), `now()` instead of `CURRENT_TIMESTAMP`, and the
   `update_modified_at` trigger is **not** reproduced (the repository sets `modified_at`
   itself). Existing DBs keep their trigger; it's harmless.
+- **`0001_wrap_tab_data_in_sections.sql` is hand-written and data-only** (Phase 2). The
+  `tab_data` column is JSONB either way, so `db:generate` produces no DDL for the section
+  wrapper — the backfill was added by hand and `meta/0001_snapshot.json` is a copy of
+  0000's with a fresh id so future `db:generate` runs still diff correctly. It only
+  touches rows where `jsonb_typeof(tab_data) = 'array'`, so re-running it is a no-op.
+  The server also normalizes legacy bodies on read and write (`normalizeTabBody` in
+  `shared/utils/tab.serializer.ts`), so an un-migrated row still renders.
 - `db/init.sql` still bootstraps a fresh Postgres container (mounted in
   `docker-compose.yml`). It and the baseline migration describe the same schema; a fresh
   Docker DB is initialized by `init.sql` and then just needs `db:baseline`.

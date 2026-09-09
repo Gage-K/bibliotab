@@ -7,13 +7,17 @@ import { TabEditorProvider } from "../context/tabEditorProvider";
 import Editor from "../components/Editor";
 import TabDisplay from "../components/TabDisplay";
 import useTypedAuth from "../hooks/useTypedAuth";
-import { createEmptyFrame } from "../utils/tabOperations";
+import { createEmptyFrame, createSection } from "../utils/tabOperations";
 import type { TabBodyType, EditorDetailsType } from "../shared/types/tab.types";
 
-const DEMO_TAB: TabBodyType = [
-  [createEmptyFrame(), createEmptyFrame(), createEmptyFrame(), createEmptyFrame()],
-  [createEmptyFrame(), createEmptyFrame(), createEmptyFrame(), createEmptyFrame()],
-];
+const DEMO_TAB: TabBodyType = {
+  sections: [
+    createSection("Intro", [
+      [createEmptyFrame(), createEmptyFrame(), createEmptyFrame(), createEmptyFrame()],
+      [createEmptyFrame(), createEmptyFrame(), createEmptyFrame(), createEmptyFrame()],
+    ]),
+  ],
+};
 
 const DEMO_DETAILS: EditorDetailsType = {
   id: "demo",

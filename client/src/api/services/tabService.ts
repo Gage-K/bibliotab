@@ -1,6 +1,9 @@
 import type { AxiosInstance } from "axios";
 import { API_ENDPOINTS } from "../endpoints";
-import type { TabBodyType, TuningType } from "../../shared/types/tab.types";
+import type { TabBodyType, TabType, TuningType } from "../../shared/types/tab.types";
+
+/** Every tab endpoint wraps its payload in `{ data }`. */
+type ApiEnvelope<T> = { data: T };
 
 export interface CreateTabPayload {
   tab_name: string;
@@ -18,13 +21,13 @@ export interface SaveTabPayload {
 
 export const tabService = {
   getAll: (axios: AxiosInstance, signal?: AbortSignal) =>
-    axios.get(API_ENDPOINTS.tabs.base, { signal }),
+    axios.get<ApiEnvelope<TabType[]>>(API_ENDPOINTS.tabs.base, { signal }),
 
   getById: (axios: AxiosInstance, id: string, signal?: AbortSignal) =>
-    axios.get(API_ENDPOINTS.tabs.byId(id), { signal }),
+    axios.get<ApiEnvelope<TabType>>(API_ENDPOINTS.tabs.byId(id), { signal }),
 
   create: (axios: AxiosInstance, data: CreateTabPayload) =>
-    axios.post(API_ENDPOINTS.tabs.base, data),
+    axios.post<ApiEnvelope<TabType>>(API_ENDPOINTS.tabs.base, data),
 
   update: (axios: AxiosInstance, id: string, data: SaveTabPayload) =>
     axios.put(API_ENDPOINTS.tabs.byId(id), data),

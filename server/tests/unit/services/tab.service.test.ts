@@ -1,45 +1,35 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { TabService } from "../../../src/core/services/tab.service";
 import { TabRepository } from "../../../src/data/repositories/tab.repository";
-import { Tab, TabTuning } from "../../../src/core/types/tab.types";
+import { TabEntity, TuningType } from "../../../src/core/types/tab.types";
 
-describe("TabService", () => {
-  let tabService: TabService;
-  let mockTabRepository: TabRepository;
+const TUNING = ["E", "B", "G", "D", "A", "E"] as TuningType;
 
-  const mockTab = {
+function makeFrame(id: string) {
+  return { id, notes: [{ fret: 0, style: "none" as const }] };
+}
+
+function makeEntity(overrides: Partial<TabEntity> = {}): TabEntity {
+  return {
     id: "tab-123",
     user_id: "user-123",
     tab_name: "Test tab",
     tab_artist: "Test artist",
-    tuning: ["E", "B", "G", "D", "A", "E"] as TabTuning,
-    created_at: new Date(),
-    modified_at: new Date(),
-    tab: JSON.stringify([
-      [
-        {
-          id: 1,
-          notes: [
-            {
-              fret: 0,
-              style: "none",
-            },
-          ],
-        },
+    tuning: TUNING,
+    created_at: new Date("2024-01-01T00:00:00.000Z"),
+    modified_at: new Date("2024-01-02T00:00:00.000Z"),
+    tab_data: {
+      sections: [
+        { id: "section-1", name: "Intro", measures: [[makeFrame("f1")]] },
       ],
-      [
-        {
-          id: 2,
-          notes: [
-            {
-              fret: 0,
-              style: "none",
-            },
-          ],
-        },
-      ],
-    ]),
+    },
+    ...overrides,
   };
+}
+
+describe("TabService", () => {
+  let tabService: TabService;
+  let mockTabRepository: TabRepository;
 
   beforeEach(() => {
     mockTabRepository = {
@@ -57,24 +47,88 @@ describe("TabService", () => {
   });
 
   describe("Get tab", () => {
-    it("should get a tab by id", async () => {
-      vi.mocked(mockTabRepository.findById).mockResolvedValue(mockTab);
+    it("should map an entity to the response shape", async () => {
+      const entity = makeEntity();
+      vi.mocked(mockTabRepository.findById).mockResolvedValue(entity);
 
-      const result = await tabService.getTab(mockTab.id, mockTab.user_id);
+      const result = await tabService.getTab(entity.id, entity.user_id);
 
-      expect(result).toEqual(mockTab);
-      expect(mockTabRepository.findById).toHaveBeenCalledWith(mockTab.id);
+      expect(result).toEqual({
+        id: entity.id,
+        details: {
+          song: entity.tab_name,
+          artist: entity.tab_artist,
+          creator: entity.user_id,
+          dateCreated: entity.created_at.toISOString(),
+          dateModified: entity.modified_at.toISOString(),
+          tuning: TUNING,
+        },
+        body: entity.tab_data,
+      });
+      expect(mockTabRepository.findById).toHaveBeenCalledWith(entity.id);
+    });
+
+    it("should wrap a legacy flat tab_data array in a default section", async () => {
+      // Rows written before the 0001 sections migration store a bare measures array.
+      const legacy = makeEntity({
+        tab_data: [[makeFrame("f1")], [makeFrame("f2")]] as any,
+      });
+      vi.mocked(mockTabRepository.findById).mockResolvedValue(legacy);
+
+      const result = await tabService.getTab(legacy.id, legacy.user_id);
+
+      expect(result.body.sections).toHaveLength(1);
+      expect(result.body.sections[0].name).toBe("Section 1");
+      expect(result.body.sections[0].measures).toEqual([
+        [makeFrame("f1")],
+        [makeFrame("f2")],
+      ]);
     });
 
     it("should throw an error if the tab is not found", async () => {
       vi.mocked(mockTabRepository.findById).mockResolvedValue(null);
       try {
-        await tabService.getTab("invalid-tab-id", mockTab.user_id);
+        await tabService.getTab("invalid-tab-id", "user-123");
         expect.fail("Should have thrown an error");
       } catch (error: any) {
         expect(error.message).toBe("Tab not found");
         expect(error.statusCode).toBe(404);
       }
+    });
+  });
+
+  describe("Create tab", () => {
+    it("should normalize a legacy body before persisting it", async () => {
+      const created = makeEntity();
+      vi.mocked(mockTabRepository.create).mockResolvedValue(created);
+
+      await tabService.createTab(
+        {
+          tab_name: "Test tab",
+          tab_artist: "Test artist",
+          tuning: TUNING,
+          tab_data: [[makeFrame("f1")]] as any,
+        },
+        "user-123"
+      );
+
+      const persisted = vi.mocked(mockTabRepository.create).mock.calls[0][1];
+      expect(persisted.tab_data.sections).toHaveLength(1);
+      expect(persisted.tab_data.sections[0].measures).toEqual([[makeFrame("f1")]]);
+    });
+  });
+
+  describe("Update tab", () => {
+    it("should leave tab_data absent when the update omits it", async () => {
+      const entity = makeEntity();
+      vi.mocked(mockTabRepository.findById).mockResolvedValue(entity);
+      vi.mocked(mockTabRepository.update).mockResolvedValue(entity);
+
+      await tabService.updateTab(entity.id, { tab_name: "Renamed" }, entity.user_id);
+
+      const patch = vi.mocked(mockTabRepository.update).mock.calls[0][1];
+      expect(patch).toEqual({ tab_name: "Renamed" });
+      expect("tab_data" in patch).toBe(false);
     });
   });
 });

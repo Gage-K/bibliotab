@@ -23,7 +23,7 @@ export type TuningType = [
   TuningNoteType,
   TuningNoteType,
   TuningNoteType,
-  TuningNoteType
+  TuningNoteType,
 ];
 
 export type NoteStyleType =
@@ -47,7 +47,11 @@ export type FrameType = {
 
 export type MeasureType = FrameType[];
 
-export type TabBodyType = MeasureType[];
+export type SectionType = { id: string; name: string; measures: MeasureType[] };
+
+export type TabBodyType = {
+  sections: SectionType[];
+};
 
 export type TabDetailsType = {
   song: string;

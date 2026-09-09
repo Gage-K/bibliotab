@@ -1,5 +1,5 @@
 import { createContext, useReducer, useEffect, useContext, useRef, useCallback } from "react";
-import { createEmptyFrame } from "../utils/tabOperations";
+import { createEmptyFrame, getFrame, getMeasures, normalizeBody } from "../utils/tabOperations";
 import { useTab, useUpdateTab } from "../hooks/useTabs";
 import { useEditorKeybindings } from "../hooks/useEditorKeybindings";
 import type { EditorAction } from "../shared/keymaps/defaultKeymap";
@@ -19,6 +19,8 @@ const FRET_MUTED = -1;
 const MAX_FRET = 24;
 const DIGIT_BUFFER_TIMEOUT_MS = 200;
 
+type MeasureRef = { section: number; measure: number };
+
 interface TabEditorContextType {
   tab: TabBodyType;
   details: EditorDetailsType;
@@ -32,14 +34,18 @@ interface TabEditorContextType {
   updateDetails: (name: string, value: string | TuningType) => void;
   saveChanges: () => Promise<void>;
   handleOpeningEditor: () => void;
-  updatePosition: (measure: number, frame: number) => void;
+  updatePosition: (section: number, measure: number, frame: number) => void;
   getEmptyFrame: () => FrameType;
-  addNewMeasure: (measure: number) => void;
-  addNewFrame: (measure: number, frame: number, isEmpty: boolean) => void;
-  addFrameAndAdvance: (measure: number, frame: number, isEmpty: boolean) => void;
-  deleteMeasure: (measure: number) => void;
-  deleteFrame: (frame: number, measure: number) => void;
-  updateTabData: (measure: number, index: number, formData: NoteFretType[]) => void;
+  addNewMeasure: (section: number, measure: number) => void;
+  addNewFrame: (section: number, measure: number, frame: number, isEmpty: boolean) => void;
+  addFrameAndAdvance: (section: number, measure: number, frame: number, isEmpty: boolean) => void;
+  deleteMeasure: (section: number, measure: number) => void;
+  deleteFrame: (section: number, measure: number, frame: number) => void;
+  updateTabData: (section: number, measure: number, frame: number, formData: NoteFretType[]) => void;
+  addSection: (index: number, name: string) => void;
+  renameSection: (index: number, name: string) => void;
+  deleteSection: (index: number) => void;
+  moveMeasure: (from: MeasureRef, to: MeasureRef) => void;
 }
 
 const TabEditorContext = createContext<TabEditorContextType | null>(null);
@@ -64,7 +70,10 @@ export function TabEditorProvider({
   useEffect(() => {
     if (demoData && !hasLoaded.current) {
       hasLoaded.current = true;
-      dispatch({ type: "SET_TAB_DATA", payload: demoData });
+      dispatch({
+        type: "SET_TAB_DATA",
+        payload: { ...demoData, tab: normalizeBody(demoData.tab) },
+      });
     } else if (serverTab && !hasLoaded.current) {
       hasLoaded.current = true;
       dispatch({
@@ -76,13 +85,14 @@ export function TabEditorProvider({
             song: serverTab.details.song,
             tuning: serverTab.details.tuning,
           },
-          tab: serverTab.body,
+          // Legacy flat bodies are wrapped in a default section (see normalizeBody).
+          tab: normalizeBody(serverTab.body),
         },
       });
     }
   }, [serverTab, demoData]);
 
-  const isLoading = isDemo ? false : isQueryLoading || tab.length === 0;
+  const isLoading = isDemo ? false : isQueryLoading || tab.sections.length === 0;
 
   function updateDetails(name: string, value: string | TuningType) {
     dispatch({ type: "UPDATE_DETAILS", payload: { name, value } });
@@ -113,32 +123,53 @@ export function TabEditorProvider({
     dispatch({ type: "TOGGLE_EDITOR" });
   }
 
-  function updatePosition(measure: number, frame: number) {
-    dispatch({ type: "SET_POSITION", payload: { measure, frame } });
+  function updatePosition(section: number, measure: number, frame: number) {
+    dispatch({ type: "SET_POSITION", payload: { section, measure, frame } });
   }
 
-  function addNewMeasure(measure: number) {
-    dispatch({ type: "ADD_MEASURE", payload: { measure } });
+  function addNewMeasure(section: number, measure: number) {
+    dispatch({ type: "ADD_MEASURE", payload: { section, measure } });
   }
 
-  function addNewFrame(measure: number, frame: number, isEmpty: boolean) {
-    dispatch({ type: "ADD_FRAME", payload: { measure, frame, isEmpty } });
+  function addNewFrame(section: number, measure: number, frame: number, isEmpty: boolean) {
+    dispatch({ type: "ADD_FRAME", payload: { section, measure, frame, isEmpty } });
   }
 
-  function addFrameAndAdvance(measure: number, frame: number, isEmpty: boolean) {
-    dispatch({ type: "ADD_FRAME_AND_ADVANCE", payload: { measure, frame, isEmpty } });
+  function addFrameAndAdvance(section: number, measure: number, frame: number, isEmpty: boolean) {
+    dispatch({ type: "ADD_FRAME_AND_ADVANCE", payload: { section, measure, frame, isEmpty } });
   }
 
-  function deleteMeasure(measure: number) {
-    dispatch({ type: "DELETE_FRAME", payload: { frame: 0, measure } });
+  function deleteMeasure(section: number, measure: number) {
+    dispatch({ type: "DELETE_FRAME", payload: { section, measure, frame: 0 } });
   }
 
-  function deleteFrame(frame: number, measure: number) {
-    dispatch({ type: "DELETE_FRAME", payload: { frame, measure } });
+  function deleteFrame(section: number, measure: number, frame: number) {
+    dispatch({ type: "DELETE_FRAME", payload: { section, measure, frame } });
   }
 
-  function updateTabData(measure: number, index: number, formData: NoteFretType[]) {
-    dispatch({ type: "UPDATE_TAB_FRAME", payload: { measure, frame: index, formData } });
+  function updateTabData(
+    section: number,
+    measure: number,
+    frame: number,
+    formData: NoteFretType[]
+  ) {
+    dispatch({ type: "UPDATE_TAB_FRAME", payload: { section, measure, frame, formData } });
+  }
+
+  function addSection(index: number, name: string) {
+    dispatch({ type: "ADD_SECTION", payload: { index, name } });
+  }
+
+  function renameSection(index: number, name: string) {
+    dispatch({ type: "RENAME_SECTION", payload: { index, name } });
+  }
+
+  function deleteSection(index: number) {
+    dispatch({ type: "DELETE_SECTION", payload: { index } });
+  }
+
+  function moveMeasure(from: MeasureRef, to: MeasureRef) {
+    dispatch({ type: "MOVE_MEASURE", payload: { from, to } });
   }
 
   // Fret digit buffering
@@ -151,6 +182,7 @@ export function TabEditorProvider({
       dispatch({
         type: "SET_NOTE_FRET",
         payload: {
+          section: position.section,
           measure: position.measure,
           frame: position.frame,
           string: position.string,
@@ -208,7 +240,7 @@ export function TabEditorProvider({
 
   const toggleStyle = useCallback(
     (style: NoteStyleType) => {
-      const currentFrame = tab[position.measure]?.[position.frame];
+      const currentFrame = getFrame(tab, position.section, position.measure, position.frame);
       if (!currentFrame) return;
       const note = currentFrame.notes[position.string];
       if (!note || note.fret === FRET_EMPTY || note.fret === FRET_MUTED) return;
@@ -217,6 +249,7 @@ export function TabEditorProvider({
       dispatch({
         type: "SET_NOTE_STYLE",
         payload: {
+          section: position.section,
           measure: position.measure,
           frame: position.frame,
           string: position.string,
@@ -229,6 +262,8 @@ export function TabEditorProvider({
 
   const handleEditorAction = useCallback(
     (action: EditorAction) => {
+      const { section, measure, frame } = position;
+
       switch (action) {
         // Navigation
         case "moveUp":
@@ -238,25 +273,33 @@ export function TabEditorProvider({
           dispatch({ type: "SET_STRING", payload: { string: position.string + 1 } });
           break;
         case "moveLeft":
-          dispatch({ type: "SET_POSITION", payload: { measure: position.measure, frame: position.frame - 1 } });
+          dispatch({ type: "SET_POSITION", payload: { section, measure, frame: frame - 1 } });
           break;
         case "moveRight":
-          dispatch({ type: "SET_POSITION", payload: { measure: position.measure, frame: position.frame + 1 } });
+          dispatch({ type: "SET_POSITION", payload: { section, measure, frame: frame + 1 } });
           break;
         case "nextMeasureStart": {
-          const next = position.measure + 1;
-          if (next < tab.length) {
-            dispatch({ type: "SET_POSITION", payload: { measure: next, frame: 0 } });
+          const next = measure + 1;
+          if (next < getMeasures(tab, section).length) {
+            dispatch({ type: "SET_POSITION", payload: { section, measure: next, frame: 0 } });
+          } else if (getMeasures(tab, section + 1).length > 0) {
+            // Falls through to the first measure of the next section.
+            dispatch({ type: "SET_POSITION", payload: { section: section + 1, measure: 0, frame: 0 } });
           }
           break;
         }
         case "prevMeasureStart": {
-          if (position.frame > 0) {
-            dispatch({ type: "SET_POSITION", payload: { measure: position.measure, frame: 0 } });
+          if (frame > 0) {
+            dispatch({ type: "SET_POSITION", payload: { section, measure, frame: 0 } });
+          } else if (measure - 1 >= 0) {
+            dispatch({ type: "SET_POSITION", payload: { section, measure: measure - 1, frame: 0 } });
           } else {
-            const prev = position.measure - 1;
-            if (prev >= 0) {
-              dispatch({ type: "SET_POSITION", payload: { measure: prev, frame: 0 } });
+            const prevMeasures = getMeasures(tab, section - 1);
+            if (prevMeasures.length > 0) {
+              dispatch({
+                type: "SET_POSITION",
+                payload: { section: section - 1, measure: prevMeasures.length - 1, frame: 0 },
+              });
             }
           }
           break;
@@ -266,13 +309,13 @@ export function TabEditorProvider({
         case "selectLeft":
           dispatch({
             type: "EXTEND_SELECTION",
-            payload: { measure: position.measure, frame: position.frame - 1 },
+            payload: { section, measure, frame: frame - 1 },
           });
           break;
         case "selectRight":
           dispatch({
             type: "EXTEND_SELECTION",
-            payload: { measure: position.measure, frame: position.frame + 1 },
+            payload: { section, measure, frame: frame + 1 },
           });
           break;
 
@@ -293,8 +336,9 @@ export function TabEditorProvider({
           dispatch({
             type: "SET_NOTE_FRET",
             payload: {
-              measure: position.measure,
-              frame: position.frame,
+              section,
+              measure,
+              frame,
               string: position.string,
               fret: FRET_EMPTY,
             },
@@ -304,8 +348,9 @@ export function TabEditorProvider({
           dispatch({
             type: "SET_NOTE_FRET",
             payload: {
-              measure: position.measure,
-              frame: position.frame,
+              section,
+              measure,
+              frame,
               string: position.string,
               fret: FRET_MUTED,
             },
@@ -322,29 +367,30 @@ export function TabEditorProvider({
 
         // Inserts
         case "addFrameBefore":
-          dispatch({ type: "ADD_FRAME", payload: { measure: position.measure, frame: position.frame - 1, isEmpty: true } });
-          dispatch({ type: "SET_POSITION", payload: { measure: position.measure, frame: position.frame + 1 } });
+          dispatch({ type: "ADD_FRAME", payload: { section, measure, frame: frame - 1, isEmpty: true } });
+          dispatch({ type: "SET_POSITION", payload: { section, measure, frame: frame + 1 } });
           break;
         case "addFrameAfter":
-          dispatch({ type: "ADD_FRAME", payload: { measure: position.measure, frame: position.frame, isEmpty: true } });
+          dispatch({ type: "ADD_FRAME", payload: { section, measure, frame, isEmpty: true } });
           break;
         case "duplicateFrame":
-          dispatch({ type: "ADD_FRAME_AND_ADVANCE", payload: { measure: position.measure, frame: position.frame, isEmpty: false } });
+          dispatch({ type: "ADD_FRAME_AND_ADVANCE", payload: { section, measure, frame, isEmpty: false } });
           break;
         case "addMeasureBefore":
-          dispatch({ type: "ADD_MEASURE", payload: { measure: position.measure } });
-          dispatch({ type: "SET_POSITION", payload: { measure: position.measure + 1, frame: position.frame } });
+          dispatch({ type: "ADD_MEASURE", payload: { section, measure } });
+          dispatch({ type: "SET_POSITION", payload: { section, measure: measure + 1, frame } });
           break;
         case "addMeasureAfter":
-          dispatch({ type: "ADD_MEASURE", payload: { measure: position.measure + 1 } });
+          dispatch({ type: "ADD_MEASURE", payload: { section, measure: measure + 1 } });
           break;
 
         case "deleteFrame":
-          dispatch({ type: "DELETE_FRAME", payload: { measure: position.measure, frame: position.frame } })
+          dispatch({ type: "DELETE_FRAME", payload: { section, measure, frame } });
+          break;
 
         // Escape
         case "escape":
-          dispatch({ type: "SET_POSITION", payload: { measure: position.measure, frame: position.frame } });
+          dispatch({ type: "SET_POSITION", payload: { section, measure, frame } });
           break;
       }
     },
@@ -376,6 +422,10 @@ export function TabEditorProvider({
         deleteMeasure,
         deleteFrame,
         updateTabData,
+        addSection,
+        renameSection,
+        deleteSection,
+        moveMeasure,
       }}>
       {children}
     </TabEditorContext.Provider>

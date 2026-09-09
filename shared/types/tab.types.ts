@@ -25,7 +25,7 @@ export type TuningType = [
   TuningNoteType,
   TuningNoteType,
   TuningNoteType,
-  TuningNoteType
+  TuningNoteType,
 ];
 
 export type NoteStyleType =
@@ -49,8 +49,6 @@ export type FrameType = {
 
 export type MeasureType = FrameType[];
 
-export type TabBodyType = MeasureType[];
-
 // Tab metadata
 export type TabDetailsType = {
   song: string;
@@ -61,13 +59,18 @@ export type TabDetailsType = {
   tuning: TuningType;
 };
 
+export type SectionType = { id: string; name: string; measures: MeasureType[] };
+
+export type TabBodyType = {
+  sections: SectionType[];
+};
+
 // Complete tab document
 export type TabType = {
   id: IdType;
   details: TabDetailsType;
   body: TabBodyType;
 };
-
 
 // ============================================================================
 // DB Model

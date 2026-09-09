@@ -1,7 +1,11 @@
 import { TabRepository } from "../../data/repositories/tab.repository";
 import { ForbiddenError, NotFoundError } from "../../common/errors/AppError";
 import { CreateTabDto, TabResponse, UpdateTabDto } from "../types/tab.types";
-import { tabEntityToResponse, tabEntitiesToResponses } from "@tablab/shared";
+import {
+  tabEntityToResponse,
+  tabEntitiesToResponses,
+  normalizeTabBody,
+} from "@tablab/shared";
 
 export class TabService {
   constructor(private tabRepo: TabRepository) {}
@@ -38,7 +42,11 @@ export class TabService {
   }
 
   async createTab(tabData: CreateTabDto, userId: string): Promise<TabResponse> {
-    const created = await this.tabRepo.create(userId, tabData);
+    // Store the sectioned shape regardless of what the client sent.
+    const created = await this.tabRepo.create(userId, {
+      ...tabData,
+      tab_data: normalizeTabBody(tabData.tab_data),
+    });
     return tabEntityToResponse(created);
   }
 
@@ -49,7 +57,12 @@ export class TabService {
   ): Promise<TabResponse> {
     await this.verifyOwnership(tabId, userId);
 
-    const updatedTab = await this.tabRepo.update(tabId, tabData);
+    const updatedTab = await this.tabRepo.update(tabId, {
+      ...tabData,
+      ...(tabData.tab_data !== undefined
+        ? { tab_data: normalizeTabBody(tabData.tab_data) }
+        : {}),
+    });
     if (!updatedTab) {
       throw new NotFoundError("Tab");
     }

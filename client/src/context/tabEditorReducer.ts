@@ -7,16 +7,23 @@ import type {
 } from "../shared/types/tab.types";
 import type { TabPositionType, TabSelectionType } from "../shared/types/utilities.types";
 import {
-  createEmptyFrame,
   isExistingPosition,
   isOnlyFrame,
   isOnlyMeasure,
+  isOnlySection,
+  getFrame,
+  getMeasures,
   insertMeasure,
   insertFrame,
   removeMeasure,
   removeFrame,
   updateFrameNotes,
   resolvePositionAfterFrameDelete,
+  insertSection,
+  removeSection,
+  renameSection,
+  moveMeasure,
+  resolveMoveTarget,
 } from "../utils/tabOperations";
 
 export interface TabEditorState {
@@ -30,9 +37,9 @@ export interface TabEditorState {
 }
 
 export const initialTabEditorState: TabEditorState = {
-  tab: [],
+  tab: { sections: [] },
   details: { id: "", artist: "", song: "", tuning: ["E", "B", "G", "D", "A", "E"] },
-  position: { measure: 0, frame: 0, string: 0 },
+  position: { section: 0, measure: 0, frame: 0, string: 0 },
   selection: null,
   editorIsOpen: false,
   isEditing: false,
@@ -42,16 +49,26 @@ export const initialTabEditorState: TabEditorState = {
 export type TabEditorAction =
   | { type: "SET_TAB_DATA"; payload: { tab: TabBodyType; details: EditorDetailsType } }
   | { type: "UPDATE_DETAILS"; payload: { name: string; value: string | TuningType } }
-  | { type: "UPDATE_TAB_FRAME"; payload: { measure: number; frame: number; formData: NoteFretType[] } }
-  | { type: "ADD_MEASURE"; payload: { measure: number } }
-  | { type: "ADD_FRAME"; payload: { measure: number; frame: number; isEmpty: boolean } }
-  | { type: "ADD_FRAME_AND_ADVANCE"; payload: { measure: number; frame: number; isEmpty: boolean } }
-  | { type: "DELETE_FRAME"; payload: { frame: number; measure: number } }
-  | { type: "SET_POSITION"; payload: { measure: number; frame: number } }
+  | { type: "UPDATE_TAB_FRAME"; payload: { section: number; measure: number; frame: number; formData: NoteFretType[] } }
+  | { type: "ADD_MEASURE"; payload: { section: number; measure: number } }
+  | { type: "ADD_FRAME"; payload: { section: number; measure: number; frame: number; isEmpty: boolean } }
+  | { type: "ADD_FRAME_AND_ADVANCE"; payload: { section: number; measure: number; frame: number; isEmpty: boolean } }
+  | { type: "DELETE_FRAME"; payload: { section: number; measure: number; frame: number } }
+  | { type: "SET_POSITION"; payload: { section: number; measure: number; frame: number } }
   | { type: "SET_STRING"; payload: { string: number } }
-  | { type: "SET_NOTE_FRET"; payload: { measure: number; frame: number; string: number; fret: number } }
-  | { type: "SET_NOTE_STYLE"; payload: { measure: number; frame: number; string: number; style: NoteStyleType } }
-  | { type: "EXTEND_SELECTION"; payload: { measure: number; frame: number } }
+  | { type: "SET_NOTE_FRET"; payload: { section: number; measure: number; frame: number; string: number; fret: number } }
+  | { type: "SET_NOTE_STYLE"; payload: { section: number; measure: number; frame: number; string: number; style: NoteStyleType } }
+  | { type: "EXTEND_SELECTION"; payload: { section: number; measure: number; frame: number } }
+  | { type: "ADD_SECTION"; payload: { index: number; name: string } }
+  | { type: "RENAME_SECTION"; payload: { index: number; name: string } }
+  | { type: "DELETE_SECTION"; payload: { index: number } }
+  | {
+      type: "MOVE_MEASURE";
+      payload: {
+        from: { section: number; measure: number };
+        to: { section: number; measure: number };
+      };
+    }
   | { type: "TOGGLE_EDITOR" }
   | { type: "SAVE_START" }
   | { type: "SAVE_SUCCESS" }
@@ -76,35 +93,41 @@ export function tabEditorReducer(state: TabEditorState, action: TabEditorAction)
     case "UPDATE_TAB_FRAME":
       return {
         ...state,
-        tab: updateFrameNotes(state.tab, action.payload.measure, action.payload.frame, action.payload.formData),
+        tab: updateFrameNotes(
+          state.tab,
+          action.payload.section,
+          action.payload.measure,
+          action.payload.frame,
+          action.payload.formData
+        ),
         isEditing: true,
       };
 
     case "ADD_MEASURE": {
-      const { measure } = action.payload;
-      const newTab = insertMeasure(state.tab, measure);
+      const { section, measure } = action.payload;
+      const newTab = insertMeasure(state.tab, section, measure);
       return {
         ...state,
         tab: newTab,
-        position: { measure: measure === -1 ? 0 : measure, frame: 0, string: 0 },
+        position: { section, measure: measure === -1 ? 0 : measure, frame: 0, string: 0 },
         isEditing: true,
       };
     }
 
     case "ADD_FRAME": {
-      const { measure, frame, isEmpty } = action.payload;
+      const { section, measure, frame, isEmpty } = action.payload;
       return {
         ...state,
-        tab: insertFrame(state.tab, measure, frame, isEmpty),
+        tab: insertFrame(state.tab, section, measure, frame, isEmpty),
         isEditing: true,
       };
     }
 
     case "ADD_FRAME_AND_ADVANCE": {
-      const { measure, frame, isEmpty } = action.payload;
-      const newTab = insertFrame(state.tab, measure, frame, isEmpty);
-      const newPosition = isExistingPosition(newTab, measure, frame + 1)
-        ? { measure, frame: frame + 1, string: state.position.string }
+      const { section, measure, frame, isEmpty } = action.payload;
+      const newTab = insertFrame(state.tab, section, measure, frame, isEmpty);
+      const newPosition = isExistingPosition(newTab, section, measure, frame + 1)
+        ? { section, measure, frame: frame + 1, string: state.position.string }
         : state.position;
       return {
         ...state,
@@ -115,59 +138,74 @@ export function tabEditorReducer(state: TabEditorState, action: TabEditorAction)
     }
 
     case "DELETE_FRAME": {
-      const { frame, measure } = action.payload;
+      const { section, measure, frame } = action.payload;
 
-      if (isOnlyFrame(state.tab, measure)) {
-        if (isOnlyMeasure(state.tab)) {
+      if (isOnlyFrame(state.tab, section, measure)) {
+        // A section always keeps at least one measure; empty it out via DELETE_SECTION.
+        if (isOnlyMeasure(state.tab, section)) {
           return state;
         }
-        const newTab = removeMeasure(state.tab, measure);
-        const prevMeasure = measure - 1;
+        const newTab = removeMeasure(state.tab, section, measure);
+        const prevMeasure = Math.max(measure - 1, 0);
         return {
           ...state,
           tab: newTab,
           position: {
+            section,
             measure: prevMeasure,
-            frame: newTab[prevMeasure]?.length - 1 || 0,
+            frame: getMeasures(newTab, section)[prevMeasure]?.length - 1 || 0,
             string: 0,
           },
           isEditing: true,
         };
       }
 
-      const newTab = removeFrame(state.tab, measure, frame);
+      const newTab = removeFrame(state.tab, section, measure, frame);
       return {
         ...state,
         tab: newTab,
-        position: resolvePositionAfterFrameDelete(newTab, measure, frame),
+        position: resolvePositionAfterFrameDelete(newTab, section, measure, frame),
         isEditing: true,
       };
     }
 
     case "SET_POSITION": {
-      const { measure, frame } = action.payload;
+      const { section, measure, frame } = action.payload;
       const { tab } = state;
 
-      if (isExistingPosition(tab, measure, frame)) {
+      if (isExistingPosition(tab, section, measure, frame)) {
         return {
           ...state,
           selection: null,
-          position: { measure, frame, string: state.position.string },
+          position: { section, measure, frame, string: state.position.string },
         };
       }
 
-      if (frame >= tab[measure]?.length) {
+      const measures = getMeasures(tab, section);
+
+      // Past the end of a measure: next measure, else first measure of the next section.
+      if (frame >= (measures[measure]?.length ?? 0)) {
         const nextMeasure = measure + 1;
-        if (nextMeasure < tab.length) {
+        if (nextMeasure < measures.length) {
           return {
             ...state,
             selection: null,
-            position: { measure: nextMeasure, frame: 0, string: state.position.string },
+            position: { section, measure: nextMeasure, frame: 0, string: state.position.string },
+          };
+        }
+        const nextSection = section + 1;
+        if (isExistingPosition(tab, nextSection, 0, 0)) {
+          return {
+            ...state,
+            selection: null,
+            position: { section: nextSection, measure: 0, frame: 0, string: state.position.string },
           };
         }
         return state;
       }
 
+      // Before the start of a measure: previous measure, else last measure of the
+      // previous section.
       if (frame < 0) {
         const prevMeasure = measure - 1;
         if (prevMeasure >= 0) {
@@ -175,8 +213,24 @@ export function tabEditorReducer(state: TabEditorState, action: TabEditorAction)
             ...state,
             selection: null,
             position: {
+              section,
               measure: prevMeasure,
-              frame: tab[prevMeasure]?.length - 1 || 0,
+              frame: measures[prevMeasure]?.length - 1 || 0,
+              string: state.position.string,
+            },
+          };
+        }
+        const prevSection = section - 1;
+        const prevSectionMeasures = getMeasures(tab, prevSection);
+        if (prevSection >= 0 && prevSectionMeasures.length > 0) {
+          const lastMeasure = prevSectionMeasures.length - 1;
+          return {
+            ...state,
+            selection: null,
+            position: {
+              section: prevSection,
+              measure: lastMeasure,
+              frame: prevSectionMeasures[lastMeasure].length - 1,
               string: state.position.string,
             },
           };
@@ -197,22 +251,24 @@ export function tabEditorReducer(state: TabEditorState, action: TabEditorAction)
     }
 
     case "SET_NOTE_FRET": {
-      const { measure, frame, string: stringIdx, fret } = action.payload;
-      const currentFrame = state.tab[measure]?.[frame];
+      const { section, measure, frame, string: stringIdx, fret } = action.payload;
+      const currentFrame = getFrame(state.tab, section, measure, frame);
       if (!currentFrame) return state;
       const newNotes = currentFrame.notes.map((note, i) =>
-        i === stringIdx ? { ...note, fret, ...(fret === -2 || fret === -1 ? { style: "none" } : {}) } : note
+        i === stringIdx
+          ? { ...note, fret, ...(fret === -2 || fret === -1 ? { style: "none" as const } : {}) }
+          : note
       );
       return {
         ...state,
-        tab: updateFrameNotes(state.tab, measure, frame, newNotes),
+        tab: updateFrameNotes(state.tab, section, measure, frame, newNotes),
         isEditing: true,
       };
     }
 
     case "SET_NOTE_STYLE": {
-      const { measure, frame, string: stringIdx, style } = action.payload;
-      const currentFrame = state.tab[measure]?.[frame];
+      const { section, measure, frame, string: stringIdx, style } = action.payload;
+      const currentFrame = getFrame(state.tab, section, measure, frame);
       if (!currentFrame) return state;
       const note = currentFrame.notes[stringIdx];
       if (!note || note.fret === -2 || note.fret === -1) return state;
@@ -221,22 +277,23 @@ export function tabEditorReducer(state: TabEditorState, action: TabEditorAction)
       );
       return {
         ...state,
-        tab: updateFrameNotes(state.tab, measure, frame, newNotes),
+        tab: updateFrameNotes(state.tab, section, measure, frame, newNotes),
         isEditing: true,
       };
     }
 
     case "EXTEND_SELECTION": {
-      const { measure, frame } = action.payload;
+      const { section, measure, frame } = action.payload;
       const { tab } = state;
-      if (!isExistingPosition(tab, measure, frame)) return state;
+      if (!isExistingPosition(tab, section, measure, frame)) return state;
 
-      const newPosition = { ...state.position, measure, frame };
+      const newPosition = { ...state.position, section, measure, frame };
+      const head = { section, measure, frame, string: 0 };
       if (state.selection) {
         return {
           ...state,
           position: newPosition,
-          selection: { ...state.selection, head: { measure, frame, string: 0 } },
+          selection: { ...state.selection, head },
         };
       }
       return {
@@ -244,8 +301,76 @@ export function tabEditorReducer(state: TabEditorState, action: TabEditorAction)
         position: newPosition,
         selection: {
           anchor: { ...state.position },
-          head: { measure, frame, string: 0 },
+          head,
         },
+      };
+    }
+
+    case "ADD_SECTION": {
+      const { index, name } = action.payload;
+      const newTab = insertSection(state.tab, index, name);
+      if (newTab === state.tab) return state;
+      const newSection = Math.max(Math.min(index, newTab.sections.length - 1), 0);
+      return {
+        ...state,
+        tab: newTab,
+        position: { section: newSection, measure: 0, frame: 0, string: state.position.string },
+        selection: null,
+        isEditing: true,
+      };
+    }
+
+    case "RENAME_SECTION": {
+      const newTab = renameSection(state.tab, action.payload.index, action.payload.name);
+      if (newTab === state.tab) return state;
+      return { ...state, tab: newTab, isEditing: true };
+    }
+
+    case "DELETE_SECTION": {
+      const { index } = action.payload;
+      if (isOnlySection(state.tab)) return state;
+      const newTab = removeSection(state.tab, index);
+      if (newTab === state.tab) return state;
+
+      // Deleting a section the cursor isn't in leaves the cursor on the same frame,
+      // shifted if the deletion was above it. Deleting the cursor's own section lands
+      // on whichever section took its place (or the new last one).
+      if (state.position.section !== index) {
+        const shifted =
+          state.position.section > index
+            ? state.position.section - 1
+            : state.position.section;
+        return {
+          ...state,
+          tab: newTab,
+          position: { ...state.position, section: shifted },
+          selection: null,
+          isEditing: true,
+        };
+      }
+
+      const newSection = Math.min(index, newTab.sections.length - 1);
+      return {
+        ...state,
+        tab: newTab,
+        position: { section: newSection, measure: 0, frame: 0, string: 0 },
+        selection: null,
+        isEditing: true,
+      };
+    }
+
+    case "MOVE_MEASURE": {
+      const { from, to } = action.payload;
+      const newTab = moveMeasure(state.tab, from, to);
+      if (newTab === state.tab) return state;
+
+      const landed = resolveMoveTarget(state.tab, from, to);
+      return {
+        ...state,
+        tab: newTab,
+        position: { ...landed, frame: 0, string: state.position.string },
+        selection: null,
+        isEditing: true,
       };
     }
 

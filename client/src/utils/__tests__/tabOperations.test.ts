@@ -1,0 +1,208 @@
+import { describe, it, expect } from "vitest";
+import {
+  createEmptyFrame,
+  createSection,
+  normalizeBody,
+  insertSection,
+  removeSection,
+  renameSection,
+  moveMeasure,
+  resolveMoveTarget,
+  insertMeasure,
+  removeFrame,
+  insertFrame,
+  updateFrameNotes,
+  frameOrdinal,
+  sectionMeasureOffset,
+  totalMeasures,
+  isExistingPosition,
+} from "../tabOperations";
+import type { MeasureType, TabBodyType } from "@/shared/types/tab.types";
+
+// A measure of `frames` empty frames.
+function measure(frames: number): MeasureType {
+  return Array.from({ length: frames }, () => createEmptyFrame());
+}
+
+// Body with one section per entry, each holding measures of the given frame counts.
+function body(...sections: { name: string; measures: number[] }[]): TabBodyType {
+  return {
+    sections: sections.map((s) =>
+      createSection(
+        s.name,
+        s.measures.map((frames) => measure(frames)),
+      ),
+    ),
+  };
+}
+
+describe("normalizeBody", () => {
+  it("wraps a legacy flat measures array in one default section", () => {
+    const legacy = [measure(2), measure(1)];
+    const normalized = normalizeBody(legacy);
+
+    expect(normalized.sections).toHaveLength(1);
+    expect(normalized.sections[0].name).toBe("Section 1");
+    expect(normalized.sections[0].measures).toEqual(legacy);
+    expect(normalized.sections[0].id).toBeTruthy();
+  });
+
+  it("passes an already-sectioned body through untouched", () => {
+    const sectioned = body({ name: "Verse", measures: [1] });
+    expect(normalizeBody(sectioned)).toBe(sectioned);
+  });
+
+  it("falls back to an empty single-section body for junk", () => {
+    expect(normalizeBody(null).sections).toHaveLength(1);
+    expect(normalizeBody("nope").sections[0].measures).toHaveLength(1);
+  });
+});
+
+describe("section operations", () => {
+  it("inserts a section at an index, clamping out-of-range ones", () => {
+    const tab = body({ name: "Intro", measures: [1] }, { name: "Verse", measures: [1] });
+
+    expect(insertSection(tab, 1, "Bridge").sections.map((s) => s.name)).toEqual([
+      "Intro",
+      "Bridge",
+      "Verse",
+    ]);
+    expect(insertSection(tab, 99, "Outro").sections.map((s) => s.name)).toEqual([
+      "Intro",
+      "Verse",
+      "Outro",
+    ]);
+    expect(insertSection(tab, -1, "Count-in").sections[0].name).toBe("Count-in");
+  });
+
+  it("gives a new section one empty measure", () => {
+    const created = insertSection(body({ name: "Intro", measures: [1] }), 1, "Verse");
+    expect(created.sections[1].measures).toHaveLength(1);
+    expect(created.sections[1].measures[0]).toHaveLength(1);
+  });
+
+  it("renames a section without touching its measures", () => {
+    const tab = body({ name: "Intro", measures: [2] });
+    const renamed = renameSection(tab, 0, "Chorus");
+    expect(renamed.sections[0].name).toBe("Chorus");
+    expect(renamed.sections[0].measures).toBe(tab.sections[0].measures);
+  });
+
+  it("removes a section but never the last one", () => {
+    const two = body({ name: "Intro", measures: [1] }, { name: "Verse", measures: [1] });
+    expect(removeSection(two, 0).sections.map((s) => s.name)).toEqual(["Verse"]);
+
+    const one = body({ name: "Intro", measures: [1] });
+    expect(removeSection(one, 0)).toBe(one);
+  });
+});
+
+describe("moveMeasure", () => {
+  it("moves a measure into another section", () => {
+    const tab = body({ name: "Intro", measures: [1, 2] }, { name: "Verse", measures: [3] });
+    const movedMeasure = tab.sections[0].measures[1];
+
+    const moved = moveMeasure(tab, { section: 0, measure: 1 }, { section: 1, measure: 0 });
+
+    expect(moved.sections[0].measures).toHaveLength(1);
+    expect(moved.sections[1].measures).toHaveLength(2);
+    expect(moved.sections[1].measures[0]).toBe(movedMeasure);
+  });
+
+  it("reorders within a section", () => {
+    const tab = body({ name: "Intro", measures: [1, 2, 3] });
+    const third = tab.sections[0].measures[2];
+
+    const moved = moveMeasure(tab, { section: 0, measure: 2 }, { section: 0, measure: 0 });
+
+    expect(moved.sections[0].measures[0]).toBe(third);
+    expect(moved.sections[0].measures.map((m) => m.length)).toEqual([3, 1, 2]);
+  });
+
+  it("refuses to move a section's only measure away", () => {
+    const tab = body({ name: "Intro", measures: [1] }, { name: "Verse", measures: [1] });
+    expect(moveMeasure(tab, { section: 0, measure: 0 }, { section: 1, measure: 0 })).toBe(tab);
+  });
+
+  it("clamps an out-of-range target index", () => {
+    const tab = body({ name: "Intro", measures: [1, 2] }, { name: "Verse", measures: [3] });
+    const moved = moveMeasure(tab, { section: 0, measure: 0 }, { section: 1, measure: 99 });
+    expect(moved.sections[1].measures.map((m) => m.length)).toEqual([3, 1]);
+  });
+
+  it("reports where the measure lands", () => {
+    const tab = body({ name: "Intro", measures: [1, 2] }, { name: "Verse", measures: [3] });
+    expect(resolveMoveTarget(tab, { section: 0, measure: 0 }, { section: 1, measure: 99 })).toEqual({
+      section: 1,
+      measure: 1,
+    });
+    expect(resolveMoveTarget(tab, { section: 0, measure: 1 }, { section: 0, measure: 0 })).toEqual({
+      section: 0,
+      measure: 0,
+    });
+  });
+});
+
+describe("section-aware measure and frame ops", () => {
+  it("inserts a measure into the addressed section only", () => {
+    const tab = body({ name: "Intro", measures: [1] }, { name: "Verse", measures: [1] });
+    const withMeasure = insertMeasure(tab, 1, 1);
+
+    expect(withMeasure.sections[0].measures).toHaveLength(1);
+    expect(withMeasure.sections[1].measures).toHaveLength(2);
+    expect(withMeasure.sections[0]).toBe(tab.sections[0]);
+  });
+
+  it("removes a frame from the addressed section only", () => {
+    const tab = body({ name: "Intro", measures: [3] }, { name: "Verse", measures: [3] });
+    const removed = removeFrame(tab, 1, 0, 1);
+
+    expect(removed.sections[0].measures[0]).toHaveLength(3);
+    expect(removed.sections[1].measures[0]).toHaveLength(2);
+  });
+
+  it("keeps a frame's id when its notes change", () => {
+    // Frame ids anchor playback highlighting and lyric mapping, so an edit must not
+    // mint a new one.
+    const tab = body({ name: "Intro", measures: [2] });
+    const originalId = tab.sections[0].measures[0][1].id;
+
+    const edited = updateFrameNotes(tab, 0, 0, 1, [{ fret: 5, style: "none" }]);
+
+    expect(edited.sections[0].measures[0][1].id).toBe(originalId);
+    expect(edited.sections[0].measures[0][1].notes).toEqual([{ fret: 5, style: "none" }]);
+  });
+
+  it("gives a duplicated frame a fresh id", () => {
+    const tab = body({ name: "Intro", measures: [1] });
+    const sourceId = tab.sections[0].measures[0][0].id;
+
+    const duplicated = insertFrame(tab, 0, 0, 0, false);
+
+    expect(duplicated.sections[0].measures[0]).toHaveLength(2);
+    expect(duplicated.sections[0].measures[0][1].id).not.toBe(sourceId);
+  });
+
+  it("knows which positions exist", () => {
+    const tab = body({ name: "Intro", measures: [2] });
+    expect(isExistingPosition(tab, 0, 0, 1)).toBe(true);
+    expect(isExistingPosition(tab, 0, 0, 2)).toBe(false);
+    expect(isExistingPosition(tab, 1, 0, 0)).toBe(false);
+  });
+});
+
+describe("document-order helpers", () => {
+  const tab = body({ name: "Intro", measures: [2, 3] }, { name: "Verse", measures: [4] });
+
+  it("counts frames before a position across sections", () => {
+    expect(frameOrdinal(tab, { section: 0, measure: 0, frame: 0 })).toBe(0);
+    expect(frameOrdinal(tab, { section: 0, measure: 1, frame: 1 })).toBe(3);
+    expect(frameOrdinal(tab, { section: 1, measure: 0, frame: 0 })).toBe(5);
+  });
+
+  it("numbers measures continuously across sections", () => {
+    expect(sectionMeasureOffset(tab, 0)).toBe(0);
+    expect(sectionMeasureOffset(tab, 1)).toBe(2);
+    expect(totalMeasures(tab)).toBe(3);
+  });
+});

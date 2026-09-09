@@ -35,19 +35,27 @@ export const DEFAULT_TAB: CreateTabPayload = {
   tab_name: "Untitled",
   tab_artist: "Untitled",
   tuning: ["E", "B", "G", "D", "A", "E"],
-  tab_data: [
-    [
+  tab_data: {
+    sections: [
       {
         id: "1",
-        notes: [
-          { fret: -2, style: "none" },
-          { fret: -2, style: "none" },
-          { fret: -2, style: "none" },
-          { fret: -2, style: "none" },
-          { fret: -2, style: "none" },
-          { fret: -2, style: "none" },
+        name: "Section 1",
+        measures: [
+          [
+            {
+              id: "1",
+              notes: [
+                { fret: -2, style: "none" },
+                { fret: -2, style: "none" },
+                { fret: -2, style: "none" },
+                { fret: -2, style: "none" },
+                { fret: -2, style: "none" },
+                { fret: -2, style: "none" },
+              ],
+            },
+          ],
         ],
       },
     ],
-  ],
+  },
 };

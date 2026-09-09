@@ -1,4 +1,5 @@
 export type TabPositionType = {
+  section: number;
   measure: number;
   frame: number;
   string: number;
