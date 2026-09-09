@@ -4,6 +4,7 @@ import type {
   EditorDetailsType,
   NoteFretType,
   NoteStyleType,
+  TimeSignatureType,
   TuningType,
 } from "../shared/types/tab.types";
 import type { TabPositionType, TabSelectionType } from "../shared/types/utilities.types";
@@ -19,6 +20,7 @@ import {
   removeMeasure,
   removeFrame,
   updateFrameNotes,
+  setFrameDuration,
   resolvePositionAfterFrameDelete,
   insertSection,
   removeSection,
@@ -32,7 +34,13 @@ import {
   reconcileOctaves,
   trackStringCount,
 } from "../utils/trackOperations";
-import { MAX_TRACKS } from "../shared/types/consts";
+import {
+  DEFAULT_BPM,
+  DEFAULT_TIME_SIGNATURE,
+  MAX_BPM,
+  MAX_TRACKS,
+  MIN_BPM,
+} from "../shared/types/consts";
 
 export interface TabEditorState {
   tracks: TrackType[];
@@ -49,7 +57,13 @@ export interface TabEditorState {
 export const initialTabEditorState: TabEditorState = {
   tracks: [],
   activeTrack: 0,
-  details: { id: "", artist: "", song: "" },
+  details: {
+    id: "",
+    artist: "",
+    song: "",
+    bpm: DEFAULT_BPM,
+    timeSignature: DEFAULT_TIME_SIGNATURE,
+  },
   position: { section: 0, measure: 0, frame: 0, string: 0 },
   selection: null,
   editorIsOpen: false,
@@ -60,6 +74,12 @@ export const initialTabEditorState: TabEditorState = {
 export type TabEditorAction =
   | { type: "SET_TAB_DATA"; payload: { tracks: TrackType[]; details: EditorDetailsType } }
   | { type: "UPDATE_DETAILS"; payload: { name: string; value: string } }
+  | { type: "SET_BPM"; payload: { bpm: number } }
+  | { type: "SET_TIME_SIGNATURE"; payload: { timeSignature: TimeSignatureType } }
+  | {
+      type: "SET_FRAME_DURATION";
+      payload: { section: number; measure: number; frame: number; duration: number };
+    }
   | { type: "UPDATE_TAB_FRAME"; payload: { section: number; measure: number; frame: number; formData: NoteFretType[] } }
   | { type: "ADD_MEASURE"; payload: { section: number; measure: number } }
   | { type: "ADD_FRAME"; payload: { section: number; measure: number; frame: number; isEmpty: boolean } }
@@ -169,6 +189,26 @@ export function tabEditorReducer(state: TabEditorState, action: TabEditorAction)
         details: { ...state.details, [action.payload.name]: action.payload.value },
         isEditing: true,
       };
+
+    case "SET_BPM": {
+      const bpm = Math.min(MAX_BPM, Math.max(MIN_BPM, Math.round(action.payload.bpm)));
+      if (bpm === state.details.bpm) return state;
+      return { ...state, details: { ...state.details, bpm }, isEditing: true };
+    }
+
+    case "SET_TIME_SIGNATURE":
+      return {
+        ...state,
+        details: { ...state.details, timeSignature: action.payload.timeSignature },
+        isEditing: true,
+      };
+
+    case "SET_FRAME_DURATION": {
+      const { section, measure, frame, duration } = action.payload;
+      const newTab = setFrameDuration(activeBody(state), section, measure, frame, duration);
+      if (newTab === activeBody(state)) return state;
+      return { ...withBody(state, newTab), isEditing: true };
+    }
 
     case "UPDATE_TAB_FRAME":
       return {

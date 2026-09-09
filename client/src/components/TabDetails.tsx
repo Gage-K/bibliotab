@@ -1,11 +1,25 @@
 import { useMemo, useState } from "react";
 import { TuningNoteType, TuningType } from "../shared/types/tab.types";
-import { INSTRUMENT_PRESETS, TUNING_NOTES } from "../shared/types/consts";
+import {
+  INSTRUMENT_PRESETS,
+  MAX_BPM,
+  MIN_BPM,
+  TUNING_NOTES,
+} from "../shared/types/consts";
+import type { TimeSignatureType } from "../shared/types/tab.types";
 import { useTabEditor } from "../context/tabEditorProvider";
 
 export default function TabDetails() {
-  const { details, track, activeTrack, stringCount, updateDetails, setTrackTuning } =
-    useTabEditor();
+  const {
+    details,
+    track,
+    activeTrack,
+    stringCount,
+    updateDetails,
+    setBpm,
+    setTimeSignature,
+    setTrackTuning,
+  } = useTabEditor();
   const [isShown, setIsShown] = useState(false);
 
   const tuning = track?.tuning ?? [];
@@ -58,7 +72,8 @@ export default function TabDetails() {
 
         <div className="flex flex-wrap gap-2 items-baseline text-muted-foreground font-medium mt-1">
           <p>
-            By {details.artist}, tuning: {tuning.toReversed().join("")}
+            By {details.artist}, tuning: {tuning.toReversed().join("")},{" "}
+            {details.timeSignature[0]}/{details.timeSignature[1]} at {details.bpm} bpm
           </p>
 
           <button
@@ -99,6 +114,65 @@ export default function TabDetails() {
             }
             className="px-2 py-1 mb-2 border border-border rounded-sm text-muted-foreground focus-within:text-foreground"
           />
+          <div className="flex gap-4 mb-2">
+            <div className="flex flex-col gap-2">
+              <label htmlFor="bpm" className="font-semibold text-foreground">
+                Tempo
+              </label>
+              <div className="flex items-center gap-2">
+                <input
+                  id="bpm"
+                  type="number"
+                  min={MIN_BPM}
+                  max={MAX_BPM}
+                  value={details.bpm}
+                  onChange={(event) => setBpm(Number(event.target.value))}
+                  className="w-20 px-2 py-1 border border-border rounded-sm text-muted-foreground focus-within:text-foreground"
+                />
+                <span className="text-muted-foreground">bpm</span>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <label htmlFor="time-signature-beats" className="font-semibold text-foreground">
+                Time signature
+              </label>
+              <div className="flex items-center gap-1">
+                <input
+                  id="time-signature-beats"
+                  type="number"
+                  min={1}
+                  max={32}
+                  value={details.timeSignature[0]}
+                  onChange={(event) =>
+                    setTimeSignature([
+                      Number(event.target.value),
+                      details.timeSignature[1],
+                    ] as TimeSignatureType)
+                  }
+                  className="w-14 px-2 py-1 border border-border rounded-sm text-muted-foreground focus-within:text-foreground"
+                />
+                <span className="text-muted-foreground">/</span>
+                <select
+                  aria-label="Beat value"
+                  value={details.timeSignature[1]}
+                  onChange={(event) =>
+                    setTimeSignature([
+                      details.timeSignature[0],
+                      Number(event.target.value),
+                    ] as TimeSignatureType)
+                  }
+                  className="px-2 py-1 border border-border rounded-sm bg-muted text-muted-foreground">
+                  {[1, 2, 4, 8, 16, 32].map((value) => (
+                    <option key={value} value={value}>
+                      {value}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+
           <label
             htmlFor="instrument-preset"
             className="font-semibold text-foreground">

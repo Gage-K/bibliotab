@@ -111,6 +111,34 @@ export const MIN_STRINGS = 3;
 export const MAX_STRINGS = 12;
 export const MAX_TRACKS = 16;
 
+// ============================================================================
+// Rhythm
+// ============================================================================
+
+/**
+ * Beats a frame lasts when it has no stored duration. One beat matches the fixed-step
+ * playback that predated the rhythm model, so pre-Phase-5 tabs sound unchanged.
+ */
+export const DEFAULT_FRAME_DURATION = 1;
+export const DEFAULT_BPM = 90;
+export const DEFAULT_TIME_SIGNATURE: [number, number] = [4, 4];
+
+export const MIN_BPM = 30;
+export const MAX_BPM = 300;
+
+/** Note values offered in the editor, in beats. */
+export const NOTE_VALUES = [
+  { label: "Whole", beats: 4, symbol: "\u{1D15D}" },
+  { label: "Half", beats: 2, symbol: "\u{1D15E}" },
+  { label: "Dotted quarter", beats: 1.5, symbol: "\u{1D15F}." },
+  { label: "Quarter", beats: 1, symbol: "\u{1D15F}" },
+  { label: "Eighth", beats: 0.5, symbol: "\u{1D160}" },
+  { label: "Sixteenth", beats: 0.25, symbol: "\u{1D161}" },
+] as const;
+
+export const MIN_FRAME_DURATION = 0.0625;
+export const MAX_FRAME_DURATION = 16;
+
 export const FRET_EMPTY = -2;
 export const FRET_MUTED = -1;
 

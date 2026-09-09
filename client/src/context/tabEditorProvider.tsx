@@ -10,6 +10,7 @@ import type {
   EditorDetailsType,
   FrameType,
   NoteFretType,
+  TimeSignatureType,
   TuningType,
 } from "../shared/types/tab.types";
 import type { TabPositionType, TabSelectionType } from "../shared/types/utilities.types";
@@ -45,6 +46,14 @@ interface TabEditorContextType {
   /** Number of strings on the current instrument — the tuning's length. */
   stringCount: number;
   updateDetails: (name: string, value: string) => void;
+  setBpm: (bpm: number) => void;
+  setTimeSignature: (timeSignature: TimeSignatureType) => void;
+  setFrameDuration: (
+    section: number,
+    measure: number,
+    frame: number,
+    duration: number,
+  ) => void;
   saveChanges: () => Promise<void>;
   handleOpeningEditor: () => void;
   updatePosition: (section: number, measure: number, frame: number) => void;
@@ -114,6 +123,8 @@ export function TabEditorProvider({
             id: serverTab.id,
             artist: serverTab.details.artist,
             song: serverTab.details.song,
+            bpm: serverTab.details.bpm,
+            timeSignature: serverTab.details.timeSignature,
           },
           // The server already normalizes, but a response cached from an older client
           // can still be a pre-tracks shape (see normalizeTracks).
@@ -128,6 +139,23 @@ export function TabEditorProvider({
 
   function updateDetails(name: string, value: string) {
     dispatch({ type: "UPDATE_DETAILS", payload: { name, value } });
+  }
+
+  function setBpm(bpm: number) {
+    dispatch({ type: "SET_BPM", payload: { bpm } });
+  }
+
+  function setTimeSignature(timeSignature: TimeSignatureType) {
+    dispatch({ type: "SET_TIME_SIGNATURE", payload: { timeSignature } });
+  }
+
+  function setFrameDuration(
+    section: number,
+    measure: number,
+    frame: number,
+    duration: number,
+  ) {
+    dispatch({ type: "SET_FRAME_DURATION", payload: { section, measure, frame, duration } });
   }
 
   function setActiveTrack(index: number) {
@@ -169,6 +197,8 @@ export function TabEditorProvider({
       // API; it mirrors track 0.
       tuning: tracks[0]?.tuning ?? [],
       tab_data: { tracks },
+      bpm: details.bpm,
+      time_signature: details.timeSignature,
     };
 
     updateTabMutation.mutate(data, {
@@ -484,6 +514,9 @@ export function TabEditorProvider({
         isDemo,
         stringCount,
         updateDetails,
+        setBpm,
+        setTimeSignature,
+        setFrameDuration,
         saveChanges,
         handleOpeningEditor,
         updatePosition,

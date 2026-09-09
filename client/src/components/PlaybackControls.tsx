@@ -1,10 +1,7 @@
 import { PlayIcon, StopIcon } from "@phosphor-icons/react";
 import { useTabEditor } from "../context/tabEditorProvider";
-import {
-  useTabPlayback,
-  MIN_BPM,
-  MAX_BPM,
-} from "../hooks/useTabPlayback";
+import { useTabPlayback } from "../hooks/useTabPlayback";
+import { MIN_BPM, MAX_BPM } from "../shared/types/consts";
 
 /**
  * Transport for the tab. Every track sounds; the cursor follows the active one.
@@ -16,11 +13,13 @@ export default function PlaybackControls({
   buttonClassName: string;
   iconSize?: number;
 }) {
-  const { tracks, activeTrack, updatePosition } = useTabEditor();
+  const { tracks, activeTrack, details, setBpm, updatePosition } = useTabEditor();
+  const bpm = details.bpm;
 
-  const { isPlaying, bpm, setBpm, toggle, totalSteps } = useTabPlayback({
+  const { isPlaying, toggle, totalSteps } = useTabPlayback({
     tracks,
     activeTrack,
+    bpm,
     onStep: (position) =>
       updatePosition(position.section, position.measure, position.frame),
   });

@@ -1,6 +1,8 @@
 import { describe, it, expect } from "vitest";
 import {
   normalizeTabBody,
+  validateBpm,
+  validateTimeSignature,
   normalizeTabTracks,
   validateTabSize,
   validateTabTracks,
@@ -60,6 +62,43 @@ function entityWith(tab_data: unknown, tuning: unknown = GUITAR): TabEntity {
     modified_at: new Date("2026-01-02"),
   } as unknown as TabEntity;
 }
+
+describe("tempo and meter", () => {
+  it("defaults bpm and time signature for rows written before the rhythm migration", () => {
+    const response = tabEntityToResponse(entityWith({ sections: [section([measure(1)])] }));
+
+    expect(response.details.bpm).toBe(90);
+    expect(response.details.timeSignature).toEqual([4, 4]);
+  });
+
+  it("passes stored tempo and meter through", () => {
+    const entity = {
+      ...entityWith({ sections: [section([measure(1)])] }),
+      bpm: 132,
+      time_signature: [6, 8],
+    } as unknown as TabEntity;
+
+    const response = tabEntityToResponse(entity);
+    expect(response.details.bpm).toBe(132);
+    expect(response.details.timeSignature).toEqual([6, 8]);
+  });
+
+  it("validates bpm", () => {
+    expect(validateBpm(120)).toEqual({ valid: true });
+    expect(validateBpm(10)).toMatchObject({ valid: false });
+    expect(validateBpm(1000)).toMatchObject({ valid: false });
+    expect(validateBpm("fast")).toMatchObject({ valid: false });
+  });
+
+  it("validates time signatures", () => {
+    expect(validateTimeSignature([4, 4])).toEqual({ valid: true });
+    expect(validateTimeSignature([6, 8])).toEqual({ valid: true });
+    expect(validateTimeSignature([4])).toMatchObject({ valid: false });
+    // Beat values are note denominators, so 3 is not one.
+    expect(validateTimeSignature([4, 3])).toMatchObject({ valid: false });
+    expect(validateTimeSignature([0, 4])).toMatchObject({ valid: false });
+  });
+});
 
 describe("normalizeTabTracks", () => {
   it("wraps a pre-sections measures array in one track", () => {

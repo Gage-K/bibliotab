@@ -12,6 +12,7 @@ unchanged — Drizzle is used here **only for schema/migrations**, not as an ORM
 | `pnpm db:migrate` | Apply any pending migrations to the DB in `.env` (tracked in `drizzle.__drizzle_migrations`). |
 | `pnpm db:baseline` | Mark the **baseline** migration (0000) as already-applied **without running it**, for a DB that already has the schema. Takes `--through <tag>` to stamp further, or `--all`. |
 | `pnpm db:studio` | Open Drizzle Studio to browse the DB. |
+| `pnpm db:backfill-durations` | One-off: fill in `duration` on every frame (rhythm model). Takes `--dry-run`. |
 
 DB connection comes from `DB_*` in `server/.env` (`drizzle.config.ts` reads
 `process.env` directly). Override the target with e.g. `DB_NAME=other pnpm db:migrate`.
@@ -67,6 +68,19 @@ the error**. If `db:migrate` fails with no message, check whether the DB was bas
   touches rows where `jsonb_typeof(tab_data) = 'array'`, so re-running it is a no-op.
   The server also normalizes legacy bodies on read and write (`normalizeTabBody` in
   `shared/utils/tab.serializer.ts`), so an un-migrated row still renders.
+- **`0002_wrap_tab_data_in_tracks.sql` is likewise hand-written and data-only.** It
+  wraps the sectioned body and the row's `tuning` column into `tracks[0]`. It writes no
+  `octaves`: deriving them in SQL would duplicate the instrument-preset table in a
+  second language and persist a wrong guess, so the read path fills them in from
+  `octavesForTuning` instead and they are saved on the next write. The `tuning` column
+  is left in place — no longer read, still NOT NULL, written as a mirror of track 0.
+  Dropping it is a follow-up migration.
+- **`0003_add_tempo_and_time_signature.sql` is generated** (real DDL: two columns).
+  Frame durations are per-frame and live in the blob, so they are backfilled by
+  `pnpm db:backfill-durations` rather than by SQL — walking
+  `tracks[].body.sections[].measures[][]` is four levels deep and far clearer in
+  application code. Run it once after `db:migrate`; it skips rows that already have
+  durations, so it is safe to re-run, and `--dry-run` reports without writing.
 - `db/init.sql` still bootstraps a fresh Postgres container (mounted in
   `docker-compose.yml`). It and the baseline migration describe the same schema; a fresh
   Docker DB is initialized by `init.sql` and then just needs `db:baseline`.

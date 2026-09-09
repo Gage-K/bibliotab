@@ -4,6 +4,8 @@ import type { NoteFretType } from "../shared/types/tab.types";
 import { getFrame } from "../utils/tabOperations";
 import { chordNameForFrame } from "../utils/chords";
 import { noteNamesForFrame } from "../utils/pitch";
+import { NOTE_VALUES } from "../shared/types/consts";
+import { frameDuration } from "../utils/tabOperations";
 import { Input } from "@/components/ui/input";
 import { Toggle } from "@/components/ui/toggle";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -18,8 +20,23 @@ const STYLES: { value: NoteFretType["style"]; label: string }[] = [
 ];
 
 export default function TabForm() {
-  const { tab, position, track, stringCount, updateTabData, getEmptyFrame } =
-    useTabEditor();
+  const {
+    tab,
+    position,
+    track,
+    stringCount,
+    updateTabData,
+    setFrameDuration,
+    getEmptyFrame,
+  } = useTabEditor();
+
+  const currentFrame = getFrame(
+    tab,
+    position.section,
+    position.measure,
+    position.frame,
+  );
+  const duration = currentFrame ? frameDuration(currentFrame) : 1;
 
   const tuning = track?.tuning ?? [];
 
@@ -105,6 +122,39 @@ export default function TabForm() {
         <span className="text-sm font-semibold tabular-nums">
           {chord ?? "—"}
         </span>
+      </div>
+
+      <div className="flex items-center gap-2 mb-3 px-1">
+        <span className="text-xs font-medium text-muted-foreground shrink-0">
+          Duration
+        </span>
+        <ToggleGroup
+          type="single"
+          variant="outline"
+          size="sm"
+          value={String(duration)}
+          onValueChange={(value) => {
+            if (!value) return;
+            setFrameDuration(
+              position.section,
+              position.measure,
+              position.frame,
+              Number(value),
+            );
+          }}
+          className="gap-0 w-full"
+        >
+          {NOTE_VALUES.map((note) => (
+            <ToggleGroupItem
+              key={note.beats}
+              value={String(note.beats)}
+              title={`${note.label} (${note.beats} beat${note.beats === 1 ? "" : "s"})`}
+              className="h-7 flex-1 px-1.5 text-sm cursor-pointer data-[state=on]:bg-blue data-[state=on]:text-blue-foreground data-[state=on]:border-blue"
+            >
+              {note.symbol}
+            </ToggleGroupItem>
+          ))}
+        </ToggleGroup>
       </div>
       <div className="flex flex-col gap-0.5 mb-3">
         {strings.toReversed().map((string) => {

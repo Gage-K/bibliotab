@@ -1,6 +1,7 @@
 import type { FrameType, TrackType } from "../shared/types/tab.types";
 import { FRET_EMPTY, FRET_MUTED } from "../shared/types/consts";
 import { PITCH_CLASS_NAMES, absoluteSemitone } from "./pitch";
+import { frameDuration } from "./tabOperations";
 import type { TabPositionType } from "../shared/types/utilities.types";
 
 /**
@@ -35,6 +36,10 @@ export type ScheduledFrame = {
   position: TabPositionType;
   /** Document-order index across the whole track — one step per frame. */
   step: number;
+  /** Beats from the start of the track to this frame's attack. */
+  startBeat: number;
+  /** This frame's length in beats. */
+  beats: number;
 };
 
 /**
@@ -44,9 +49,12 @@ export type ScheduledFrame = {
  */
 export function flattenTrack(track: TrackType): ScheduledFrame[] {
   const flattened: ScheduledFrame[] = [];
+  let startBeat = 0;
+
   track.body.sections.forEach((section, sectionIndex) => {
     section.measures.forEach((measure, measureIndex) => {
       measure.forEach((frame, frameIndex) => {
+        const beats = frameDuration(frame);
         flattened.push({
           frame,
           position: {
@@ -56,17 +64,59 @@ export function flattenTrack(track: TrackType): ScheduledFrame[] {
             string: 0,
           },
           step: flattened.length,
+          startBeat,
+          beats,
         });
+        startBeat += beats;
       });
     });
   });
+
   return flattened;
 }
 
-/** Longest track, in steps — how far playback runs. */
+/** Longest track, in steps. */
 export function trackLength(tracks: TrackType[]): number {
   return tracks.reduce(
     (longest, track) => Math.max(longest, flattenTrack(track).length),
     0,
   );
+}
+
+/** Seconds one beat lasts at a given tempo. */
+export function secondsPerBeat(bpm: number): number {
+  return 60 / bpm;
+}
+
+export type TimedFrame = ScheduledFrame & {
+  /** Seconds from the start of the track to this frame's attack. */
+  start: number;
+  /** This frame's length in seconds. */
+  seconds: number;
+};
+
+/**
+ * Places a track's frames on an absolute seconds axis. This is the function the whole
+ * rhythm model exists for: playback schedules against it, and it is what lets a frame
+ * be located in time rather than by index.
+ *
+ * Durations are stored in beats, so changing the tempo rescales everything here without
+ * touching a single frame.
+ */
+export function withTiming(track: TrackType, bpm: number): TimedFrame[] {
+  const spb = secondsPerBeat(bpm);
+  return flattenTrack(track).map((scheduled) => ({
+    ...scheduled,
+    start: scheduled.startBeat * spb,
+    seconds: scheduled.beats * spb,
+  }));
+}
+
+/** Total length of the longest track, in beats. */
+export function totalBeats(tracks: TrackType[]): number {
+  return tracks.reduce((longest, track) => {
+    const frames = flattenTrack(track);
+    const last = frames[frames.length - 1];
+    return Math.max(longest, last ? last.startBeat + last.beats : 0);
+  }, 0);
 }

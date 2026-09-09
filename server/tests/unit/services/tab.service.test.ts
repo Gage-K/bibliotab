@@ -18,6 +18,8 @@ function makeEntity(overrides: Partial<TabEntity> = {}): TabEntity {
     tuning: TUNING,
     created_at: new Date("2024-01-01T00:00:00.000Z"),
     modified_at: new Date("2024-01-02T00:00:00.000Z"),
+    bpm: 90,
+    time_signature: [4, 4] as [number, number],
     tab_data: {
       tracks: [
         {
@@ -72,6 +74,8 @@ describe("TabService", () => {
           creator: entity.user_id,
           dateCreated: entity.created_at.toISOString(),
           dateModified: entity.modified_at.toISOString(),
+          bpm: 90,
+          timeSignature: [4, 4],
         },
         tracks: entity.tab_data.tracks,
       });

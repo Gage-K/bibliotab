@@ -40,6 +40,14 @@ export type NoteFretType = {
 export type FrameType = {
   id: string;
   notes: NoteFretType[];
+  /**
+   * Length in beats — quarter = 1, eighth = 0.5, dotted quarter = 1.5. Beats rather
+   * than seconds so changing the tempo never means editing frames.
+   *
+   * Optional because frames written before the rhythm model have none; read it through
+   * DEFAULT_FRAME_DURATION rather than directly.
+   */
+  duration?: number;
 };
 
 export type MeasureType = FrameType[];
@@ -51,18 +59,25 @@ export type TabBodyType = {
 };
 
 // Tuning lives on the track, not here — each instrument tunes independently.
+/** Beats per measure and the note value that gets the beat, e.g. [4, 4]. */
+export type TimeSignatureType = [number, number];
+
 export type TabDetailsType = {
   song: string;
   artist: string;
   creator: string;
   dateCreated: string;
   dateModified: string;
+  bpm: number;
+  timeSignature: TimeSignatureType;
 };
 
 export type EditorDetailsType = {
   id: string;
   artist: string;
   song: string;
+  bpm: number;
+  timeSignature: TimeSignatureType;
 };
 
 /**

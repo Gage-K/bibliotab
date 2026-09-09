@@ -8,7 +8,9 @@ import { authMiddleware } from "../middleware/auth.middleware";
 import { body, param, query } from "express-validator";
 import {
   normalizeTabTracks,
+  validateBpm,
   validateTabTracks,
+  validateTimeSignature,
   validateTuning,
 } from "@tablab/shared";
 
@@ -37,6 +39,18 @@ const tuningValidator = (value: unknown) => {
   if (!result.valid) {
     throw new Error(result.error);
   }
+  return true;
+};
+
+const bpmValidator = (value: unknown) => {
+  const result = validateBpm(value);
+  if (!result.valid) throw new Error(result.error);
+  return true;
+};
+
+const timeSignatureValidator = (value: unknown) => {
+  const result = validateTimeSignature(value);
+  if (!result.valid) throw new Error(result.error);
   return true;
 };
 
@@ -87,6 +101,8 @@ export const createTabRouter = (
       body("tab_artist").optional().trim().isLength({ max: 255 }),
       body("tuning").custom(tuningValidator),
       body("tab_data").custom(tabDataValidator),
+      body("bpm").optional().custom(bpmValidator),
+      body("time_signature").optional().custom(timeSignatureValidator),
     ],
     validateRequest(),
     (async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
@@ -124,6 +140,8 @@ export const createTabRouter = (
       body("tab_artist").optional().trim().isLength({ max: 255 }),
       body("tuning").optional().custom(tuningValidator),
       body("tab_data").optional().custom(tabDataValidator),
+      body("bpm").optional().custom(bpmValidator),
+      body("time_signature").optional().custom(timeSignatureValidator),
     ],
     validateRequest(),
     (async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {

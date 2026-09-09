@@ -1,7 +1,11 @@
 import { randomUUID } from "crypto";
 import {
+  DEFAULT_BPM,
+  DEFAULT_TIME_SIGNATURE,
+  MAX_BPM,
   MAX_STRINGS,
   MAX_TRACKS,
+  MIN_BPM,
   MIN_STRINGS,
   TUNING_NOTES,
 } from "../constants/tab.constants";
@@ -126,6 +130,9 @@ export function tabEntityToResponse(entity: TabEntity): TabResponse {
       creator: entity.user_id,
       dateCreated: entity.created_at.toISOString(),
       dateModified: entity.modified_at.toISOString(),
+      // Columns are nullable on rows written before the rhythm migration ran.
+      bpm: entity.bpm ?? DEFAULT_BPM,
+      timeSignature: entity.time_signature ?? DEFAULT_TIME_SIGNATURE,
     },
     tracks: normalizeTabTracks(entity.tab_data, entity.tuning).tracks,
   };
@@ -153,6 +160,8 @@ export function createDtoToEntity(
     // The column is NOT NULL and no longer read; mirror track 0 to keep it honest.
     tuning: tab_data.tracks[0]?.tuning ?? dto.tuning,
     tab_data,
+    bpm: dto.bpm ?? DEFAULT_BPM,
+    time_signature: dto.time_signature ?? DEFAULT_TIME_SIGNATURE,
   };
 }
 
@@ -320,6 +329,42 @@ export function validateTuning(
   );
   if (unknown !== undefined) {
     return { valid: false, error: `"${unknown}" is not a valid note name` };
+  }
+  return { valid: true };
+}
+
+/** Validates a `[beats, beatValue]` pair, e.g. [4, 4] or [6, 8]. */
+export function validateTimeSignature(
+  value: unknown
+): { valid: false; error: string } | { valid: true } {
+  if (!Array.isArray(value) || value.length !== 2) {
+    return {
+      valid: false,
+      error: "time_signature must be a [beats, beatValue] pair",
+    };
+  }
+  const [beats, beatValue] = value;
+  if (!Number.isInteger(beats) || beats < 1 || beats > 32) {
+    return { valid: false, error: "time signature beats must be 1-32" };
+  }
+  // Beat values are note denominators, so only powers of two make sense.
+  if (![1, 2, 4, 8, 16, 32].includes(beatValue)) {
+    return {
+      valid: false,
+      error: "time signature beat value must be 1, 2, 4, 8, 16 or 32",
+    };
+  }
+  return { valid: true };
+}
+
+export function validateBpm(
+  value: unknown
+): { valid: false; error: string } | { valid: true } {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return { valid: false, error: "bpm must be a number" };
+  }
+  if (value < MIN_BPM || value > MAX_BPM) {
+    return { valid: false, error: `bpm must be between ${MIN_BPM} and ${MAX_BPM}` };
   }
   return { valid: true };
 }

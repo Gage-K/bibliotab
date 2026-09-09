@@ -1,8 +1,16 @@
-import { pgTable, uuid, varchar, jsonb, timestamp, index } from "drizzle-orm/pg-core";
+import {
+  pgTable,
+  uuid,
+  varchar,
+  jsonb,
+  timestamp,
+  index,
+  integer,
+} from "drizzle-orm/pg-core";
 import { users } from "./users.schema";
 // Type-only import: erased at build, keeps the JSONB columns typed as the shared
 // domain types without pulling the shared package into drizzle-kit's loader.
-import type { TabTracksType, TuningType } from "@tablab/shared";
+import type { TabTracksType, TimeSignatureType, TuningType } from "@tablab/shared";
 
 /**
  * tabs — mirrors server/db/init.sql.
@@ -26,6 +34,13 @@ export const tabs = pgTable(
     tabArtist: varchar("tab_artist", { length: 255 }),
     tuning: jsonb("tuning").$type<TuningType>().notNull(),
     tabData: jsonb("tab_data").$type<TabTracksType>().notNull(),
+    // Timing is tab-level and queryable, so it lives in columns rather than inside the
+    // tab_data blob. Frame durations are in beats, which makes them independent of bpm.
+    bpm: integer("bpm").notNull().default(90),
+    timeSignature: jsonb("time_signature")
+      .$type<TimeSignatureType>()
+      .notNull()
+      .default([4, 4]),
     createdAt: timestamp("created_at").defaultNow(),
     modifiedAt: timestamp("modified_at").defaultNow(),
   },

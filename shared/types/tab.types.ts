@@ -42,9 +42,20 @@ export type NoteFretType = {
 export type FrameType = {
   id: string;
   notes: NoteFretType[];
+  /**
+   * Length in beats — quarter = 1, eighth = 0.5, dotted quarter = 1.5. Beats rather
+   * than seconds so changing the tempo never means editing frames.
+   *
+   * Optional on the type because rows written before the rhythm migration have no
+   * duration; read it through DEFAULT_FRAME_DURATION rather than directly.
+   */
+  duration?: number;
 };
 
 export type MeasureType = FrameType[];
+
+/** Beats per measure and the note value that gets the beat, e.g. [4, 4]. */
+export type TimeSignatureType = [number, number];
 
 // Tab metadata. Tuning lives on the track, not here — each instrument tunes
 // independently.
@@ -54,6 +65,8 @@ export type TabDetailsType = {
   creator: string;
   dateCreated: string;
   dateModified: string;
+  bpm: number;
+  timeSignature: TimeSignatureType;
 };
 
 export type SectionType = { id: string; name: string; measures: MeasureType[] };
@@ -112,6 +125,8 @@ export interface TabEntity {
   tab_artist: string;
   tuning: TuningType;
   tab_data: TabTracksType;
+  bpm: number;
+  time_signature: TimeSignatureType;
   created_at: Date;
   modified_at: Date;
 }
@@ -126,6 +141,8 @@ export type CreateTabDto = {
   /** Mirrors tracks[0].tuning; see the note on TabEntity. */
   tuning: TuningType;
   tab_data: TabTracksType;
+  bpm?: number;
+  time_signature?: TimeSignatureType;
 };
 
 export type UpdateTabDto = {
@@ -133,6 +150,8 @@ export type UpdateTabDto = {
   tab_artist?: string;
   tuning?: TuningType;
   tab_data?: TabTracksType;
+  bpm?: number;
+  time_signature?: TimeSignatureType;
 };
 
 // ============================================================================

@@ -1,7 +1,13 @@
 import { Fragment } from "react";
 import { TrashIcon } from "@phosphor-icons/react";
 import { useTabEditor } from "../context/tabEditorProvider";
-import { frameOrdinal, sectionMeasureOffset } from "../utils/tabOperations";
+import {
+  frameDuration,
+  frameOrdinal,
+  measureBeats,
+  measureIsComplete,
+  sectionMeasureOffset,
+} from "../utils/tabOperations";
 import type { TabBodyType } from "../shared/types/tab.types";
 import type { TabSelectionType } from "../shared/types/utilities.types";
 
@@ -43,10 +49,22 @@ function selectionRounding(
   return "rounded-none";
 }
 
+/**
+ * Grid columns a frame occupies, so a half note reads as twice a quarter.
+ *
+ * The display grid is auto-fill with uniform tracks, so proportion is expressed in
+ * whole columns rather than exact widths: two columns per beat, clamped, which keeps an
+ * eighth legible and stops a whole note from running off the row.
+ */
+function durationSpan(beats: number): number {
+  return Math.min(8, Math.max(1, Math.round(beats * 2)));
+}
+
 export default function TabDisplay() {
   const {
     tab,
     position,
+    details,
     selection,
     updatePosition,
     addFrameAndAdvance,
@@ -107,6 +125,11 @@ export default function TabDisplay() {
           measure.map((frame, frameIndex) => ({ frame, measureIndex, frameIndex }))
         );
 
+        // Soft signal only — a tab in progress is allowed to have short measures.
+        const incompleteMeasures = section.measures.filter(
+          (measure) => !measureIsComplete(measure, details.timeSignature)
+        ).length;
+
         return (
           <section key={section.id} className="mt-8 first:mt-0">
             <header className="flex items-center gap-2 border-b border-border pb-1">
@@ -121,6 +144,13 @@ export default function TabDisplay() {
               <span className="text-xs text-muted-foreground tabular-nums shrink-0">
                 {measureRange}
               </span>
+              {incompleteMeasures > 0 && (
+                <span
+                  title={`${incompleteMeasures} measure(s) don't add up to ${details.timeSignature[0]}/${details.timeSignature[1]}`}
+                  className="text-xs text-muted-foreground/70 tabular-nums shrink-0">
+                  {`${incompleteMeasures} off-meter`}
+                </span>
+              )}
               <button
                 aria-label={`Delete section ${section.name}`}
                 title={
@@ -155,6 +185,9 @@ export default function TabDisplay() {
                       </button>
                     )}
                     <div
+                      style={{
+                        gridColumn: `span ${durationSpan(frameDuration(tabChunk.frame))}`,
+                      }}
                       className={
                         isLastInSection
                           ? tabChunk.frameIndex === 0
@@ -177,6 +210,9 @@ export default function TabDisplay() {
                         aria-label={`Section ${sectionIndex + 1} Measure ${
                           tabChunk.measureIndex + 1
                         } Frame ${tabChunk.frameIndex + 1}`}
+                        title={`${frameDuration(tabChunk.frame)} beat(s) — measure totals ${measureBeats(
+                          section.measures[tabChunk.measureIndex]
+                        )}`}
                         className={`flex flex-col gap-4 justify-center w-full border border-transparent hover:border-border ${selectionRounding(ordinal, bounds)} ${
                           isCurrentFrame(framePosition) ? "bg-accent" : ""
                         } ${isInSelection(ordinal, bounds) ? "bg-primary/20" : ""}`}

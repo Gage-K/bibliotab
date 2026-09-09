@@ -12,7 +12,8 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:baseline": "node scripts/stamp-baseline.mjs",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "db:backfill-durations": "node scripts/backfill-frame-durations.mjs"
   },
   "author": "Gage Krause",
   "license": "ISC",

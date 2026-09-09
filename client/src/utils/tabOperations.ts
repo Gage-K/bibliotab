@@ -7,7 +7,13 @@ import type {
   NoteFretType,
 } from "../shared/types/tab.types"
 import type { TabPositionType } from "../shared/types/utilities.types";
-import { DEFAULT_STRING_COUNT, FRET_EMPTY } from "../shared/types/consts";
+import {
+  DEFAULT_FRAME_DURATION,
+  DEFAULT_STRING_COUNT,
+  FRET_EMPTY,
+  MAX_FRAME_DURATION,
+  MIN_FRAME_DURATION,
+} from "../shared/types/consts";
 
 export const DEFAULT_SECTION_NAME = "Section 1";
 
@@ -20,7 +26,8 @@ export const DEFAULT_SECTION_NAME = "Section 1";
 
 /** One note row per string; the string count comes from the tuning's length. */
 export function createEmptyFrame(
-  stringCount: number = DEFAULT_STRING_COUNT
+  stringCount: number = DEFAULT_STRING_COUNT,
+  duration: number = DEFAULT_FRAME_DURATION
 ): FrameType {
   return {
     id: nanoid(),
@@ -28,6 +35,7 @@ export function createEmptyFrame(
       fret: FRET_EMPTY,
       style: "none" as const,
     })),
+    duration,
   };
 }
 
@@ -456,4 +464,54 @@ export function sectionMeasureOffset(tab: TabBodyType, section: number): number 
   return tab.sections
     .slice(0, section)
     .reduce((sum, prevSection) => sum + prevSection.measures.length, 0);
+}
+
+// ============================================================================
+// Rhythm
+// ============================================================================
+
+/** A frame's length in beats, defaulting for frames written before the rhythm model. */
+export function frameDuration(frame: FrameType): number {
+  return frame.duration ?? DEFAULT_FRAME_DURATION;
+}
+
+export function setFrameDuration(
+  tab: TabBodyType,
+  section: number,
+  measure: number,
+  frame: number,
+  duration: number
+): TabBodyType {
+  const clamped = Math.min(
+    MAX_FRAME_DURATION,
+    Math.max(MIN_FRAME_DURATION, duration)
+  );
+  return mapSectionMeasures(tab, section, (measures) =>
+    measures.map((prevMeasure, measureIndex) =>
+      measureIndex !== measure
+        ? prevMeasure
+        : prevMeasure.map((prevFrame, frameIndex) =>
+            frameIndex === frame ? { ...prevFrame, duration: clamped } : prevFrame
+          )
+    )
+  );
+}
+
+/** Total beats in a measure — what a time signature is checked against. */
+export function measureBeats(measure: MeasureType): number {
+  return measure.reduce((sum, frame) => sum + frameDuration(frame), 0);
+}
+
+/**
+ * Whether a measure's frames add up to its meter. Used for a soft warning in the
+ * display, not enforced — a tab in progress is allowed to be incomplete.
+ */
+export function measureIsComplete(
+  measure: MeasureType,
+  timeSignature: [number, number]
+): boolean {
+  const [beatsPerMeasure, beatValue] = timeSignature;
+  // Durations are in quarter notes; a 6/8 measure is 3 quarter-note beats.
+  const expected = beatsPerMeasure * (4 / beatValue);
+  return Math.abs(measureBeats(measure) - expected) < 1e-6;
 }

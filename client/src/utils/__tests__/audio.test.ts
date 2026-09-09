@@ -1,5 +1,12 @@
 import { describe, it, expect } from "vitest";
-import { absoluteNote, flattenTrack, frameToNotes, trackLength } from "../audio";
+import {
+  absoluteNote,
+  flattenTrack,
+  frameToNotes,
+  totalBeats,
+  trackLength,
+  withTiming,
+} from "../audio";
 import { createTrack } from "../trackOperations";
 import { createEmptyFrame, createSection } from "../tabOperations";
 import { FRET_EMPTY, FRET_MUTED } from "@/shared/types/consts";
@@ -92,5 +99,79 @@ describe("flattenTrack", () => {
     const short = createTrack({ name: "Bass", tuning: BASS });
     expect(trackLength([track, short])).toBe(4);
     expect(trackLength([])).toBe(0);
+  });
+});
+
+describe("withTiming", () => {
+  function trackWithDurations(durations: number[]) {
+    return createTrack({
+      name: "Guitar",
+      body: {
+        sections: [
+          createSection("Intro", [
+            durations.map((duration) => ({ ...createEmptyFrame(), duration })),
+          ]),
+        ],
+      },
+    });
+  }
+
+  it("places frames end to end on a seconds axis", () => {
+    // At 60 bpm a beat is exactly one second, which makes the arithmetic checkable.
+    const timed = withTiming(trackWithDurations([1, 0.5, 0.5, 2]), 60);
+
+    expect(timed.map((f) => f.start)).toEqual([0, 1, 1.5, 2]);
+    expect(timed.map((f) => f.seconds)).toEqual([1, 0.5, 0.5, 2]);
+  });
+
+  it("keeps start times monotonic", () => {
+    const timed = withTiming(trackWithDurations([0.25, 1.5, 0.5, 4]), 137);
+    for (let i = 1; i < timed.length; i++) {
+      expect(timed[i].start).toBeGreaterThan(timed[i - 1].start);
+    }
+  });
+
+  it("gives four quarters and eight eighths the same total length", () => {
+    const quarters = withTiming(trackWithDurations([1, 1, 1, 1]), 90);
+    const eighths = withTiming(
+      trackWithDurations([0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5]),
+      90,
+    );
+
+    const end = (frames: typeof quarters) => {
+      const last = frames[frames.length - 1];
+      return last.start + last.seconds;
+    };
+    expect(end(quarters)).toBeCloseTo(end(eighths));
+  });
+
+  it("rescales with tempo without touching durations", () => {
+    const track = trackWithDurations([1, 1]);
+    expect(withTiming(track, 60)[1].start).toBe(1);
+    expect(withTiming(track, 120)[1].start).toBe(0.5);
+  });
+
+  it("treats a frame with no stored duration as one beat", () => {
+    // Frames written before the rhythm model carry no duration.
+    const legacy = createTrack({
+      name: "Guitar",
+      body: {
+        sections: [
+          createSection("Intro", [
+            [
+              { id: "a", notes: createEmptyFrame().notes },
+              { id: "b", notes: createEmptyFrame().notes },
+            ],
+          ]),
+        ],
+      },
+    });
+
+    expect(withTiming(legacy, 60).map((f) => f.start)).toEqual([0, 1]);
+  });
+
+  it("measures the tab by its longest track in beats", () => {
+    expect(totalBeats([trackWithDurations([1, 1]), trackWithDurations([0.5])])).toBe(2);
+    expect(totalBeats([])).toBe(0);
   });
 });

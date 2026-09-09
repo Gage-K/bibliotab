@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import * as Tone from "tone";
-import { flattenTrack, frameToNotes, trackLength } from "../utils/audio";
+import { frameToNotes, totalBeats, trackLength, withTiming } from "../utils/audio";
 import {
   createReverbBus,
   createVoice,
@@ -11,31 +11,30 @@ import {
 import type { TrackType } from "../shared/types/tab.types";
 import type { TabPositionType } from "../shared/types/utilities.types";
 
-export const MIN_BPM = 30;
-export const MAX_BPM = 300;
-export const DEFAULT_BPM = 90;
+export { MIN_BPM, MAX_BPM, DEFAULT_BPM } from "../shared/types/consts";
 
-/** Fraction of a step a note rings for, so consecutive frames don't run together. */
+/** Fraction of a frame a note rings for, so consecutive frames don't run together. */
 const NOTE_LENGTH_RATIO = 0.9;
 
 type PlaybackOptions = {
   tracks: TrackType[];
   /** Cursor updates follow this track; the others sound but don't move the cursor. */
   activeTrack: number;
+  /** Tab tempo. Durations are in beats, so this is the only thing that scales time. */
+  bpm: number;
   onStep: (position: TabPositionType) => void;
 };
 
 /**
- * Steps the transport through the tab one frame at a time, sounding every track at
- * once.
+ * Runs the transport through the tab, sounding every track at once.
  *
- * Frames have no duration yet, so every frame is one beat and tracks line up by frame
- * index. That is fine while all tracks subdivide the same way; aligning them on
- * absolute time needs the rhythm model.
+ * Scheduling is duration-driven: each frame is placed at its own absolute start time
+ * (see withTiming), so a measure of four quarters and a measure of eight eighths take
+ * the same wall-clock time. Tracks therefore stay aligned even when they subdivide
+ * differently.
  */
-export function useTabPlayback({ tracks, activeTrack, onStep }: PlaybackOptions) {
+export function useTabPlayback({ tracks, activeTrack, bpm, onStep }: PlaybackOptions) {
   const [isPlaying, setIsPlaying] = useState(false);
-  const [bpm, setBpm] = useState(DEFAULT_BPM);
 
   const voicesRef = useRef<VoiceHandle[]>([]);
   const busRef = useRef<FxBus | null>(null);
@@ -90,30 +89,30 @@ export function useTabPlayback({ tracks, activeTrack, onStep }: PlaybackOptions)
       createVoice(voiceForInstrument(track.instrument), busRef.current!.input),
     );
 
-    const stepSeconds = 60 / bpm;
-    const noteSeconds = stepSeconds * NOTE_LENGTH_RATIO;
-
     currentTracks.forEach((track, trackIndex) => {
       const voice = voicesRef.current[trackIndex];
       const isActive = trackIndex === activeTrackRef.current;
 
-      flattenTrack(track).forEach(({ frame, position, step }) => {
-        const at = step * stepSeconds;
+      withTiming(track, bpm).forEach(({ frame, position, start, seconds }) => {
         Tone.getTransport().schedule((time) => {
           const notes = frameToNotes(frame, track);
           if (notes.length > 0) {
-            voice.synth.triggerAttackRelease(notes, noteSeconds, time);
+            voice.synth.triggerAttackRelease(
+              notes,
+              seconds * NOTE_LENGTH_RATIO,
+              time,
+            );
           }
           if (isActive) {
             // Draw defers to the animation frame nearest `time`, which keeps the
             // cursor visually in step without blocking the audio thread.
             Tone.getDraw().schedule(() => onStepRef.current(position), time);
           }
-        }, at);
+        }, start);
       });
     });
 
-    const endsAt = trackLength(currentTracks) * stepSeconds;
+    const endsAt = totalBeats(currentTracks) * (60 / bpm);
     Tone.getTransport().schedule(() => {
       Tone.getDraw().schedule(() => setIsPlaying(false), Tone.now());
       Tone.getTransport().stop();
@@ -131,16 +130,14 @@ export function useTabPlayback({ tracks, activeTrack, onStep }: PlaybackOptions)
     }
   }, [isPlaying, play, stop]);
 
-  const changeBpm = useCallback(
-    (next: number) => {
-      const clamped = Math.min(MAX_BPM, Math.max(MIN_BPM, Math.round(next)));
-      setBpm(clamped);
-      // Rescheduling mid-playback would restart the tab; the new tempo applies on the
-      // next play instead.
-      if (isPlaying) stop();
-    },
-    [isPlaying, stop],
-  );
+  // Editing the tab or the tempo mid-playback would leave the transport running the
+  // events scheduled from the old state, so stop rather than silently diverging.
+  useEffect(() => {
+    if (isPlaying) stop();
+    // Deliberately keyed on bpm alone: re-running on `tracks` would stop playback on
+    // every cursor move, since positions live in the same state object.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bpm]);
 
-  return { isPlaying, bpm, setBpm: changeBpm, play, stop, toggle, totalSteps };
+  return { isPlaying, play, stop, toggle, totalSteps };
 }

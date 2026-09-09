@@ -10,6 +10,7 @@ import useTypedAuth from "../hooks/useTypedAuth";
 import { createEmptyFrame, createSection } from "../utils/tabOperations";
 import { createTrack } from "../utils/trackOperations";
 import type { TrackType, EditorDetailsType } from "../shared/types/tab.types";
+import { DEFAULT_BPM, DEFAULT_TIME_SIGNATURE } from "../shared/types/consts";
 
 const DEMO_TRACKS: TrackType[] = [
   createTrack({
@@ -30,6 +31,8 @@ const DEMO_DETAILS: EditorDetailsType = {
   id: "demo",
   artist: "",
   song: "Try it out",
+  bpm: DEFAULT_BPM,
+  timeSignature: DEFAULT_TIME_SIGNATURE,
 };
 
 export default function Home() {

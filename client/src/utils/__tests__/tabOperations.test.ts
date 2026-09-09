@@ -13,6 +13,10 @@ import {
   insertFrame,
   resizeFrames,
   bodyStringCount,
+  frameDuration,
+  setFrameDuration,
+  measureBeats,
+  measureIsComplete,
   updateFrameNotes,
   frameOrdinal,
   sectionMeasureOffset,
@@ -268,5 +272,52 @@ describe("variable string counts", () => {
   it("is a no-op when the count already matches", () => {
     const tab = body({ name: "Intro", measures: [1] });
     expect(resizeFrames(tab, 6)).toBe(tab);
+  });
+});
+
+describe("frame durations", () => {
+  it("defaults a frame with no stored duration to one beat", () => {
+    expect(frameDuration({ id: "a", notes: [] })).toBe(1);
+    expect(frameDuration({ id: "a", notes: [], duration: 0.5 })).toBe(0.5);
+  });
+
+  it("gives new frames a quarter-note duration", () => {
+    expect(createEmptyFrame().duration).toBe(1);
+    expect(createEmptyFrame(6, 0.25).duration).toBe(0.25);
+  });
+
+  it("sets one frame's duration and leaves the rest alone", () => {
+    const tab = body({ name: "Intro", measures: [2] });
+    const updated = setFrameDuration(tab, 0, 0, 1, 0.5);
+
+    expect(updated.sections[0].measures[0][0].duration).toBe(1);
+    expect(updated.sections[0].measures[0][1].duration).toBe(0.5);
+    // Ids anchor playback and lyrics; a duration edit must not mint a new one.
+    expect(updated.sections[0].measures[0][1].id).toBe(
+      tab.sections[0].measures[0][1].id,
+    );
+  });
+
+  it("clamps durations to the supported range", () => {
+    const tab = body({ name: "Intro", measures: [1] });
+    expect(setFrameDuration(tab, 0, 0, 0, 999).sections[0].measures[0][0].duration).toBe(16);
+    expect(setFrameDuration(tab, 0, 0, 0, 0).sections[0].measures[0][0].duration).toBe(
+      0.0625,
+    );
+  });
+
+  it("sums a measure's beats", () => {
+    const tab = setFrameDuration(body({ name: "Intro", measures: [3] }), 0, 0, 0, 0.5);
+    expect(measureBeats(tab.sections[0].measures[0])).toBe(2.5);
+  });
+
+  it("knows whether a measure fills its meter", () => {
+    const fourQuarters = body({ name: "Intro", measures: [4] }).sections[0].measures[0];
+    expect(measureIsComplete(fourQuarters, [4, 4])).toBe(true);
+    expect(measureIsComplete(fourQuarters, [3, 4])).toBe(false);
+
+    // 6/8 is three quarter notes' worth, not six.
+    const threeQuarters = body({ name: "Intro", measures: [3] }).sections[0].measures[0];
+    expect(measureIsComplete(threeQuarters, [6, 8])).toBe(true);
   });
 });
