@@ -24,7 +24,9 @@ import {
   renameSection,
   moveMeasure,
   resolveMoveTarget,
+  resizeFrames,
 } from "../utils/tabOperations";
+import { STANDARD_TUNINGS } from "../shared/types/consts";
 
 export interface TabEditorState {
   tab: TabBodyType;
@@ -38,7 +40,7 @@ export interface TabEditorState {
 
 export const initialTabEditorState: TabEditorState = {
   tab: { sections: [] },
-  details: { id: "", artist: "", song: "", tuning: ["E", "B", "G", "D", "A", "E"] },
+  details: { id: "", artist: "", song: "", tuning: STANDARD_TUNINGS.standard },
   position: { section: 0, measure: 0, frame: 0, string: 0 },
   selection: null,
   editorIsOpen: false,
@@ -74,6 +76,11 @@ export type TabEditorAction =
   | { type: "SAVE_SUCCESS" }
   | { type: "SAVE_FAILURE" };
 
+/** String count for the tab being edited — the tuning is the source of truth. */
+function stringCount(state: TabEditorState): number {
+  return state.details.tuning.length;
+}
+
 export function tabEditorReducer(state: TabEditorState, action: TabEditorAction): TabEditorState {
   switch (action.type) {
     case "SET_TAB_DATA":
@@ -83,12 +90,29 @@ export function tabEditorReducer(state: TabEditorState, action: TabEditorAction)
         details: action.payload.details,
       };
 
-    case "UPDATE_DETAILS":
-      return {
-        ...state,
-        details: { ...state.details, [action.payload.name]: action.payload.value },
-        isEditing: true,
-      };
+    case "UPDATE_DETAILS": {
+      const { name, value } = action.payload;
+      const details = { ...state.details, [name]: value };
+
+      // Switching to an instrument with a different string count has to reshape every
+      // frame, or the notes array and the tuning disagree about how many rows exist.
+      if (name === "tuning" && Array.isArray(value)) {
+        const newStringCount = value.length;
+        return {
+          ...state,
+          details,
+          tab: resizeFrames(state.tab, newStringCount),
+          position: {
+            ...state.position,
+            string: Math.min(state.position.string, newStringCount - 1),
+          },
+          selection: null,
+          isEditing: true,
+        };
+      }
+
+      return { ...state, details, isEditing: true };
+    }
 
     case "UPDATE_TAB_FRAME":
       return {
@@ -105,7 +129,7 @@ export function tabEditorReducer(state: TabEditorState, action: TabEditorAction)
 
     case "ADD_MEASURE": {
       const { section, measure } = action.payload;
-      const newTab = insertMeasure(state.tab, section, measure);
+      const newTab = insertMeasure(state.tab, section, measure, stringCount(state));
       return {
         ...state,
         tab: newTab,
@@ -118,14 +142,21 @@ export function tabEditorReducer(state: TabEditorState, action: TabEditorAction)
       const { section, measure, frame, isEmpty } = action.payload;
       return {
         ...state,
-        tab: insertFrame(state.tab, section, measure, frame, isEmpty),
+        tab: insertFrame(state.tab, section, measure, frame, isEmpty, stringCount(state)),
         isEditing: true,
       };
     }
 
     case "ADD_FRAME_AND_ADVANCE": {
       const { section, measure, frame, isEmpty } = action.payload;
-      const newTab = insertFrame(state.tab, section, measure, frame, isEmpty);
+      const newTab = insertFrame(
+        state.tab,
+        section,
+        measure,
+        frame,
+        isEmpty,
+        stringCount(state)
+      );
       const newPosition = isExistingPosition(newTab, section, measure, frame + 1)
         ? { section, measure, frame: frame + 1, string: state.position.string }
         : state.position;
@@ -243,7 +274,7 @@ export function tabEditorReducer(state: TabEditorState, action: TabEditorAction)
 
     case "SET_STRING": {
       const newString = action.payload.string;
-      if (newString < 0 || newString > 5) return state;
+      if (newString < 0 || newString > stringCount(state) - 1) return state;
       return {
         ...state,
         position: { ...state.position, string: newString },
@@ -308,7 +339,7 @@ export function tabEditorReducer(state: TabEditorState, action: TabEditorAction)
 
     case "ADD_SECTION": {
       const { index, name } = action.payload;
-      const newTab = insertSection(state.tab, index, name);
+      const newTab = insertSection(state.tab, index, name, stringCount(state));
       if (newTab === state.tab) return state;
       const newSection = Math.max(Math.min(index, newTab.sections.length - 1), 0);
       return {

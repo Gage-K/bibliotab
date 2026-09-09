@@ -17,14 +17,11 @@ export type TuningNoteType =
   | "G"
   | "G#"
   | "Gb";
-export type TuningType = [
-  TuningNoteType,
-  TuningNoteType,
-  TuningNoteType,
-  TuningNoteType,
-  TuningNoteType,
-  TuningNoteType,
-];
+/**
+ * Open notes per string, index 0 = string 1 = highest-pitched. Length is the string
+ * count, so a 4-string bass and a 7-string guitar are both just tunings.
+ */
+export type TuningType = TuningNoteType[];
 
 export type NoteStyleType =
   | "none"

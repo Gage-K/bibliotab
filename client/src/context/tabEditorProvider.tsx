@@ -31,6 +31,8 @@ interface TabEditorContextType {
   isEditing: boolean;
   isSaving: boolean;
   isDemo: boolean;
+  /** Number of strings on the current instrument — the tuning's length. */
+  stringCount: number;
   updateDetails: (name: string, value: string | TuningType) => void;
   saveChanges: () => Promise<void>;
   handleOpeningEditor: () => void;
@@ -93,6 +95,7 @@ export function TabEditorProvider({
   }, [serverTab, demoData]);
 
   const isLoading = isDemo ? false : isQueryLoading || tab.sections.length === 0;
+  const stringCount = details.tuning.length;
 
   function updateDetails(name: string, value: string | TuningType) {
     dispatch({ type: "UPDATE_DETAILS", payload: { name, value } });
@@ -171,6 +174,11 @@ export function TabEditorProvider({
   function moveMeasure(from: MeasureRef, to: MeasureRef) {
     dispatch({ type: "MOVE_MEASURE", payload: { from, to } });
   }
+
+  const getEmptyFrame = useCallback(
+    () => createEmptyFrame(stringCount),
+    [stringCount]
+  );
 
   // Fret digit buffering
   const digitBufferRef = useRef("");
@@ -411,11 +419,12 @@ export function TabEditorProvider({
         isEditing,
         isSaving,
         isDemo,
+        stringCount,
         updateDetails,
         saveChanges,
         handleOpeningEditor,
         updatePosition,
-        getEmptyFrame: createEmptyFrame,
+        getEmptyFrame,
         addNewMeasure,
         addNewFrame,
         addFrameAndAdvance,

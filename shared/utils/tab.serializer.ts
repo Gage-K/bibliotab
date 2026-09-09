@@ -1,5 +1,10 @@
 import { randomUUID } from "crypto";
 import {
+  MAX_STRINGS,
+  MIN_STRINGS,
+  TUNING_NOTES,
+} from "../constants/tab.constants";
+import {
   TabEntity,
   TabType,
   TabResponse,
@@ -7,6 +12,7 @@ import {
   UpdateTabDto,
   TabBodyType,
   MeasureType,
+  TuningNoteType,
 } from "../types/tab.types";
 
 export const DEFAULT_SECTION_NAME = "Section 1";
@@ -81,11 +87,15 @@ export function createDtoToEntity(
 }
 
 /**
- * Validates that a TabBodyType is within reasonable size limits
- * Returns error message if invalid, null if valid
+ * Validates that a TabBodyType is within reasonable size limits.
+ *
+ * `expectedStringCount` (the tuning's length) is optional: when supplied, every frame
+ * must have exactly that many notes, which is what keeps the note rows and the tuning
+ * from drifting apart. Without it, frames only have to be a plausible width.
  */
 export function validateTabSize(
-  body: any
+  body: any,
+  expectedStringCount?: number
 ): { valid: false; error: string } | { valid: true } {
   if (!body || typeof body !== "object" || !Array.isArray(body.sections)) {
     return {
@@ -97,7 +107,6 @@ export function validateTabSize(
   const MAX_SECTIONS = 100;
   const MAX_MEASURES = 500;
   const MAX_FRAMES_PER_MEASURE = 64;
-  const MAX_STRINGS = 12;
 
   if (body.sections.length > MAX_SECTIONS) {
     return {
@@ -154,15 +163,52 @@ export function validateTabSize(
           };
         }
 
-        if (frame.notes.length < 1 || frame.notes.length > MAX_STRINGS) {
+        if (
+          expectedStringCount !== undefined &&
+          frame.notes.length !== expectedStringCount
+        ) {
           return {
             valid: false,
-            error: `Frame ${j} in measure ${i} of section ${s} must have between 1 and ${MAX_STRINGS} notes`,
+            error: `Frame ${j} in measure ${i} of section ${s} has ${frame.notes.length} notes but the tuning has ${expectedStringCount} strings`,
+          };
+        }
+
+        if (
+          frame.notes.length < MIN_STRINGS ||
+          frame.notes.length > MAX_STRINGS
+        ) {
+          return {
+            valid: false,
+            error: `Frame ${j} in measure ${i} of section ${s} must have between ${MIN_STRINGS} and ${MAX_STRINGS} notes`,
           };
         }
       }
     }
   }
 
+  return { valid: true };
+}
+
+/**
+ * Validates a tuning: an array of known note names, one per string.
+ */
+export function validateTuning(
+  tuning: unknown
+): { valid: false; error: string } | { valid: true } {
+  if (!Array.isArray(tuning)) {
+    return { valid: false, error: "tuning must be an array of note names" };
+  }
+  if (tuning.length < MIN_STRINGS || tuning.length > MAX_STRINGS) {
+    return {
+      valid: false,
+      error: `tuning must have between ${MIN_STRINGS} and ${MAX_STRINGS} strings`,
+    };
+  }
+  const unknown = tuning.find(
+    (note) => !TUNING_NOTES.includes(note as TuningNoteType)
+  );
+  if (unknown !== undefined) {
+    return { valid: false, error: `"${unknown}" is not a valid note name` };
+  }
   return { valid: true };
 }

@@ -1,12 +1,11 @@
 import { describe, it, expect } from "vitest";
-// Imported by relative path rather than the "@tablab/shared" alias, which vitest
-// does not resolve (see tests/unit/services/tab.service.test.ts).
 import {
   normalizeTabBody,
   validateTabSize,
+  validateTuning,
   tabEntityToResponse,
-} from "../../../../shared/utils/tab.serializer";
-import type { TabEntity, MeasureType } from "../../../../shared/types/tab.types";
+} from "@tablab/shared";
+import type { TabEntity, MeasureType } from "@tablab/shared";
 
 const frame = (notes = 6) => ({
   id: "f",
@@ -100,7 +99,36 @@ describe("validateTabSize", () => {
 
   it("accepts non-6-string frames but still bounds them", () => {
     expect(validateTabSize({ sections: [section([[frame(4)]])] })).toEqual({ valid: true });
-    expect(validateTabSize({ sections: [section([[frame(0)]])] })).toMatchObject({ valid: false });
+    expect(validateTabSize({ sections: [section([[frame(2)]])] })).toMatchObject({ valid: false });
     expect(validateTabSize({ sections: [section([[frame(13)]])] })).toMatchObject({ valid: false });
+  });
+
+  it("requires one note per string when given a string count", () => {
+    const bass = { sections: [section([[frame(4)]])] };
+    expect(validateTabSize(bass, 4)).toEqual({ valid: true });
+
+    const mismatch = validateTabSize(bass, 6);
+    expect(mismatch).toMatchObject({ valid: false });
+    expect((mismatch as { error: string }).error).toContain("4 notes");
+  });
+});
+
+describe("validateTuning", () => {
+  it("accepts tunings of any supported width", () => {
+    expect(validateTuning(["E", "B", "G", "D", "A", "E"])).toEqual({ valid: true });
+    expect(validateTuning(["G", "D", "A", "E"])).toEqual({ valid: true });
+    expect(validateTuning(["E", "B", "G", "D", "A", "E", "B"])).toEqual({ valid: true });
+  });
+
+  it("rejects non-arrays and out-of-range string counts", () => {
+    expect(validateTuning("EADGBE")).toMatchObject({ valid: false });
+    expect(validateTuning(["E", "A"])).toMatchObject({ valid: false });
+    expect(validateTuning(Array(13).fill("E"))).toMatchObject({ valid: false });
+  });
+
+  it("rejects unknown note names", () => {
+    const result = validateTuning(["E", "B", "G", "D", "A", "H"]);
+    expect(result).toMatchObject({ valid: false });
+    expect((result as { error: string }).error).toContain("H");
   });
 });

@@ -8,8 +8,6 @@ import { Input } from "@/components/ui/input";
 import { Toggle } from "@/components/ui/toggle";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
-const STRINGS = [1, 2, 3, 4, 5, 6];
-
 const STYLES: { value: NoteFretType["style"]; label: string }[] = [
   { value: "bend", label: "b" },
   { value: "slide", label: "/" },
@@ -20,8 +18,14 @@ const STYLES: { value: NoteFretType["style"]; label: string }[] = [
 ];
 
 export default function TabForm() {
-  const { tab, position, details, updateTabData, getEmptyFrame } =
+  const { tab, position, details, stringCount, updateTabData, getEmptyFrame } =
     useTabEditor();
+
+  // String 1 is the highest-pitched (tuning index 0); rows render lowest-first.
+  const strings = useMemo(
+    () => Array.from({ length: stringCount }, (_unused, i) => i + 1),
+    [stringCount],
+  );
 
   const currentNotes = useMemo(
     () =>
@@ -101,8 +105,9 @@ export default function TabForm() {
         </span>
       </div>
       <div className="flex flex-col gap-0.5 mb-3">
-        {STRINGS.toReversed().map((string) => {
+        {strings.toReversed().map((string) => {
           const note = formData[string - 1];
+          if (!note) return null;
           const hasFret = note.fret >= 0;
           const isMuted = note.fret === -1;
           const fretDisplay = note.fret >= 0 ? String(note.fret) : "";

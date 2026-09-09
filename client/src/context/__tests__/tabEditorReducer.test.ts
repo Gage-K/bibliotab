@@ -194,3 +194,67 @@ describe("selection", () => {
     ).toBe(state);
   });
 });
+
+describe("changing tuning changes the string count", () => {
+  const tab = body({ name: "Intro", measures: [2] });
+
+  it("reshapes every frame and clamps the cursor when switching to a bass", () => {
+    const state = stateWith(tab, { string: 5 });
+    const next = tabEditorReducer(state, {
+      type: "UPDATE_DETAILS",
+      payload: { name: "tuning", value: ["G", "D", "A", "E"] },
+    });
+
+    expect(next.details.tuning).toHaveLength(4);
+    for (const frame of next.tab.sections[0].measures[0]) {
+      expect(frame.notes).toHaveLength(4);
+    }
+    // The cursor was on string 6, which no longer exists.
+    expect(next.position.string).toBe(3);
+  });
+
+  it("leaves non-tuning detail edits alone", () => {
+    const state = stateWith(tab);
+    const next = tabEditorReducer(state, {
+      type: "UPDATE_DETAILS",
+      payload: { name: "song", value: "Renamed" },
+    });
+
+    expect(next.tab).toBe(state.tab);
+    expect(next.details.song).toBe("Renamed");
+  });
+
+  it("clamps SET_STRING to the current string count", () => {
+    const state: TabEditorState = {
+      ...stateWith(tab),
+      details: { ...initialTabEditorState.details, tuning: ["G", "D", "A", "E"] },
+    };
+
+    expect(
+      tabEditorReducer(state, { type: "SET_STRING", payload: { string: 3 } }).position.string,
+    ).toBe(3);
+    // String 5 exists on a guitar but not on a 4-string bass.
+    expect(
+      tabEditorReducer(state, { type: "SET_STRING", payload: { string: 4 } }).position.string,
+    ).toBe(0);
+  });
+
+  it("builds new sections and measures at the current string count", () => {
+    const state: TabEditorState = {
+      ...stateWith({ sections: [createSection("Intro", [[createEmptyFrame(4)]])] }),
+      details: { ...initialTabEditorState.details, tuning: ["G", "D", "A", "E"] },
+    };
+
+    const withSection = tabEditorReducer(state, {
+      type: "ADD_SECTION",
+      payload: { index: 1, name: "Verse" },
+    });
+    expect(withSection.tab.sections[1].measures[0][0].notes).toHaveLength(4);
+
+    const withMeasure = tabEditorReducer(state, {
+      type: "ADD_MEASURE",
+      payload: { section: 0, measure: 1 },
+    });
+    expect(withMeasure.tab.sections[0].measures[1][0].notes).toHaveLength(4);
+  });
+});

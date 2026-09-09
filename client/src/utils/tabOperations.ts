@@ -7,6 +7,7 @@ import type {
   NoteFretType,
 } from "../shared/types/tab.types"
 import type { TabPositionType } from "../shared/types/utilities.types";
+import { DEFAULT_STRING_COUNT, FRET_EMPTY } from "../shared/types/consts";
 
 export const DEFAULT_SECTION_NAME = "Section 1";
 
@@ -17,33 +18,48 @@ export const DEFAULT_SECTION_NAME = "Section 1";
  * only measure away) are no-ops rather than errors, so the cursor is always valid.
  */
 
-export function createEmptyFrame(): FrameType {
+/** One note row per string; the string count comes from the tuning's length. */
+export function createEmptyFrame(
+  stringCount: number = DEFAULT_STRING_COUNT
+): FrameType {
   return {
     id: nanoid(),
-    notes: [
-      { fret: -2, style: "none" },
-      { fret: -2, style: "none" },
-      { fret: -2, style: "none" },
-      { fret: -2, style: "none" },
-      { fret: -2, style: "none" },
-      { fret: -2, style: "none" },
-    ],
+    notes: Array.from({ length: stringCount }, () => ({
+      fret: FRET_EMPTY,
+      style: "none" as const,
+    })),
   };
 }
 
-export function createEmptyMeasure(): MeasureType {
-  return [createEmptyFrame()];
+export function createEmptyMeasure(
+  stringCount: number = DEFAULT_STRING_COUNT
+): MeasureType {
+  return [createEmptyFrame(stringCount)];
 }
 
 export function createSection(
   name: string = DEFAULT_SECTION_NAME,
-  measures: MeasureType[] = [createEmptyMeasure()]
+  measures?: MeasureType[],
+  stringCount: number = DEFAULT_STRING_COUNT
 ): SectionType {
-  return { id: nanoid(), name, measures };
+  return {
+    id: nanoid(),
+    name,
+    measures: measures ?? [createEmptyMeasure(stringCount)],
+  };
 }
 
-export function createEmptyBody(): TabBodyType {
-  return { sections: [createSection()] };
+export function createEmptyBody(
+  stringCount: number = DEFAULT_STRING_COUNT
+): TabBodyType {
+  return { sections: [createSection(DEFAULT_SECTION_NAME, undefined, stringCount)] };
+}
+
+/** String count a body was built for, read off its first frame. */
+export function bodyStringCount(tab: TabBodyType): number {
+  return (
+    tab.sections[0]?.measures[0]?.[0]?.notes.length ?? DEFAULT_STRING_COUNT
+  );
 }
 
 /**
@@ -51,22 +67,56 @@ export function createEmptyBody(): TabBodyType {
  * normalizeTabBody in shared/utils/tab.serializer.ts — the server normalizes on read
  * and write, this catches anything cached client-side from before the migration.
  */
-export function normalizeBody(raw: unknown): TabBodyType {
+export function normalizeBody(
+  raw: unknown,
+  stringCount: number = DEFAULT_STRING_COUNT
+): TabBodyType {
   if (Array.isArray(raw)) {
     return { sections: [createSection(DEFAULT_SECTION_NAME, raw as MeasureType[])] };
   }
   if (raw && typeof raw === "object" && Array.isArray((raw as TabBodyType).sections)) {
     return raw as TabBodyType;
   }
-  return createEmptyBody();
+  return createEmptyBody(stringCount);
+}
+
+/**
+ * Grows or shrinks every frame to `stringCount` rows, for when the tuning changes to
+ * an instrument with a different number of strings. Added strings come in empty;
+ * removed ones drop off the low end (the tail of the array), which is where the
+ * tuning picker adds and removes them too.
+ */
+export function resizeFrames(
+  tab: TabBodyType,
+  stringCount: number
+): TabBodyType {
+  if (bodyStringCount(tab) === stringCount) return tab;
+  return {
+    ...tab,
+    sections: tab.sections.map((section) => ({
+      ...section,
+      measures: section.measures.map((measure) =>
+        measure.map((frame) => ({
+          ...frame,
+          notes: Array.from({ length: stringCount }, (_unused, i) =>
+            frame.notes[i] ?? { fret: FRET_EMPTY, style: "none" as const }
+          ),
+        }))
+      ),
+    })),
+  };
 }
 
 // ============================================================================
 // Measure-level helpers — operate on a single section's MeasureType[]
 // ============================================================================
 
-function insertMeasureAt(measures: MeasureType[], measure: number): MeasureType[] {
-  const newMeasure = createEmptyMeasure();
+function insertMeasureAt(
+  measures: MeasureType[],
+  measure: number,
+  stringCount: number
+): MeasureType[] {
+  const newMeasure = createEmptyMeasure(stringCount);
   return measure === -1
     ? [newMeasure, ...measures]
     : [...measures.slice(0, measure), newMeasure, ...measures.slice(measure)];
@@ -76,10 +126,11 @@ function insertFrameAt(
   measures: MeasureType[],
   measure: number,
   frame: number,
-  isEmpty: boolean
+  isEmpty: boolean,
+  stringCount: number
 ): MeasureType[] {
   const newFrame = isEmpty
-    ? createEmptyFrame()
+    ? createEmptyFrame(stringCount)
     : { ...measures[measure][frame], id: nanoid() };
 
   return measures.map((prevMeasure, i) =>
@@ -192,10 +243,11 @@ export function isOnlySection(tab: TabBodyType): boolean {
 export function insertMeasure(
   tab: TabBodyType,
   section: number,
-  measure: number
+  measure: number,
+  stringCount: number = bodyStringCount(tab)
 ): TabBodyType {
   return mapSectionMeasures(tab, section, (measures) =>
-    insertMeasureAt(measures, measure)
+    insertMeasureAt(measures, measure, stringCount)
   );
 }
 
@@ -204,11 +256,12 @@ export function insertFrame(
   section: number,
   measure: number,
   frame: number,
-  isEmpty: boolean
+  isEmpty: boolean,
+  stringCount: number = bodyStringCount(tab)
 ): TabBodyType {
   if (!getMeasures(tab, section)[measure]) return tab;
   return mapSectionMeasures(tab, section, (measures) =>
-    insertFrameAt(measures, measure, frame, isEmpty)
+    insertFrameAt(measures, measure, frame, isEmpty, stringCount)
   );
 }
 
@@ -273,14 +326,15 @@ function clampInsertIndex(index: number, length: number): number {
 export function insertSection(
   tab: TabBodyType,
   index: number,
-  name: string
+  name: string,
+  stringCount: number = bodyStringCount(tab)
 ): TabBodyType {
   const at = clampInsertIndex(index, tab.sections.length);
   return {
     ...tab,
     sections: [
       ...tab.sections.slice(0, at),
-      createSection(name),
+      createSection(name, undefined, stringCount),
       ...tab.sections.slice(at),
     ],
   };

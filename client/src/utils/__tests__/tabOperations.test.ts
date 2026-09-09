@@ -11,6 +11,8 @@ import {
   insertMeasure,
   removeFrame,
   insertFrame,
+  resizeFrames,
+  bodyStringCount,
   updateFrameNotes,
   frameOrdinal,
   sectionMeasureOffset,
@@ -204,5 +206,67 @@ describe("document-order helpers", () => {
     expect(sectionMeasureOffset(tab, 0)).toBe(0);
     expect(sectionMeasureOffset(tab, 1)).toBe(2);
     expect(totalMeasures(tab)).toBe(3);
+  });
+});
+
+describe("variable string counts", () => {
+  it("builds frames with one row per string", () => {
+    expect(createEmptyFrame(4).notes).toHaveLength(4);
+    expect(createEmptyFrame(7).notes).toHaveLength(7);
+    // The default keeps six-string callers working unchanged.
+    expect(createEmptyFrame().notes).toHaveLength(6);
+  });
+
+  it("reads a body's string count off its first frame", () => {
+    const bass = {
+      sections: [createSection("Intro", [[createEmptyFrame(4)]])],
+    };
+    expect(bodyStringCount(bass)).toBe(4);
+  });
+
+  it("propagates the string count through inserts", () => {
+    const bass = {
+      sections: [createSection("Intro", [[createEmptyFrame(4)]])],
+    };
+
+    expect(insertMeasure(bass, 0, 1).sections[0].measures[1][0].notes).toHaveLength(4);
+    expect(insertFrame(bass, 0, 0, 0, true).sections[0].measures[0][1].notes).toHaveLength(4);
+    expect(
+      insertSection(bass, 1, "Verse").sections[1].measures[0][0].notes,
+    ).toHaveLength(4);
+  });
+
+  it("pads every frame when the string count grows", () => {
+    const tab = body({ name: "Intro", measures: [2] });
+    const grown = resizeFrames(tab, 7);
+
+    for (const frame of grown.sections[0].measures[0]) {
+      expect(frame.notes).toHaveLength(7);
+      expect(frame.notes[6]).toEqual({ fret: -2, style: "none" });
+    }
+  });
+
+  it("truncates from the low end when the string count shrinks, keeping ids", () => {
+    const tab = body({ name: "Intro", measures: [1] });
+    const originalId = tab.sections[0].measures[0][0].id;
+    const withNotes = updateFrameNotes(tab, 0, 0, 0, [
+      { fret: 1, style: "none" },
+      { fret: 2, style: "none" },
+      { fret: 3, style: "none" },
+      { fret: 4, style: "none" },
+      { fret: 5, style: "none" },
+      { fret: 6, style: "none" },
+    ]);
+
+    const shrunk = resizeFrames(withNotes, 4);
+    const frame = shrunk.sections[0].measures[0][0];
+
+    expect(frame.id).toBe(originalId);
+    expect(frame.notes.map((n) => n.fret)).toEqual([1, 2, 3, 4]);
+  });
+
+  it("is a no-op when the count already matches", () => {
+    const tab = body({ name: "Intro", measures: [1] });
+    expect(resizeFrames(tab, 6)).toBe(tab);
   });
 });

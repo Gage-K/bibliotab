@@ -6,14 +6,22 @@ import { validateRequest } from "../middleware/validation.middleware";
 import { UserRepository } from "../../data/repositories/user.repository";
 import { authMiddleware } from "../middleware/auth.middleware";
 import { body, param, query } from "express-validator";
-import { normalizeTabBody, validateTabSize } from "@tablab/shared";
+import {
+  normalizeTabBody,
+  validateTabSize,
+  validateTuning,
+} from "@tablab/shared";
 
 /**
  * Rejects tab bodies that aren't the sectioned `{ sections: [...] }` shape or that blow
  * past the size limits. Legacy flat arrays are normalized first so an old client can
  * still write (the value is re-normalized on the way into the DB).
+ *
+ * When the request also carries a tuning, every frame must have exactly one note per
+ * string — that pairing is what keeps a 4-string bass tab from being saved with
+ * 6-note frames.
  */
-const tabDataValidator = (value: unknown) => {
+const tabDataValidator = (value: unknown, { req }: { req: any }) => {
   const tabBody = normalizeTabBody(value);
   if (tabBody.sections.length === 0) {
     // normalizeTabBody yields no sections only for input that is neither a legacy
@@ -21,7 +29,18 @@ const tabDataValidator = (value: unknown) => {
     throw new Error("tab_data must be an object with a non-empty sections array");
   }
 
-  const result = validateTabSize(tabBody);
+  const tuning = req.body?.tuning;
+  const expectedStringCount = Array.isArray(tuning) ? tuning.length : undefined;
+
+  const result = validateTabSize(tabBody, expectedStringCount);
+  if (!result.valid) {
+    throw new Error(result.error);
+  }
+  return true;
+};
+
+const tuningValidator = (value: unknown) => {
+  const result = validateTuning(value);
   if (!result.valid) {
     throw new Error(result.error);
   }
@@ -73,7 +92,7 @@ export const createTabRouter = (
     [
       body("tab_name").trim().isLength({ min: 1, max: 255 }),
       body("tab_artist").optional().trim().isLength({ max: 255 }),
-      body("tuning").isArray(),
+      body("tuning").custom(tuningValidator),
       body("tab_data").custom(tabDataValidator),
     ],
     validateRequest(),
@@ -110,7 +129,7 @@ export const createTabRouter = (
       param("tabId").isUUID(),
       body("tab_name").optional().trim().isLength({ min: 1, max: 255 }),
       body("tab_artist").optional().trim().isLength({ max: 255 }),
-      body("tuning").optional().isArray(),
+      body("tuning").optional().custom(tuningValidator),
       body("tab_data").optional().custom(tabDataValidator),
     ],
     validateRequest(),
