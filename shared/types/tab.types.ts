@@ -101,12 +101,25 @@ export type TabTracksType = {
 };
 
 // Complete tab document
+/**
+ * A Tiptap/ProseMirror document. Kept opaque here — the schema is defined by the
+ * editor's extensions, and pinning its shape in the domain types would mean chasing
+ * every extension change. Syllable-to-frame bindings live inside it as `frameAnchor`
+ * marks carrying a `frameId`.
+ */
+export type LyricsDocType = { type: string; content?: unknown[] } & Record<
+  string,
+  unknown
+>;
+
 export type TabType = {
   id: IdType;
   details: TabDetailsType;
   tracks: TrackType[];
   /** Freeform markdown notes for the tab. */
   notes: string;
+  /** Tiptap lyric document, or null if the tab has none. */
+  lyrics: LyricsDocType | null;
 };
 
 // ============================================================================
@@ -130,6 +143,7 @@ export interface TabEntity {
   bpm: number;
   time_signature: TimeSignatureType;
   notes: string;
+  lyrics: LyricsDocType | null;
   created_at: Date;
   modified_at: Date;
 }
@@ -147,6 +161,7 @@ export type CreateTabDto = {
   bpm?: number;
   time_signature?: TimeSignatureType;
   notes?: string;
+  lyrics?: LyricsDocType | null;
 };
 
 export type UpdateTabDto = {
@@ -157,6 +172,7 @@ export type UpdateTabDto = {
   bpm?: number;
   time_signature?: TimeSignatureType;
   notes?: string;
+  lyrics?: LyricsDocType | null;
 };
 
 // ============================================================================

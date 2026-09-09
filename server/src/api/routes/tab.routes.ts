@@ -10,6 +10,7 @@ import {
   MAX_NOTES_LENGTH,
   normalizeTabTracks,
   validateBpm,
+  validateLyrics,
   validateTabTracks,
   validateTimeSignature,
   validateTuning,
@@ -51,6 +52,12 @@ const bpmValidator = (value: unknown) => {
 
 const timeSignatureValidator = (value: unknown) => {
   const result = validateTimeSignature(value);
+  if (!result.valid) throw new Error(result.error);
+  return true;
+};
+
+const lyricsValidator = (value: unknown) => {
+  const result = validateLyrics(value);
   if (!result.valid) throw new Error(result.error);
   return true;
 };
@@ -105,6 +112,7 @@ export const createTabRouter = (
       body("bpm").optional().custom(bpmValidator),
       body("time_signature").optional().custom(timeSignatureValidator),
       body("notes").optional().isString().isLength({ max: MAX_NOTES_LENGTH }),
+      body("lyrics").optional({ values: "null" }).custom(lyricsValidator),
     ],
     validateRequest(),
     (async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
@@ -145,6 +153,7 @@ export const createTabRouter = (
       body("bpm").optional().custom(bpmValidator),
       body("time_signature").optional().custom(timeSignatureValidator),
       body("notes").optional().isString().isLength({ max: MAX_NOTES_LENGTH }),
+      body("lyrics").optional({ values: "null" }).custom(lyricsValidator),
     ],
     validateRequest(),
     (async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {

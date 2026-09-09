@@ -81,6 +81,11 @@ the error**. If `db:migrate` fails with no message, check whether the DB was bas
   `tracks[].body.sections[].measures[][]` is four levels deep and far clearer in
   application code. Run it once after `db:migrate`; it skips rows that already have
   durations, so it is safe to re-run, and `--dry-run` reports without writing.
+- **`0004_add_tab_notes.sql` and `0005_add_tab_lyrics.sql` are generated.** Both add a
+  single column with a safe default (empty string, and null respectively), so neither
+  needs a backfill. Lyrics are JSONB because the document is structured — the
+  syllable-to-frame bindings are marks inside it — and nullable so "never written" stays
+  distinguishable from "deliberately cleared".
 - `db/init.sql` still bootstraps a fresh Postgres container (mounted in
   `docker-compose.yml`). It and the baseline migration describe the same schema; a fresh
   Docker DB is initialized by `init.sql` and then just needs `db:baseline`.

@@ -4,6 +4,7 @@ import TrackBar from "./TrackBar";
 import Editor from "./Editor";
 import TabDisplay from "./TabDisplay";
 import NotesPanel from "./NotesPanel";
+import LyricEditor from "./lyrics/LyricEditor";
 import { useTabEditor } from "../context/tabEditorProvider";
 
 export default function TabEditorLayout() {
@@ -21,6 +22,7 @@ export default function TabEditorLayout() {
       <TrackBar />
       <Editor />
       <TabDisplay />
+      <LyricEditor />
       <NotesPanel />
     </>
   );

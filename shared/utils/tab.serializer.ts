@@ -3,6 +3,7 @@ import {
   DEFAULT_BPM,
   DEFAULT_TIME_SIGNATURE,
   MAX_BPM,
+  MAX_LYRICS_BYTES,
   MAX_STRINGS,
   MAX_TRACKS,
   MIN_BPM,
@@ -136,6 +137,7 @@ export function tabEntityToResponse(entity: TabEntity): TabResponse {
     },
     tracks: normalizeTabTracks(entity.tab_data, entity.tuning).tracks,
     notes: entity.notes ?? "",
+    lyrics: entity.lyrics ?? null,
   };
 }
 
@@ -164,6 +166,7 @@ export function createDtoToEntity(
     bpm: dto.bpm ?? DEFAULT_BPM,
     time_signature: dto.time_signature ?? DEFAULT_TIME_SIGNATURE,
     notes: dto.notes ?? "",
+    lyrics: dto.lyrics ?? null,
   };
 }
 
@@ -367,6 +370,30 @@ export function validateBpm(
   }
   if (value < MIN_BPM || value > MAX_BPM) {
     return { valid: false, error: `bpm must be between ${MIN_BPM} and ${MAX_BPM}` };
+  }
+  return { valid: true };
+}
+
+/**
+ * Validates a lyric document. The Tiptap schema lives in the editor's extensions, so
+ * this only checks the envelope and bounds the size — the editor is the authority on
+ * what is inside, and duplicating its schema here would go stale immediately.
+ */
+export function validateLyrics(
+  value: unknown
+): { valid: false; error: string } | { valid: true } {
+  if (value === null || value === undefined) return { valid: true };
+  if (typeof value !== "object" || Array.isArray(value)) {
+    return { valid: false, error: "lyrics must be a document object or null" };
+  }
+  if (typeof (value as { type?: unknown }).type !== "string") {
+    return { valid: false, error: "lyrics document must have a type" };
+  }
+  if (JSON.stringify(value).length > MAX_LYRICS_BYTES) {
+    return {
+      valid: false,
+      error: `lyrics document exceeds ${MAX_LYRICS_BYTES} characters`,
+    };
   }
   return { valid: true };
 }

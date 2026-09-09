@@ -2,6 +2,7 @@ import type {
   TabBodyType,
   TrackType,
   EditorDetailsType,
+  LyricsDocType,
   NoteFretType,
   NoteStyleType,
   TimeSignatureType,
@@ -21,6 +22,7 @@ import {
   removeFrame,
   updateFrameNotes,
   setFrameDuration,
+  findFrameById,
   resolvePositionAfterFrameDelete,
   insertSection,
   removeSection,
@@ -45,6 +47,8 @@ import {
 export interface TabEditorState {
   /** Freeform markdown notes for the tab. */
   notes: string;
+  /** Tiptap lyric document, or null if the tab has none. */
+  lyrics: LyricsDocType | null;
   tracks: TrackType[];
   /** Index into `tracks` — every edit applies to this one. */
   activeTrack: number;
@@ -58,6 +62,7 @@ export interface TabEditorState {
 
 export const initialTabEditorState: TabEditorState = {
   notes: "",
+  lyrics: null,
   tracks: [],
   activeTrack: 0,
   details: {
@@ -77,9 +82,16 @@ export const initialTabEditorState: TabEditorState = {
 export type TabEditorAction =
   | {
       type: "SET_TAB_DATA";
-      payload: { tracks: TrackType[]; details: EditorDetailsType; notes: string };
+      payload: {
+        tracks: TrackType[];
+        details: EditorDetailsType;
+        notes: string;
+        lyrics: LyricsDocType | null;
+      };
     }
   | { type: "SET_NOTES"; payload: { notes: string } }
+  | { type: "SET_LYRICS"; payload: { lyrics: LyricsDocType | null } }
+  | { type: "GO_TO_FRAME"; payload: { frameId: string } }
   | { type: "UPDATE_DETAILS"; payload: { name: string; value: string } }
   | { type: "SET_BPM"; payload: { bpm: number } }
   | { type: "SET_TIME_SIGNATURE"; payload: { timeSignature: TimeSignatureType } }
@@ -186,6 +198,7 @@ export function tabEditorReducer(state: TabEditorState, action: TabEditorAction)
         activeTrack: 0,
         details: action.payload.details,
         notes: action.payload.notes,
+        lyrics: action.payload.lyrics,
         position: { section: 0, measure: 0, frame: 0, string: 0 },
         selection: null,
       };
@@ -201,6 +214,21 @@ export function tabEditorReducer(state: TabEditorState, action: TabEditorAction)
     case "SET_NOTES":
       if (action.payload.notes === state.notes) return state;
       return { ...state, notes: action.payload.notes, isEditing: true };
+
+    case "SET_LYRICS":
+      return { ...state, lyrics: action.payload.lyrics, isEditing: true };
+
+    case "GO_TO_FRAME": {
+      // Anchors resolve by id, so a frame that has since been deleted is a no-op
+      // rather than a jump to whatever now sits at that index.
+      const found = findFrameById(activeBody(state), action.payload.frameId);
+      if (!found) return state;
+      return {
+        ...state,
+        position: { ...found, string: state.position.string },
+        selection: null,
+      };
+    }
 
     case "SET_BPM": {
       const bpm = Math.min(MAX_BPM, Math.max(MIN_BPM, Math.round(action.payload.bpm)));

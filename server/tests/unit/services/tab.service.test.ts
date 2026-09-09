@@ -80,6 +80,7 @@ describe("TabService", () => {
         },
         tracks: entity.tab_data.tracks,
         notes: "",
+        lyrics: null,
       });
       expect(mockTabRepository.findById).toHaveBeenCalledWith(entity.id);
     });

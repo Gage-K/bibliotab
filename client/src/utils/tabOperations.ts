@@ -515,3 +515,38 @@ export function measureIsComplete(
   const expected = beatsPerMeasure * (4 / beatValue);
   return Math.abs(measureBeats(measure) - expected) < 1e-6;
 }
+
+/**
+ * Locates a frame by its id across every section of a body.
+ *
+ * Lyric anchors store frame ids rather than indices, so resolving one means a scan.
+ * Returns null when the frame no longer exists — a binding whose frame was deleted goes
+ * inert rather than pointing somewhere wrong.
+ */
+export function findFrameById(
+  tab: TabBodyType,
+  frameId: string
+): TabPositionType | null {
+  for (let s = 0; s < tab.sections.length; s++) {
+    const measures = tab.sections[s].measures;
+    for (let m = 0; m < measures.length; m++) {
+      for (let f = 0; f < measures[m].length; f++) {
+        if (measures[m][f].id === frameId) {
+          return { section: s, measure: m, frame: f, string: 0 };
+        }
+      }
+    }
+  }
+  return null;
+}
+
+/** Every frame id in a body, for checking which lyric anchors still resolve. */
+export function collectFrameIds(tab: TabBodyType): Set<string> {
+  const ids = new Set<string>();
+  for (const section of tab.sections) {
+    for (const measure of section.measures) {
+      for (const frame of measure) ids.add(frame.id);
+    }
+  }
+  return ids;
+}

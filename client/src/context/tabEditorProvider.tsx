@@ -9,6 +9,7 @@ import type {
   TrackType,
   EditorDetailsType,
   FrameType,
+  LyricsDocType,
   NoteFretType,
   TimeSignatureType,
   TuningType,
@@ -37,6 +38,7 @@ interface TabEditorContextType {
   track: TrackType | undefined;
   details: EditorDetailsType;
   notes: string;
+  lyrics: LyricsDocType | null;
   isLoading: boolean;
   position: TabPositionType;
   selection: TabSelectionType;
@@ -48,6 +50,9 @@ interface TabEditorContextType {
   stringCount: number;
   updateDetails: (name: string, value: string) => void;
   setNotes: (notes: string) => void;
+  setLyrics: (lyrics: LyricsDocType | null) => void;
+  /** Moves the cursor to a frame by id. A no-op if that frame no longer exists. */
+  goToFrameById: (frameId: string) => void;
   setBpm: (bpm: number) => void;
   setTimeSignature: (timeSignature: TimeSignatureType) => void;
   setFrameDuration: (
@@ -94,13 +99,28 @@ export function TabEditorProvider({
   children,
 }: {
   tabId?: string;
-  demoData?: { tracks: TrackType[]; details: EditorDetailsType; notes?: string };
+  demoData?: {
+    tracks: TrackType[];
+    details: EditorDetailsType;
+    notes?: string;
+    lyrics?: LyricsDocType | null;
+  };
   children: React.ReactNode;
 }) {
   const isDemo = !!demoData;
   const [state, dispatch] = useReducer(tabEditorReducer, initialTabEditorState);
-  const { tracks, activeTrack, details, notes, position, selection, editorIsOpen, isEditing, isSaving } =
-    state;
+  const {
+    tracks,
+    activeTrack,
+    details,
+    notes,
+    lyrics,
+    position,
+    selection,
+    editorIsOpen,
+    isEditing,
+    isSaving,
+  } = state;
 
   const track = tracks[activeTrack];
   const tab = activeBody(state);
@@ -117,6 +137,7 @@ export function TabEditorProvider({
         payload: {
           ...demoData,
           notes: demoData.notes ?? "",
+          lyrics: demoData.lyrics ?? null,
           tracks: normalizeTracks({ tracks: demoData.tracks }),
         },
       });
@@ -136,6 +157,7 @@ export function TabEditorProvider({
           // can still be a pre-tracks shape (see normalizeTracks).
           tracks: normalizeTracks({ tracks: serverTab.tracks }),
           notes: serverTab.notes ?? "",
+          lyrics: serverTab.lyrics ?? null,
         },
       });
     }
@@ -150,6 +172,14 @@ export function TabEditorProvider({
 
   function setNotes(next: string) {
     dispatch({ type: "SET_NOTES", payload: { notes: next } });
+  }
+
+  function setLyrics(next: LyricsDocType | null) {
+    dispatch({ type: "SET_LYRICS", payload: { lyrics: next } });
+  }
+
+  function goToFrameById(frameId: string) {
+    dispatch({ type: "GO_TO_FRAME", payload: { frameId } });
   }
 
   function setBpm(bpm: number) {
@@ -211,6 +241,7 @@ export function TabEditorProvider({
       bpm: details.bpm,
       time_signature: details.timeSignature,
       notes,
+      lyrics,
     };
 
     updateTabMutation.mutate(data, {
@@ -518,6 +549,7 @@ export function TabEditorProvider({
         track,
         details,
         notes,
+        lyrics,
         isLoading,
         position,
         selection,
@@ -528,6 +560,8 @@ export function TabEditorProvider({
         stringCount,
         updateDetails,
         setNotes,
+        setLyrics,
+        goToFrameById,
         setBpm,
         setTimeSignature,
         setFrameDuration,

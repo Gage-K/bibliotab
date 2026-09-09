@@ -81,11 +81,11 @@ export class TabRepository {
       const query = `
         INSERT INTO tabs (
           user_id, tab_name, tab_artist, tuning, created_at, modified_at, tab_data,
-          bpm, time_signature, notes
+          bpm, time_signature, notes, lyrics
         )
         VALUES (
           $1, $2, $3, $4, $5, $6, $7,
-          COALESCE($8, 90), COALESCE($9, '[4,4]'::jsonb), COALESCE($10, '')
+          COALESCE($8, 90), COALESCE($9, '[4,4]'::jsonb), COALESCE($10, ''), $11
         )
         RETURNING *
       `;
@@ -100,6 +100,7 @@ export class TabRepository {
         tabData.bpm ?? null,
         tabData.time_signature ? JSON.stringify(tabData.time_signature) : null,
         tabData.notes ?? null,
+        tabData.lyrics ? JSON.stringify(tabData.lyrics) : null,
       ]);
       return rows[0];
     } catch (error) {
@@ -153,6 +154,12 @@ export class TabRepository {
       if (tabData.notes !== undefined) {
         updateFields.push(`notes = $${paramIndex}`);
         values.push(tabData.notes);
+        paramIndex++;
+      }
+
+      if (tabData.lyrics !== undefined) {
+        updateFields.push(`lyrics = $${paramIndex}`);
+        values.push(tabData.lyrics === null ? null : JSON.stringify(tabData.lyrics));
         paramIndex++;
       }
 

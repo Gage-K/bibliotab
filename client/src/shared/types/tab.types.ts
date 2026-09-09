@@ -98,10 +98,22 @@ export type TabTracksType = {
   tracks: TrackType[];
 };
 
+/**
+ * A Tiptap/ProseMirror document. Kept opaque — the schema is defined by the editor's
+ * extensions, and pinning its shape here would mean chasing every extension change.
+ * Syllable-to-frame bindings live inside it as `frameAnchor` marks carrying a frameId.
+ */
+export type LyricsDocType = { type: string; content?: unknown[] } & Record<
+  string,
+  unknown
+>;
+
 export type TabType = {
   id: IdType;
   details: TabDetailsType;
   tracks: TrackType[];
   /** Freeform markdown notes for the tab. */
   notes: string;
+  /** Tiptap lyric document, or null if the tab has none. */
+  lyrics: LyricsDocType | null;
 };

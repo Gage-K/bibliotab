@@ -218,3 +218,9 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
+/* Lyric syllables bound to a frame in the transcription (see FrameAnchorMark). */
+.lyric-anchor-active {
+  background-color: var(--color-blue, oklch(0.6 0.15 250));
+  color: white;
+}

@@ -17,6 +17,8 @@ import {
   setFrameDuration,
   measureBeats,
   measureIsComplete,
+  findFrameById,
+  collectFrameIds,
   updateFrameNotes,
   frameOrdinal,
   sectionMeasureOffset,
@@ -319,5 +321,45 @@ describe("frame durations", () => {
     // 6/8 is three quarter notes' worth, not six.
     const threeQuarters = body({ name: "Intro", measures: [3] }).sections[0].measures[0];
     expect(measureIsComplete(threeQuarters, [6, 8])).toBe(true);
+  });
+});
+
+describe("frame lookup by id", () => {
+  const tab = body(
+    { name: "Intro", measures: [2, 1] },
+    { name: "Verse", measures: [1, 2] },
+  );
+
+  it("finds a frame anywhere in the body", () => {
+    const target = tab.sections[1].measures[1][1];
+    expect(findFrameById(tab, target.id)).toEqual({
+      section: 1,
+      measure: 1,
+      frame: 1,
+      string: 0,
+    });
+  });
+
+  it("returns null for an id that is not there", () => {
+    // A lyric anchor whose frame was deleted must go inert, not resolve to a neighbour.
+    expect(findFrameById(tab, "gone")).toBeNull();
+  });
+
+  it("collects every frame id in the body", () => {
+    const ids = collectFrameIds(tab);
+    expect(ids.size).toBe(6);
+    expect(ids.has(tab.sections[0].measures[0][0].id)).toBe(true);
+  });
+
+  it("keeps ids stable across a measure move, so anchors survive", () => {
+    const movedId = tab.sections[0].measures[0][0].id;
+    const moved = moveMeasure(tab, { section: 0, measure: 0 }, { section: 1, measure: 0 });
+
+    expect(findFrameById(moved, movedId)).toEqual({
+      section: 1,
+      measure: 0,
+      frame: 0,
+      string: 0,
+    });
   });
 });

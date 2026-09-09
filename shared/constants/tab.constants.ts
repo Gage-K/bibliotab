@@ -139,6 +139,9 @@ export const NOTE_VALUES = [
 /** Generous cap on the markdown notes field, to bound the row size. */
 export const MAX_NOTES_LENGTH = 50_000;
 
+/** Serialized size cap on the lyric document, for the same reason. */
+export const MAX_LYRICS_BYTES = 200_000;
+
 export const MIN_FRAME_DURATION = 0.0625;
 export const MAX_FRAME_DURATION = 16;
 

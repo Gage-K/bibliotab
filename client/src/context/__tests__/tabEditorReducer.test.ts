@@ -366,3 +366,67 @@ describe("track actions", () => {
     expect(next.position).toBe(state.position);
   });
 });
+
+describe("GO_TO_FRAME", () => {
+  const tab = body({ name: "Intro", measures: [2, 1] }, { name: "Verse", measures: [2] });
+
+  it("moves the cursor to the frame with that id", () => {
+    const state = stateWith(tab);
+    const target = tab.sections[1].measures[0][1];
+
+    const next = tabEditorReducer(state, {
+      type: "GO_TO_FRAME",
+      payload: { frameId: target.id },
+    });
+
+    expect(next.position).toMatchObject({ section: 1, measure: 0, frame: 1 });
+  });
+
+  it("does nothing for a frame that no longer exists", () => {
+    // A lyric anchor outliving its frame must not jump to whatever took that index.
+    const state = stateWith(tab, { section: 0, measure: 1, frame: 0 });
+    expect(
+      tabEditorReducer(state, { type: "GO_TO_FRAME", payload: { frameId: "gone" } }),
+    ).toBe(state);
+  });
+
+  it("keeps the current string", () => {
+    const state = stateWith(tab, { string: 4 });
+    const next = tabEditorReducer(state, {
+      type: "GO_TO_FRAME",
+      payload: { frameId: tab.sections[1].measures[0][0].id },
+    });
+    expect(next.position.string).toBe(4);
+  });
+});
+
+describe("notes and lyrics", () => {
+  const tab = body({ name: "Intro", measures: [1] });
+
+  it("stores notes and flags the tab as edited", () => {
+    const next = tabEditorReducer(stateWith(tab), {
+      type: "SET_NOTES",
+      payload: { notes: "Capo 2" },
+    });
+    expect(next.notes).toBe("Capo 2");
+    expect(next.isEditing).toBe(true);
+  });
+
+  it("ignores an unchanged notes write", () => {
+    // The notes textarea fires on every keystroke; an identical value shouldn't mark
+    // the tab dirty.
+    const state = { ...stateWith(tab), notes: "Capo 2" };
+    expect(
+      tabEditorReducer(state, { type: "SET_NOTES", payload: { notes: "Capo 2" } }),
+    ).toBe(state);
+  });
+
+  it("stores the lyric document", () => {
+    const doc = { type: "doc", content: [] };
+    const next = tabEditorReducer(stateWith(tab), {
+      type: "SET_LYRICS",
+      payload: { lyrics: doc },
+    });
+    expect(next.lyrics).toBe(doc);
+  });
+});
