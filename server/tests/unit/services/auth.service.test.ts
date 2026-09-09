@@ -11,9 +11,9 @@ vi.mock("jsonwebtoken", () => ({
   verify: vi.fn(),
 }));
 
-// mock environment variables
-process.env.ACCESS_TOKEN_SECRET = "test-access-secret";
-process.env.REFRESH_TOKEN_SECRET = "test-refresh-secret";
+// Secrets come from tests/setup.ts, which runs before env.config.ts reads
+// process.env. Assigning them here would be too late — the import above has already
+// captured whatever was in the environment.
 
 describe("AuthService", () => {
   let authService: AuthService;
