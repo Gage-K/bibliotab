@@ -21,6 +21,31 @@ import {
   activeBody,
 } from "./tabEditorReducer";
 import { normalizeTracks, trackStringCount } from "../utils/trackOperations";
+import { useTabPlayback } from "../hooks/useTabPlayback";
+import { usePlayhead } from "../hooks/usePlayhead";
+
+/** Class the sounding syllable carries; styling lives with the lyric editor. */
+const ACTIVE_ANCHOR_CLASS = "lyric-anchor-active";
+
+function clearLyricHighlights() {
+  document
+    .querySelectorAll(`.${ACTIVE_ANCHOR_CLASS}`)
+    .forEach((element) => element.classList.remove(ACTIVE_ANCHOR_CLASS));
+}
+
+/**
+ * Highlights the lyric syllables bound to the frame currently sounding.
+ *
+ * Reaching into the DOM rather than routing through React state is deliberate: this
+ * fires once per frame during playback, and re-rendering the lyric document at that
+ * rate would fight the editor for control of its own content.
+ */
+function highlightLyricAnchor(frameId: string) {
+  clearLyricHighlights();
+  document
+    .querySelectorAll(`[data-frame-id="${CSS.escape(frameId)}"]`)
+    .forEach((element) => element.classList.add(ACTIVE_ANCHOR_CLASS));
+}
 
 const FRET_EMPTY = -2;
 const FRET_MUTED = -1;
@@ -48,6 +73,12 @@ interface TabEditorContextType {
   isDemo: boolean;
   /** Number of strings on the current instrument — the tuning's length. */
   stringCount: number;
+  isPlaying: boolean;
+  togglePlayback: () => void;
+  /** Playback position in ticks, or null when stopped. Drives the timeline playhead. */
+  playheadTick: number | null;
+  /** Frames in the longest track — zero means there is nothing to play. */
+  totalSteps: number;
   updateDetails: (name: string, value: string) => void;
   setNotes: (notes: string) => void;
   setLyrics: (lyrics: LyricsDocType | null) => void;
@@ -313,6 +344,44 @@ export function TabEditorProvider({
     [stringCount]
   );
 
+  // ==========================================================================
+  // Playback
+  //
+  // Lives here rather than in the transport component because two consumers need it:
+  // the transport button and the timeline's playhead.
+  // ==========================================================================
+  const updatePositionRef = useRef(updatePosition);
+  updatePositionRef.current = updatePosition;
+
+  const handlePlaybackStep = useCallback((stepPosition: TabPositionType) => {
+    updatePositionRef.current(
+      stepPosition.section,
+      stepPosition.measure,
+      stepPosition.frame,
+    );
+  }, []);
+
+  const {
+    isPlaying,
+    toggle: togglePlayback,
+    totalSteps,
+  } = useTabPlayback({
+    tracks,
+    activeTrack,
+    bpm: details.bpm,
+    onStep: handlePlaybackStep,
+    onFrameSound: highlightLyricAnchor,
+  });
+
+  const playheadTick = usePlayhead(isPlaying, details.bpm);
+
+  // Leaving a stale highlight behind after stopping would suggest playback is still
+  // somewhere in the song.
+  useEffect(() => {
+    if (isPlaying) return;
+    clearLyricHighlights();
+  }, [isPlaying]);
+
   // Fret digit buffering
   const digitBufferRef = useRef("");
   const digitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -558,6 +627,10 @@ export function TabEditorProvider({
         isSaving,
         isDemo,
         stringCount,
+        isPlaying,
+        togglePlayback,
+        playheadTick,
+        totalSteps,
         updateDetails,
         setNotes,
         setLyrics,
