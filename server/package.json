@@ -1,6 +1,7 @@
 {
   "name": "server",
   "version": "1.0.0",
+  "packageManager": "pnpm@11.25.0",
   "description": "backend for tablab",
   "main": "index.js",
   "scripts": {
