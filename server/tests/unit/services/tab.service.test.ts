@@ -20,6 +20,7 @@ function makeEntity(overrides: Partial<TabEntity> = {}): TabEntity {
     modified_at: new Date("2024-01-02T00:00:00.000Z"),
     bpm: 90,
     time_signature: [4, 4] as [number, number],
+    notes: "",
     tab_data: {
       tracks: [
         {
@@ -78,6 +79,7 @@ describe("TabService", () => {
           timeSignature: [4, 4],
         },
         tracks: entity.tab_data.tracks,
+        notes: "",
       });
       expect(mockTabRepository.findById).toHaveBeenCalledWith(entity.id);
     });

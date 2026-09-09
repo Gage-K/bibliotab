@@ -90,6 +90,19 @@ describe("tempo and meter", () => {
     expect(validateBpm("fast")).toMatchObject({ valid: false });
   });
 
+  it("defaults notes to an empty string for rows written before the notes column", () => {
+    const response = tabEntityToResponse(entityWith({ sections: [section([measure(1)])] }));
+    expect(response.notes).toBe("");
+  });
+
+  it("passes stored notes through", () => {
+    const entity = {
+      ...entityWith({ sections: [section([measure(1)])] }),
+      notes: "Capo 2",
+    } as unknown as TabEntity;
+    expect(tabEntityToResponse(entity).notes).toBe("Capo 2");
+  });
+
   it("validates time signatures", () => {
     expect(validateTimeSignature([4, 4])).toEqual({ valid: true });
     expect(validateTimeSignature([6, 8])).toEqual({ valid: true });

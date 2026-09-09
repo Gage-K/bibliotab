@@ -43,6 +43,8 @@ import {
 } from "../shared/types/consts";
 
 export interface TabEditorState {
+  /** Freeform markdown notes for the tab. */
+  notes: string;
   tracks: TrackType[];
   /** Index into `tracks` — every edit applies to this one. */
   activeTrack: number;
@@ -55,6 +57,7 @@ export interface TabEditorState {
 }
 
 export const initialTabEditorState: TabEditorState = {
+  notes: "",
   tracks: [],
   activeTrack: 0,
   details: {
@@ -72,7 +75,11 @@ export const initialTabEditorState: TabEditorState = {
 };
 
 export type TabEditorAction =
-  | { type: "SET_TAB_DATA"; payload: { tracks: TrackType[]; details: EditorDetailsType } }
+  | {
+      type: "SET_TAB_DATA";
+      payload: { tracks: TrackType[]; details: EditorDetailsType; notes: string };
+    }
+  | { type: "SET_NOTES"; payload: { notes: string } }
   | { type: "UPDATE_DETAILS"; payload: { name: string; value: string } }
   | { type: "SET_BPM"; payload: { bpm: number } }
   | { type: "SET_TIME_SIGNATURE"; payload: { timeSignature: TimeSignatureType } }
@@ -178,6 +185,7 @@ export function tabEditorReducer(state: TabEditorState, action: TabEditorAction)
         tracks: action.payload.tracks,
         activeTrack: 0,
         details: action.payload.details,
+        notes: action.payload.notes,
         position: { section: 0, measure: 0, frame: 0, string: 0 },
         selection: null,
       };
@@ -189,6 +197,10 @@ export function tabEditorReducer(state: TabEditorState, action: TabEditorAction)
         details: { ...state.details, [action.payload.name]: action.payload.value },
         isEditing: true,
       };
+
+    case "SET_NOTES":
+      if (action.payload.notes === state.notes) return state;
+      return { ...state, notes: action.payload.notes, isEditing: true };
 
     case "SET_BPM": {
       const bpm = Math.min(MAX_BPM, Math.max(MIN_BPM, Math.round(action.payload.bpm)));

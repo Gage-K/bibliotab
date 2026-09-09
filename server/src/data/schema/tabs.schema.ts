@@ -6,6 +6,7 @@ import {
   timestamp,
   index,
   integer,
+  text,
 } from "drizzle-orm/pg-core";
 import { users } from "./users.schema";
 // Type-only import: erased at build, keeps the JSONB columns typed as the shared
@@ -41,6 +42,8 @@ export const tabs = pgTable(
       .$type<TimeSignatureType>()
       .notNull()
       .default([4, 4]),
+    // Freeform markdown. TEXT rather than JSONB — it has no structure to query.
+    notes: text("notes").notNull().default(""),
     createdAt: timestamp("created_at").defaultNow(),
     modifiedAt: timestamp("modified_at").defaultNow(),
   },

@@ -102,4 +102,6 @@ export type TabType = {
   id: IdType;
   details: TabDetailsType;
   tracks: TrackType[];
+  /** Freeform markdown notes for the tab. */
+  notes: string;
 };

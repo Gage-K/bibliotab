@@ -136,6 +136,9 @@ export const NOTE_VALUES = [
   { label: "Sixteenth", beats: 0.25, symbol: "\u{1D161}" },
 ] as const;
 
+/** Generous cap on the markdown notes field, to bound the row size. */
+export const MAX_NOTES_LENGTH = 50_000;
+
 export const MIN_FRAME_DURATION = 0.0625;
 export const MAX_FRAME_DURATION = 16;
 

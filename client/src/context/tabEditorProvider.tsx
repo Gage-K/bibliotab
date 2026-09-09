@@ -36,6 +36,7 @@ interface TabEditorContextType {
   /** The track being edited, or undefined before the tab loads. */
   track: TrackType | undefined;
   details: EditorDetailsType;
+  notes: string;
   isLoading: boolean;
   position: TabPositionType;
   selection: TabSelectionType;
@@ -46,6 +47,7 @@ interface TabEditorContextType {
   /** Number of strings on the current instrument — the tuning's length. */
   stringCount: number;
   updateDetails: (name: string, value: string) => void;
+  setNotes: (notes: string) => void;
   setBpm: (bpm: number) => void;
   setTimeSignature: (timeSignature: TimeSignatureType) => void;
   setFrameDuration: (
@@ -92,12 +94,12 @@ export function TabEditorProvider({
   children,
 }: {
   tabId?: string;
-  demoData?: { tracks: TrackType[]; details: EditorDetailsType };
+  demoData?: { tracks: TrackType[]; details: EditorDetailsType; notes?: string };
   children: React.ReactNode;
 }) {
   const isDemo = !!demoData;
   const [state, dispatch] = useReducer(tabEditorReducer, initialTabEditorState);
-  const { tracks, activeTrack, details, position, selection, editorIsOpen, isEditing, isSaving } =
+  const { tracks, activeTrack, details, notes, position, selection, editorIsOpen, isEditing, isSaving } =
     state;
 
   const track = tracks[activeTrack];
@@ -112,7 +114,11 @@ export function TabEditorProvider({
       hasLoaded.current = true;
       dispatch({
         type: "SET_TAB_DATA",
-        payload: { ...demoData, tracks: normalizeTracks({ tracks: demoData.tracks }) },
+        payload: {
+          ...demoData,
+          notes: demoData.notes ?? "",
+          tracks: normalizeTracks({ tracks: demoData.tracks }),
+        },
       });
     } else if (serverTab && !hasLoaded.current) {
       hasLoaded.current = true;
@@ -129,6 +135,7 @@ export function TabEditorProvider({
           // The server already normalizes, but a response cached from an older client
           // can still be a pre-tracks shape (see normalizeTracks).
           tracks: normalizeTracks({ tracks: serverTab.tracks }),
+          notes: serverTab.notes ?? "",
         },
       });
     }
@@ -139,6 +146,10 @@ export function TabEditorProvider({
 
   function updateDetails(name: string, value: string) {
     dispatch({ type: "UPDATE_DETAILS", payload: { name, value } });
+  }
+
+  function setNotes(next: string) {
+    dispatch({ type: "SET_NOTES", payload: { notes: next } });
   }
 
   function setBpm(bpm: number) {
@@ -199,6 +210,7 @@ export function TabEditorProvider({
       tab_data: { tracks },
       bpm: details.bpm,
       time_signature: details.timeSignature,
+      notes,
     };
 
     updateTabMutation.mutate(data, {
@@ -505,6 +517,7 @@ export function TabEditorProvider({
         activeTrack,
         track,
         details,
+        notes,
         isLoading,
         position,
         selection,
@@ -514,6 +527,7 @@ export function TabEditorProvider({
         isDemo,
         stringCount,
         updateDetails,
+        setNotes,
         setBpm,
         setTimeSignature,
         setFrameDuration,

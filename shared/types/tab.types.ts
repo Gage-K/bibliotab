@@ -105,6 +105,8 @@ export type TabType = {
   id: IdType;
   details: TabDetailsType;
   tracks: TrackType[];
+  /** Freeform markdown notes for the tab. */
+  notes: string;
 };
 
 // ============================================================================
@@ -127,6 +129,7 @@ export interface TabEntity {
   tab_data: TabTracksType;
   bpm: number;
   time_signature: TimeSignatureType;
+  notes: string;
   created_at: Date;
   modified_at: Date;
 }
@@ -143,6 +146,7 @@ export type CreateTabDto = {
   tab_data: TabTracksType;
   bpm?: number;
   time_signature?: TimeSignatureType;
+  notes?: string;
 };
 
 export type UpdateTabDto = {
@@ -152,6 +156,7 @@ export type UpdateTabDto = {
   tab_data?: TabTracksType;
   bpm?: number;
   time_signature?: TimeSignatureType;
+  notes?: string;
 };
 
 // ============================================================================

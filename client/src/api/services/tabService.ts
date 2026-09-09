@@ -1,6 +1,11 @@
 import type { AxiosInstance } from "axios";
 import { API_ENDPOINTS } from "../endpoints";
-import type { TabTracksType, TabType, TuningType } from "../../shared/types/tab.types";
+import type {
+  TabTracksType,
+  TabType,
+  TimeSignatureType,
+  TuningType,
+} from "../../shared/types/tab.types";
 
 /** Every tab endpoint wraps its payload in `{ data }`. */
 type ApiEnvelope<T> = { data: T };
@@ -14,6 +19,9 @@ export interface CreateTabPayload {
   tab_artist: string;
   tuning: TuningType;
   tab_data: TabTracksType;
+  bpm?: number;
+  time_signature?: TimeSignatureType;
+  notes?: string;
 }
 
 export interface SaveTabPayload {
@@ -21,6 +29,9 @@ export interface SaveTabPayload {
   tab_artist: string;
   tuning: TuningType;
   tab_data: TabTracksType;
+  bpm: number;
+  time_signature: TimeSignatureType;
+  notes: string;
 }
 
 export const tabService = {

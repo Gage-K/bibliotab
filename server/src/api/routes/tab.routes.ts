@@ -7,6 +7,7 @@ import { UserRepository } from "../../data/repositories/user.repository";
 import { authMiddleware } from "../middleware/auth.middleware";
 import { body, param, query } from "express-validator";
 import {
+  MAX_NOTES_LENGTH,
   normalizeTabTracks,
   validateBpm,
   validateTabTracks,
@@ -103,6 +104,7 @@ export const createTabRouter = (
       body("tab_data").custom(tabDataValidator),
       body("bpm").optional().custom(bpmValidator),
       body("time_signature").optional().custom(timeSignatureValidator),
+      body("notes").optional().isString().isLength({ max: MAX_NOTES_LENGTH }),
     ],
     validateRequest(),
     (async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
@@ -142,6 +144,7 @@ export const createTabRouter = (
       body("tab_data").optional().custom(tabDataValidator),
       body("bpm").optional().custom(bpmValidator),
       body("time_signature").optional().custom(timeSignatureValidator),
+      body("notes").optional().isString().isLength({ max: MAX_NOTES_LENGTH }),
     ],
     validateRequest(),
     (async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {

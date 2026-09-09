@@ -135,6 +135,7 @@ export function tabEntityToResponse(entity: TabEntity): TabResponse {
       timeSignature: entity.time_signature ?? DEFAULT_TIME_SIGNATURE,
     },
     tracks: normalizeTabTracks(entity.tab_data, entity.tuning).tracks,
+    notes: entity.notes ?? "",
   };
 }
 
@@ -162,6 +163,7 @@ export function createDtoToEntity(
     tab_data,
     bpm: dto.bpm ?? DEFAULT_BPM,
     time_signature: dto.time_signature ?? DEFAULT_TIME_SIGNATURE,
+    notes: dto.notes ?? "",
   };
 }
 
