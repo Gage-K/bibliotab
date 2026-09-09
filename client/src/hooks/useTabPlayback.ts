@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import * as Tone from "tone";
+import { loadTone, peekTone } from "../utils/toneLoader";
 import { frameToNotes, totalBeats, trackLength, withTiming } from "../utils/audio";
 import {
   createReverbBus,
@@ -61,8 +61,11 @@ export function useTabPlayback({
   const totalSteps = trackLength(tracks);
 
   const teardown = useCallback(() => {
-    Tone.getTransport().stop();
-    Tone.getTransport().cancel();
+    // Unmount can happen without anything ever having played, in which case tone was
+    // never loaded and there is no transport to stop.
+    const tone = peekTone();
+    tone?.getTransport().stop();
+    tone?.getTransport().cancel();
     voicesRef.current.forEach((voice) => voice.dispose());
     voicesRef.current = [];
     busRef.current?.dispose();
@@ -74,12 +77,17 @@ export function useTabPlayback({
   useEffect(() => teardown, [teardown]);
 
   const stop = useCallback(() => {
-    Tone.getTransport().stop();
-    Tone.getTransport().cancel();
+    const tone = peekTone();
+    tone?.getTransport().stop();
+    tone?.getTransport().cancel();
     setIsPlaying(false);
   }, []);
 
   const play = useCallback(async () => {
+    // tone is ~66 kB gzipped and useless before a gesture, so it is fetched here rather
+    // than bundled into the initial load. The import is cached after the first play.
+    const Tone = await loadTone();
+
     // The audio context can only be unlocked from a user gesture, so this must run in
     // the click handler's own call stack.
     await Tone.start();
@@ -93,10 +101,10 @@ export function useTabPlayback({
     Tone.getTransport().stop();
     Tone.getTransport().position = 0;
 
-    if (!busRef.current) busRef.current = createReverbBus();
+    if (!busRef.current) busRef.current = createReverbBus(Tone);
     voicesRef.current.forEach((voice) => voice.dispose());
     voicesRef.current = currentTracks.map((track) =>
-      createVoice(voiceForInstrument(track.instrument), busRef.current!.input),
+      createVoice(Tone, voiceForInstrument(track.instrument), busRef.current!.input),
     );
 
     currentTracks.forEach((track, trackIndex) => {

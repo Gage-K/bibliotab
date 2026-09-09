@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import * as Tone from "tone";
+import { peekTone } from "../utils/toneLoader";
 import { secondsToTicks } from "../utils/timeline";
 
 /**
@@ -20,7 +20,10 @@ export function usePlayhead(isPlaying: boolean, bpm: number): number | null {
 
     let frameId = 0;
     const sample = () => {
-      setTick(secondsToTicks(Tone.getTransport().seconds, bpm));
+      // Playback can only be running if tone has loaded, but peek rather than assume:
+      // this samples every animation frame and must never throw.
+      const tone = peekTone();
+      if (tone) setTick(secondsToTicks(tone.getTransport().seconds, bpm));
       frameId = requestAnimationFrame(sample);
     };
     frameId = requestAnimationFrame(sample);

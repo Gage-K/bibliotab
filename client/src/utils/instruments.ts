@@ -1,4 +1,5 @@
-import * as Tone from "tone";
+import type * as Tone from "tone";
+import type { ToneModule } from "./toneLoader";
 
 export type InstrumentVoiceId =
   | "guitar"
@@ -98,14 +99,18 @@ export function voiceForInstrument(instrument: string): InstrumentVoiceId {
 /**
  * Builds a voice and its output chain. `destination` lets several voices share one FX
  * bus (playback mixes tracks into a common reverb); omit it to go straight out.
+ *
+ * The tone module is passed in rather than imported, so this file stays free of a
+ * static dependency on it and can be tree-shaken out of the initial bundle.
  */
 export function createVoice(
+  tone: ToneModule,
   id: InstrumentVoiceId,
   destination?: Tone.InputNode,
 ): VoiceHandle {
   const preset = VOICES[id] ?? VOICES.guitar;
-  const filter = new Tone.Filter(preset.cutoff, "lowpass");
-  const synth = new Tone.PolySynth(Tone.Synth, preset.options as never);
+  const filter = new tone.Filter(preset.cutoff, "lowpass");
+  const synth = new tone.PolySynth(tone.Synth, preset.options as never);
   synth.volume.value = preset.volume;
 
   synth.connect(filter);
@@ -130,8 +135,8 @@ export type FxBus = {
 };
 
 /** A little room on the master bus — dry strings alone sound synthetic. */
-export function createReverbBus(wet = 0.18): FxBus {
-  const reverb = new Tone.Reverb({ decay: 2.2, wet });
+export function createReverbBus(tone: ToneModule, wet = 0.18): FxBus {
+  const reverb = new tone.Reverb({ decay: 2.2, wet });
   reverb.toDestination();
   return { input: reverb, dispose: () => reverb.dispose() };
 }

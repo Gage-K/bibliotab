@@ -1,4 +1,5 @@
-import * as Tone from "tone";
+import type * as Tone from "tone";
+import type { ToneModule } from "../toneLoader";
 
 export type PerformanceModeId =
   | "block"
@@ -19,6 +20,8 @@ export const PERFORMANCE_MODES: { id: PerformanceModeId; label: string; hint: st
   ];
 
 export type PerformOptions = {
+  /** The loaded tone module. Passed in so this file stays out of the initial bundle. */
+  tone: ToneModule;
   synth: Tone.PolySynth;
   notes: string[];
   /** Beats per minute, for the modes that repeat. */
@@ -41,11 +44,11 @@ const NOOP_HANDLE: PerformanceHandle = { stop: () => {} };
  */
 export function performChord(
   mode: PerformanceModeId,
-  { synth, notes, bpm, intensity }: PerformOptions,
+  { tone, synth, notes, bpm, intensity }: PerformOptions,
 ): PerformanceHandle {
   if (notes.length === 0) return NOOP_HANDLE;
 
-  const now = Tone.now();
+  const now = tone.now();
   const beat = 60 / bpm;
 
   switch (mode) {
@@ -90,13 +93,13 @@ export function performChord(
     case "arp": {
       const step = beat / (intensity > 0.5 ? 4 : 2);
       let index = 0;
-      const loop = new Tone.Loop((time) => {
+      const loop = new tone.Loop((time) => {
         const note = notes[index % notes.length];
         synth.triggerAttackRelease(note, step * 0.9, time);
         index++;
       }, step).start(0);
 
-      Tone.getTransport().start();
+      tone.getTransport().start();
       return {
         stop: () => {
           loop.stop();
@@ -111,13 +114,13 @@ export function performChord(
       const figure = [0, notes.length - 1, Math.floor(notes.length / 2), notes.length - 1];
       const step = beat / 2;
       let index = 0;
-      const loop = new Tone.Loop((time) => {
+      const loop = new tone.Loop((time) => {
         const note = notes[figure[index % figure.length]];
         synth.triggerAttackRelease(note, step * 0.8, time);
         index++;
       }, step).start(0);
 
-      Tone.getTransport().start();
+      tone.getTransport().start();
       return {
         stop: () => {
           loop.stop();

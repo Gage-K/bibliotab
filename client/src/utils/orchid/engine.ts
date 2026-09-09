@@ -1,4 +1,5 @@
-import * as Tone from "tone";
+import type * as Tone from "tone";
+import type { ToneModule } from "../toneLoader";
 
 export type EngineVoiceId = "analog" | "fm" | "epiano";
 
@@ -25,21 +26,24 @@ export type OrchidEngine = {
  *
  * The bass is kept dry and separate on purpose — running the low root through the same
  * reverb as the chord is what makes this kind of instrument sound muddy.
+ *
+ * The tone module is passed in rather than imported, so this file carries no static
+ * dependency on it and stays out of the initial bundle.
  */
-export function createEngine(): OrchidEngine {
-  const reverb = new Tone.Reverb({ decay: 3.4, wet: 0.3 }).toDestination();
-  const chorus = new Tone.Chorus({ frequency: 1.2, depth: 0.5, wet: 0.3 })
+export function createEngine(tone: ToneModule): OrchidEngine {
+  const reverb = new tone.Reverb({ decay: 3.4, wet: 0.3 }).toDestination();
+  const chorus = new tone.Chorus({ frequency: 1.2, depth: 0.5, wet: 0.3 })
     .connect(reverb)
     .start();
-  const chordBus = new Tone.Gain(0.8).connect(chorus);
+  const chordBus = new tone.Gain(0.8).connect(chorus);
 
-  const analog = new Tone.PolySynth(Tone.Synth, {
+  const analog = new tone.PolySynth(tone.Synth, {
     oscillator: { type: "fatsawtooth", count: 3, spread: 24 },
     envelope: { attack: 0.02, decay: 0.35, sustain: 0.55, release: 1.4 },
   } as never).connect(chordBus);
   analog.volume.value = -14;
 
-  const fm = new Tone.PolySynth(Tone.FMSynth, {
+  const fm = new tone.PolySynth(tone.FMSynth, {
     harmonicity: 2.5,
     modulationIndex: 6,
     envelope: { attack: 0.01, decay: 0.5, sustain: 0.35, release: 1.6 },
@@ -47,13 +51,13 @@ export function createEngine(): OrchidEngine {
   } as never).connect(chordBus);
   fm.volume.value = -16;
 
-  const epiano = new Tone.PolySynth(Tone.Synth, {
+  const epiano = new tone.PolySynth(tone.Synth, {
     oscillator: { type: "fmsine", modulationType: "sine", harmonicity: 3.01 },
     envelope: { attack: 0.005, decay: 1.4, sustain: 0.08, release: 1.5 },
   } as never).connect(chordBus);
   epiano.volume.value = -11;
 
-  const bass = new Tone.MonoSynth({
+  const bass = new tone.MonoSynth({
     oscillator: { type: "square" },
     filter: { Q: 2, type: "lowpass" },
     envelope: { attack: 0.01, decay: 0.4, sustain: 0.4, release: 0.8 },

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import * as Tone from "tone";
+import { loadTone, peekTone } from "../utils/toneLoader";
 import {
   applyKeyLock,
   chordName,
@@ -100,12 +100,16 @@ export function useOrchid() {
   }, []);
 
   const play = useCallback(async (rootPc: number) => {
+    // tone is fetched on the first play rather than bundled; the import is cached
+    // afterwards, so later presses are synchronous in practice.
+    const Tone = await loadTone();
+
     // The audio context only unlocks from a user gesture, so this stays in the
     // handler's own call stack.
     await Tone.start();
 
     if (!engineRef.current) {
-      engineRef.current = createEngine();
+      engineRef.current = createEngine(Tone);
       engineRef.current.setAmbience(stateRef.current.ambience);
     }
     const engine = engineRef.current;
@@ -130,6 +134,7 @@ export function useOrchid() {
     Tone.getTransport().bpm.value = current.bpm;
 
     handleRef.current = performChord(current.mode, {
+      tone: Tone,
       synth: engine.voices[current.voice],
       notes,
       bpm: current.bpm,
@@ -150,8 +155,10 @@ export function useOrchid() {
     handleRef.current?.stop();
     handleRef.current = null;
     engineRef.current?.releaseAll();
-    Tone.getTransport().stop();
-    Tone.getTransport().cancel();
+    // Release runs on unmount too, which can happen before anything ever played.
+    const tone = peekTone();
+    tone?.getTransport().stop();
+    tone?.getTransport().cancel();
   }, []);
 
   return { state, update, toggleQuality, play, release, lastChord };
