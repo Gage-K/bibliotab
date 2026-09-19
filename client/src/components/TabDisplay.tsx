@@ -9,7 +9,6 @@ import {
   sectionMeasureOffset,
 } from "../utils/tabOperations";
 import type {
-  FrameType,
   MeasureType,
   TabBodyType,
   TimeSignatureType,
@@ -57,7 +56,8 @@ function isInSelection(
 }
 
 function fretLabel(fret: number, style: string): string {
-  const value = fret === -2 ? " " : fret === -1 ? "X" : String(fret);
+  const value = fret === -2 ? "" : fret === -1 ? "X" : String(fret);
+  if (value === "") return "";
   switch (style) {
     case "hammerOn":
       return `h${value}`;
@@ -76,30 +76,38 @@ function fretLabel(fret: number, style: string): string {
   }
 }
 
-/** A frame's slot as a percentage of its measure — what makes a half note read wide. */
-function widthPercent(frame: FrameType, totalBeats: number): number {
-  if (totalBeats <= 0) return 100;
-  return (frameDuration(frame) / totalBeats) * 100;
+/**
+ * Grid columns for a measure, one track per frame sized to its duration. The duration
+ * bar and the note staff both render on this exact template, so a frame's segment above
+ * lines up with its notes below — a half note is one wide column in both.
+ */
+function columnsFor(measure: MeasureType): string {
+  return measure.frames.map((frame) => `${frameDuration(frame)}fr`).join(" ");
 }
 
+/** Space between frame columns; shared by the bar and the staff so their edges align. */
+const COLUMN_GAP = "3px";
+
 /**
- * The proportional-duration strip above a measure. One segment per frame, its width the
- * fraction of the bar the frame lasts. A ringing frame reads as a filled bar; a rest as
- * a hollow one — so "held for two beats then a beat of silence" is visible at a glance.
+ * The proportional-duration strip above a measure. One segment per frame on the same
+ * grid as the notes below. A ringing frame reads as a filled bar, a rest as a hollow
+ * one — so "held for two beats then a beat of silence" is visible at a glance.
  */
 function DurationBar({
   measure,
-  totalBeats,
+  columns,
   activeFrame,
   onSelect,
 }: {
   measure: MeasureType;
-  totalBeats: number;
+  columns: string;
   activeFrame: number | null;
   onSelect: (frame: number) => void;
 }) {
   return (
-    <div className="flex h-2 w-full gap-px mb-1">
+    <div
+      className="grid h-2 mb-1.5"
+      style={{ gridTemplateColumns: columns, columnGap: COLUMN_GAP }}>
       {measure.frames.map((frame, frameIndex) => {
         const rest = isRestFrame(frame);
         const isActive = frameIndex === activeFrame;
@@ -108,7 +116,6 @@ function DurationBar({
             key={frame.id}
             onClick={() => onSelect(frameIndex)}
             title={`${frameDuration(frame)} beat(s)${rest ? " · rest" : ""}`}
-            style={{ width: `${widthPercent(frame, totalBeats)}%` }}
             className={`h-full rounded-[1px] cursor-pointer transition-colors ${
               rest
                 ? `border border-dashed ${isActive ? "border-blue" : "border-border"}`
@@ -211,108 +218,125 @@ export default function TabDisplay() {
                 const hasMeterOverride = measure.timeSignature !== undefined;
                 const isCursorMeasure =
                   position.section === sectionIndex && position.measure === measureIndex;
-                const activeFrame =
-                  isCursorMeasure ? position.frame : null;
+                const activeFrame = isCursorMeasure ? position.frame : null;
                 const measureStartOrdinal = ordinal;
                 ordinal += measure.frames.length;
+
+                const columns = columnsFor(measure);
+                // Width scales with the bar's beats so a 5/4 bar reads wider than a 4/4,
+                // with a floor per frame so a run of sixteenths stays legible.
+                const measureWidth = Math.max(
+                  totalBeats * 3,
+                  measure.frames.length * 2.4
+                );
 
                 return (
                   <div
                     key={measureIndex}
                     className="flex flex-col border-l border-border pl-2 pr-1 last:border-r last:pr-2"
-                    style={{ minWidth: `${Math.max(measure.frames.length * 2.5, 4)}em` }}>
+                    style={{ width: `${measureWidth}em` }}>
                     <DurationBar
                       measure={measure}
-                      totalBeats={totalBeats}
+                      columns={columns}
                       activeFrame={activeFrame}
                       onSelect={(frame) =>
                         updatePosition(sectionIndex, measureIndex, frame)
                       }
                     />
 
-                    <div className="flex text-xs">
-                      {measure.frames.map((frame, frameIndex) => {
-                        const framePosition: FramePosition = {
-                          section: sectionIndex,
-                          measure: measureIndex,
-                          frame: frameIndex,
-                        };
-                        const current = isCurrentFrame(framePosition);
-                        const selected = isInSelection(
-                          measureStartOrdinal + frameIndex,
-                          bounds
-                        );
-                        const rest = isRestFrame(frame);
+                    {/* Continuous staff lines behind the columns, so the gaps between
+                        frames never break the strings. */}
+                    <div
+                      className="td-staff relative"
+                      style={{ height: `calc(var(--td-row-h) * ${stringCount})` }}>
+                      <div
+                        className="grid h-full"
+                        style={{ gridTemplateColumns: columns, columnGap: COLUMN_GAP }}>
+                        {measure.frames.map((frame, frameIndex) => {
+                          const framePosition: FramePosition = {
+                            section: sectionIndex,
+                            measure: measureIndex,
+                            frame: frameIndex,
+                          };
+                          const current = isCurrentFrame(framePosition);
+                          const selected = isInSelection(
+                            measureStartOrdinal + frameIndex,
+                            bounds
+                          );
+                          const rest = isRestFrame(frame);
 
-                        return (
-                          <button
-                            key={frame.id}
-                            aria-label={`Section ${sectionIndex + 1} Measure ${
-                              measureIndex + 1
-                            } Frame ${frameIndex + 1}`}
-                            title={`${frameDuration(frame)} beat(s)${
-                              rest ? " · rest" : ""
-                            } — bar totals ${totalBeats}`}
-                            onClick={() =>
-                              updatePosition(sectionIndex, measureIndex, frameIndex)
-                            }
-                            style={{ width: `${widthPercent(frame, totalBeats)}%` }}
-                            className={`flex flex-col justify-center rounded-sm border border-transparent hover:border-border ${
-                              current ? "bg-accent" : ""
-                            } ${selected ? "bg-primary/20" : ""}`}>
-                            {rest ? (
-                              <span
-                                className="td-rest flex items-center justify-center text-muted-foreground/70 select-none"
-                                style={{ minHeight: `${stringCount}em` }}>
-                                𝄽
-                              </span>
-                            ) : (
-                              stringRows.map((stringIndex) => {
-                                const note = frame.notes[stringIndex];
-                                return (
-                                  <p
-                                    key={stringIndex}
-                                    className={`td-grid-note z-2 text-foreground ${
-                                      current && position.string === stringIndex
-                                        ? "bg-primary/20 rounded-sm"
-                                        : ""
-                                    }`}>
-                                    {note ? fretLabel(note.fret, note.style) : " "}
-                                  </p>
-                                );
-                              })
-                            )}
-                          </button>
-                        );
-                      })}
-
-                      <button
-                        aria-label={`Add frame to measure ${measureIndex + 1}`}
-                        title="Add frame"
-                        onClick={() =>
-                          addFrameAndAdvance(
-                            sectionIndex,
-                            measureIndex,
-                            measure.frames.length - 1,
-                            true
-                          )
-                        }
-                        className="self-stretch px-1 text-muted-foreground/40 hover:text-foreground hover:bg-foreground/5 rounded-sm cursor-pointer">
-                        <PlusIcon size={12} />
-                      </button>
+                          return (
+                            <button
+                              key={frame.id}
+                              aria-label={`Section ${sectionIndex + 1} Measure ${
+                                measureIndex + 1
+                              } Frame ${frameIndex + 1}`}
+                              title={`${frameDuration(frame)} beat(s)${
+                                rest ? " · rest" : ""
+                              } — bar totals ${totalBeats}`}
+                              onClick={() =>
+                                updatePosition(sectionIndex, measureIndex, frameIndex)
+                              }
+                              className={`h-full flex flex-col rounded-sm cursor-pointer ${
+                                current
+                                  ? "bg-accent"
+                                  : selected
+                                    ? "bg-primary/20"
+                                    : "hover:bg-foreground/5"
+                              }`}>
+                              {rest ? (
+                                <span className="td-rest flex-1 flex items-center justify-center text-lg text-muted-foreground/70 select-none">
+                                  𝄽
+                                </span>
+                              ) : (
+                                stringRows.map((stringIndex) => {
+                                  const note = frame.notes[stringIndex];
+                                  return (
+                                    <span
+                                      key={stringIndex}
+                                      className={`td-note-cell text-xs text-foreground tabular-nums ${
+                                        current && position.string === stringIndex
+                                          ? "bg-primary/30 rounded-sm"
+                                          : ""
+                                      }`}>
+                                      {note ? fretLabel(note.fret, note.style) : ""}
+                                    </span>
+                                  );
+                                })
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
 
-                    <div className="flex items-center justify-between gap-2 mt-1.5 text-[10px] text-muted-foreground tabular-nums">
+                    <div className="flex items-center justify-between gap-2 mt-2 text-[10px] text-muted-foreground tabular-nums">
                       <span>{measureIndex + measureOffset + 1}</span>
-                      <span
-                        title={
-                          hasMeterOverride
-                            ? "This bar overrides the tab meter"
-                            : "Inherited from the tab meter"
-                        }
-                        className={hasMeterOverride ? "text-foreground font-medium" : ""}>
-                        {meter[0]}/{meter[1]}
-                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          aria-label={`Add frame to measure ${measureIndex + 1}`}
+                          title="Add frame to this measure"
+                          onClick={() =>
+                            addFrameAndAdvance(
+                              sectionIndex,
+                              measureIndex,
+                              measure.frames.length - 1,
+                              true
+                            )
+                          }
+                          className="flex items-center rounded-sm p-0.5 text-muted-foreground/50 hover:text-foreground hover:bg-foreground/10 cursor-pointer">
+                          <PlusIcon size={11} />
+                        </button>
+                        <span
+                          title={
+                            hasMeterOverride
+                              ? "This bar overrides the tab meter"
+                              : "Inherited from the tab meter"
+                          }
+                          className={hasMeterOverride ? "text-foreground font-medium" : ""}>
+                          {meter[0]}/{meter[1]}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 );
