@@ -15,6 +15,7 @@ import {
   bodyStringCount,
   frameDuration,
   setFrameDuration,
+  stepDuration,
   setFrameRest,
   isRestFrame,
   setMeasureTimeSignature,
@@ -324,6 +325,24 @@ describe("frame durations", () => {
     // 6/8 is three quarter notes' worth, not six.
     const threeQuarters = body({ name: "Intro", measures: [3] }).sections[0].measures[0];
     expect(measureIsComplete(threeQuarters, [6, 8])).toBe(true);
+  });
+});
+
+describe("stepDuration", () => {
+  it("steps up and down the note values", () => {
+    expect(stepDuration(1, "longer")).toBe(1.5); // quarter -> dotted quarter
+    expect(stepDuration(1, "shorter")).toBe(0.5); // quarter -> eighth
+    expect(stepDuration(2, "longer")).toBe(4); // half -> whole
+  });
+
+  it("clamps at the ends", () => {
+    expect(stepDuration(4, "longer")).toBe(4); // already the longest
+    expect(stepDuration(0.25, "shorter")).toBe(0.25); // already the shortest
+  });
+
+  it("snaps an off-list duration to the nearest value first", () => {
+    // 0.8 is nearest a quarter (1); one shorter is an eighth.
+    expect(stepDuration(0.8, "shorter")).toBe(0.5);
   });
 });
 

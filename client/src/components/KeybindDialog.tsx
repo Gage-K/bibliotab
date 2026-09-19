@@ -35,6 +35,8 @@ const LABEL_MAP: Partial<Record<EditorAction, string>> = {
   addMeasureBefore: "Add Measure Before",
   deleteFrame: "Delete Frame",
   duplicateFrame: "Duplicate Frame",
+  durationLonger: "Longer Note",
+  durationShorter: "Shorter Note",
 }
 
 const SHIFT_SYMBOLS: Record<string, string> = {
@@ -48,6 +50,7 @@ const GROUPS: { label: string; actions: EditorAction[] }[] = [
   { label: "Note", actions: ["clearNote", "muteNote"] },
   { label: "Styles", actions: ["styleBend", "styleSlide", "styleHammerOn", "stylePullOff", "styleHarmonic", "styleTap"] },
   { label: "Frames & Measures", actions: ["addFrameAfter", "addFrameBefore", "addMeasureAfter", "addMeasureBefore", "deleteFrame", "duplicateFrame"] },
+  { label: "Duration", actions: ["durationLonger", "durationShorter"] },
 ]
 
 function invertKeymap(keymap: Keymap): Partial<Record<EditorAction, string>> {

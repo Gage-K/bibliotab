@@ -14,6 +14,7 @@ import {
   FRET_EMPTY,
   MAX_FRAME_DURATION,
   MIN_FRAME_DURATION,
+  NOTE_VALUES,
 } from "../shared/types/consts";
 
 export const DEFAULT_SECTION_NAME = "Section 1";
@@ -518,6 +519,34 @@ export function frameDuration(frame: FrameType): number {
 /** Whether a frame is a rest (silence for its duration). */
 export function isRestFrame(frame: FrameType): boolean {
   return frame.isRest === true;
+}
+
+/**
+ * The next note value up or down from `current`, walking the editor's NOTE_VALUES
+ * (whole → half → dotted quarter → quarter → eighth → sixteenth). Snaps an off-list
+ * duration to its nearest value first, so stepping always lands on a real note value.
+ * This is what the duration keyboard shortcuts step through.
+ */
+export function stepDuration(
+  current: number,
+  direction: "longer" | "shorter"
+): number {
+  const beats = NOTE_VALUES.map((value) => value.beats); // descending: [4, 2, 1.5, 1, …]
+  let nearest = 0;
+  let smallestGap = Infinity;
+  beats.forEach((value, index) => {
+    const gap = Math.abs(value - current);
+    if (gap < smallestGap) {
+      smallestGap = gap;
+      nearest = index;
+    }
+  });
+  // The list is longest-first, so a longer note is an earlier index.
+  const next =
+    direction === "longer"
+      ? Math.max(0, nearest - 1)
+      : Math.min(beats.length - 1, nearest + 1);
+  return beats[next];
 }
 
 /** A measure's effective meter — its own override, or the tab default. */

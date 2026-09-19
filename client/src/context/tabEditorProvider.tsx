@@ -1,5 +1,11 @@
 import { createContext, useReducer, useEffect, useContext, useRef, useCallback } from "react";
-import { createEmptyFrame, getFrame, getMeasures } from "../utils/tabOperations";
+import {
+  createEmptyFrame,
+  frameDuration,
+  getFrame,
+  getMeasures,
+  stepDuration,
+} from "../utils/tabOperations";
 import { useTab, useUpdateTab } from "../hooks/useTabs";
 import { useEditorKeybindings } from "../hooks/useEditorKeybindings";
 import type { EditorAction } from "../shared/keymaps/defaultKeymap";
@@ -580,6 +586,22 @@ export function TabEditorProvider({
         case "deleteFrame":
           dispatch({ type: "DELETE_FRAME", payload: { section, measure, frame } });
           break;
+
+        // Duration — step the current frame through the editor's note values.
+        case "durationLonger":
+        case "durationShorter": {
+          const current = getFrame(tab, section, measure, frame);
+          if (!current) break;
+          const next = stepDuration(
+            frameDuration(current),
+            action === "durationLonger" ? "longer" : "shorter",
+          );
+          dispatch({
+            type: "SET_FRAME_DURATION",
+            payload: { section, measure, frame, duration: next },
+          });
+          break;
+        }
 
         // Escape
         case "escape":
