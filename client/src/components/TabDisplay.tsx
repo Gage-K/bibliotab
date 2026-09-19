@@ -137,9 +137,11 @@ function DurationBar({
             key={frame.id}
             onClick={() => onSelect(frameIndex)}
             title={`${frameDuration(frame)} beat(s)${rest ? " · rest" : ""}`}
-            className={`flex items-center justify-center overflow-hidden border-y border-r first:border-l cursor-pointer ${
-              rest ? "border-dashed" : ""
-            } ${
+            className={`flex items-center justify-center overflow-hidden cursor-pointer ${
+              // The active cell takes a full border so all four sides turn blue; the rest
+              // share single dividers (each draws its right edge, the first its left too).
+              isActive ? "border" : "border-y border-r first:border-l"
+            } ${rest ? "border-dashed" : ""} ${
               isActive
                 ? "border-blue bg-blue/15 text-blue"
                 : "border-border text-foreground/70 hover:bg-foreground/5"
