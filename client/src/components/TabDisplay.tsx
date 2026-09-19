@@ -87,8 +87,11 @@ function formatBeats(beats: number): string {
 const EM_PER_BEAT = 3.5;
 /** Floor so a very short note stays wide enough to click and to show its icon. */
 const MIN_COLUMN_EM = 1.4;
-/** Space between frame columns; shared by the bar and the staff so their edges align. */
-const COLUMN_GAP = "3px";
+/**
+ * Frame columns abut (no gap) so a multi-frame selection reads as one continuous block
+ * and the staff lines never break. The bar and the staff share this, so they stay aligned.
+ */
+const COLUMN_GAP = "0px";
 
 /**
  * Grid columns for a measure. Every frame gets an explicit width from its duration (so a
@@ -134,7 +137,7 @@ function DurationBar({
             key={frame.id}
             onClick={() => onSelect(frameIndex)}
             title={`${frameDuration(frame)} beat(s)${rest ? " · rest" : ""}`}
-            className={`flex items-center justify-center overflow-hidden rounded-sm border cursor-pointer ${
+            className={`flex items-center justify-center overflow-hidden border-y border-r first:border-l cursor-pointer ${
               rest ? "border-dashed" : ""
             } ${
               isActive
@@ -285,6 +288,20 @@ export default function TabDisplay() {
                             bounds
                           );
                           const rest = isRestFrame(frame);
+                          // Round only the outer edge of a selected run: a selected frame
+                          // whose neighbour in the same measure is also selected keeps a
+                          // square edge there, so the block reads as one shape.
+                          const joinLeft =
+                            selected &&
+                            frameIndex > 0 &&
+                            isInSelection(measureStartOrdinal + frameIndex - 1, bounds);
+                          const joinRight =
+                            selected &&
+                            frameIndex < measure.frames.length - 1 &&
+                            isInSelection(measureStartOrdinal + frameIndex + 1, bounds);
+                          const rounding = `${joinLeft ? "rounded-l-none" : "rounded-l-sm"} ${
+                            joinRight ? "rounded-r-none" : "rounded-r-sm"
+                          }`;
 
                           return (
                             <button
@@ -298,11 +315,13 @@ export default function TabDisplay() {
                               onClick={() =>
                                 updatePosition(sectionIndex, measureIndex, frameIndex)
                               }
-                              className={`h-full flex flex-col rounded-sm cursor-pointer ${
-                                current
-                                  ? "bg-blue/15 outline outline-1 outline-blue/50"
-                                  : selected
-                                    ? "bg-primary/20"
+                              className={`h-full flex flex-col ${rounding} cursor-pointer ${
+                                selected
+                                  ? current
+                                    ? "bg-primary/35"
+                                    : "bg-primary/20"
+                                  : current
+                                    ? "bg-blue/15 outline outline-1 outline-blue/50"
                                     : "hover:bg-foreground/5"
                               }`}>
                               {rest ? (
