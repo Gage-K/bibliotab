@@ -16,6 +16,9 @@ import {
   frameDuration,
   setFrameDuration,
   stepDuration,
+  isDottedDuration,
+  baseDuration,
+  toggleDot,
   setFrameRest,
   isRestFrame,
   setMeasureTimeSignature,
@@ -328,11 +331,36 @@ describe("frame durations", () => {
   });
 });
 
+describe("dotted durations", () => {
+  it("recognizes a dotted value", () => {
+    expect(isDottedDuration(1.5)).toBe(true); // dotted quarter
+    expect(isDottedDuration(0.75)).toBe(true); // dotted eighth
+    expect(isDottedDuration(1)).toBe(false);
+    expect(isDottedDuration(2)).toBe(false);
+  });
+
+  it("reads the plain value under a dotted note", () => {
+    expect(baseDuration(1.5)).toBe(1);
+    expect(baseDuration(1)).toBe(1);
+  });
+
+  it("toggles the dot on and off", () => {
+    expect(toggleDot(1)).toBe(1.5); // quarter -> dotted quarter
+    expect(toggleDot(1.5)).toBe(1); // and back
+    expect(toggleDot(0.5)).toBe(0.75); // eighth -> dotted eighth
+  });
+});
+
 describe("stepDuration", () => {
-  it("steps up and down the note values", () => {
-    expect(stepDuration(1, "longer")).toBe(1.5); // quarter -> dotted quarter
+  it("steps up and down the plain note values", () => {
+    expect(stepDuration(1, "longer")).toBe(2); // quarter -> half
     expect(stepDuration(1, "shorter")).toBe(0.5); // quarter -> eighth
     expect(stepDuration(2, "longer")).toBe(4); // half -> whole
+  });
+
+  it("keeps the dot while stepping", () => {
+    expect(stepDuration(1.5, "shorter")).toBe(0.75); // dotted quarter -> dotted eighth
+    expect(stepDuration(1.5, "longer")).toBe(3); // dotted quarter -> dotted half
   });
 
   it("clamps at the ends", () => {

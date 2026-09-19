@@ -60,14 +60,16 @@ export const MEASURE_METERS: [number, number][] = [
   [12, 8],
 ];
 
-/** Note values offered in the editor, in beats. */
+/**
+ * Base note values offered in the editor, in beats. Dotted values are not listed here —
+ * a dot is a separate modifier (×1.5) applied on top, so every entry is a plain value.
+ */
 export const NOTE_VALUES = [
-  { label: "Whole", beats: 4, symbol: "\u{1D15D}" },
-  { label: "Half", beats: 2, symbol: "\u{1D15E}" },
-  { label: "Dotted quarter", beats: 1.5, symbol: "\u{1D15F}." },
-  { label: "Quarter", beats: 1, symbol: "\u{1D15F}" },
-  { label: "Eighth", beats: 0.5, symbol: "\u{1D160}" },
-  { label: "Sixteenth", beats: 0.25, symbol: "\u{1D161}" },
+  { label: "Whole", beats: 4 },
+  { label: "Half", beats: 2 },
+  { label: "Quarter", beats: 1 },
+  { label: "Eighth", beats: 0.5 },
+  { label: "Sixteenth", beats: 0.25 },
 ] as const;
 
 /** Generous cap on the markdown notes field, to bound the row size. */

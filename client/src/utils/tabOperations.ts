@@ -521,32 +521,65 @@ export function isRestFrame(frame: FrameType): boolean {
   return frame.isRest === true;
 }
 
+/** How much longer a dotted note is than its plain value. */
+const DOT_FACTOR = 1.5;
+const DURATION_EPSILON = 1e-6;
+
+/** The plain note values, longest first: [4, 2, 1, 0.5, 0.25]. */
+const BASE_NOTE_BEATS = NOTE_VALUES.map((value) => value.beats);
+
+/** Whether a duration is a dotted note — a plain value times 1.5. */
+export function isDottedDuration(beats: number): boolean {
+  return BASE_NOTE_BEATS.some(
+    (base) => Math.abs(base * DOT_FACTOR - beats) < DURATION_EPSILON
+  );
+}
+
+/** The plain value under a duration — the note without its dot, if it has one. */
+export function baseDuration(beats: number): number {
+  return isDottedDuration(beats) ? beats / DOT_FACTOR : beats;
+}
+
 /**
- * The next note value up or down from `current`, walking the editor's NOTE_VALUES
- * (whole → half → dotted quarter → quarter → eighth → sixteenth). Snaps an off-list
- * duration to its nearest value first, so stepping always lands on a real note value.
- * This is what the duration keyboard shortcuts step through.
+ * Adds or removes a dot on a duration. Dotting a note makes it half again as long
+ * (quarter → dotted quarter); removing the dot returns the plain value. Clamped so a
+ * dotted whole note doesn't run past the duration ceiling.
+ */
+export function toggleDot(beats: number): number {
+  if (isDottedDuration(beats)) return baseDuration(beats);
+  return Math.min(MAX_FRAME_DURATION, beats * DOT_FACTOR);
+}
+
+/**
+ * The next note value up or down from `current`, walking the plain note values
+ * (whole → half → quarter → eighth → sixteenth). A dot is preserved across the step, so
+ * a dotted quarter steps to a dotted eighth. Snaps an off-list duration to its nearest
+ * value first. This is what the duration keyboard shortcuts step through.
  */
 export function stepDuration(
   current: number,
   direction: "longer" | "shorter"
 ): number {
-  const beats = NOTE_VALUES.map((value) => value.beats); // descending: [4, 2, 1.5, 1, …]
+  const dotted = isDottedDuration(current);
+  const base = baseDuration(current);
+
   let nearest = 0;
   let smallestGap = Infinity;
-  beats.forEach((value, index) => {
-    const gap = Math.abs(value - current);
+  BASE_NOTE_BEATS.forEach((value, index) => {
+    const gap = Math.abs(value - base);
     if (gap < smallestGap) {
       smallestGap = gap;
       nearest = index;
     }
   });
   // The list is longest-first, so a longer note is an earlier index.
-  const next =
+  const nextIndex =
     direction === "longer"
       ? Math.max(0, nearest - 1)
-      : Math.min(beats.length - 1, nearest + 1);
-  return beats[next];
+      : Math.min(BASE_NOTE_BEATS.length - 1, nearest + 1);
+
+  const nextBase = BASE_NOTE_BEATS[nextIndex];
+  return dotted ? Math.min(MAX_FRAME_DURATION, nextBase * DOT_FACTOR) : nextBase;
 }
 
 /** A measure's effective meter — its own override, or the tab default. */

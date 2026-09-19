@@ -14,6 +14,7 @@ import type {
   TimeSignatureType,
 } from "../shared/types/tab.types";
 import type { TabSelectionType } from "../shared/types/utilities.types";
+import { NoteValueIcon } from "./NoteValueIcon";
 
 type FramePosition = { section: number; measure: number; frame: number };
 
@@ -76,22 +77,39 @@ function fretLabel(fret: number, style: string): string {
   }
 }
 
-/**
- * Grid columns for a measure, one track per frame sized to its duration. The duration
- * bar and the note staff both render on this exact template, so a frame's segment above
- * lines up with its notes below — a half note is one wide column in both.
- */
-function columnsFor(measure: MeasureType): string {
-  return measure.frames.map((frame) => `${frameDuration(frame)}fr`).join(" ");
+/** Trims a beat count for display: 4 stays "4", 3.5 stays "3.5", 1.25 → "1.25". */
+function formatBeats(beats: number): string {
+  return String(Number(beats.toFixed(2)));
 }
 
+/** Width a whole beat occupies, so the bar reads as a ruler: a quarter is always the
+ * same width across the tab, an eighth always half of it. */
+const EM_PER_BEAT = 3.5;
+/** Floor so a very short note stays wide enough to click and to show its icon. */
+const MIN_COLUMN_EM = 1.4;
 /** Space between frame columns; shared by the bar and the staff so their edges align. */
 const COLUMN_GAP = "3px";
 
 /**
- * The proportional-duration strip above a measure. One segment per frame on the same
- * grid as the notes below. A ringing frame reads as a filled bar, a rest as a hollow
- * one — so "held for two beats then a beat of silence" is visible at a glance.
+ * Grid columns for a measure. Every frame gets an explicit width from its duration (so a
+ * half note is literally twice a quarter, at the same scale as every other bar), floored
+ * so short notes stay legible. When the bar doesn't fill its meter, a trailing column
+ * holds the empty remainder — that gap is how an under-full bar reads as under-full. The
+ * duration bar and the note staff render on this exact template, so they line up.
+ */
+function columnsFor(measure: MeasureType, meterBeats: number): string {
+  const columns = measure.frames.map(
+    (frame) => `${Math.max(frameDuration(frame) * EM_PER_BEAT, MIN_COLUMN_EM)}em`
+  );
+  const remainder = meterBeats - measureBeats(measure);
+  if (remainder > 1e-6) columns.push(`${remainder * EM_PER_BEAT}em`);
+  return columns.join(" ");
+}
+
+/**
+ * The rhythm strip above a measure: one cell per frame on the same grid as the notes
+ * below, each showing the note-value glyph so a quarter, eighth and sixteenth are
+ * distinguishable even when narrow. Rests read as a dashed cell with a rest glyph.
  */
 function DurationBar({
   measure,
@@ -106,7 +124,7 @@ function DurationBar({
 }) {
   return (
     <div
-      className="grid h-2 mb-1.5"
+      className="grid h-5 mb-1.5"
       style={{ gridTemplateColumns: columns, columnGap: COLUMN_GAP }}>
       {measure.frames.map((frame, frameIndex) => {
         const rest = isRestFrame(frame);
@@ -116,14 +134,19 @@ function DurationBar({
             key={frame.id}
             onClick={() => onSelect(frameIndex)}
             title={`${frameDuration(frame)} beat(s)${rest ? " · rest" : ""}`}
-            className={`h-full rounded-[1px] cursor-pointer transition-colors ${
-              rest
-                ? `border border-dashed ${isActive ? "border-blue" : "border-border"}`
-                : isActive
-                  ? "bg-blue"
-                  : "bg-foreground/40 hover:bg-foreground/60"
-            }`}
-          />
+            className={`flex items-center justify-center overflow-hidden rounded-sm border cursor-pointer ${
+              rest ? "border-dashed" : ""
+            } ${
+              isActive
+                ? "border-blue bg-blue/15 text-blue"
+                : "border-border text-foreground/70 hover:bg-foreground/5"
+            }`}>
+            {rest ? (
+              <span className="leading-none select-none">𝄽</span>
+            ) : (
+              <NoteValueIcon beats={frameDuration(frame)} className="h-3.5 w-3.5" />
+            )}
+          </button>
         );
       })}
     </div>
@@ -214,7 +237,10 @@ export default function TabDisplay() {
             <div className="flex flex-wrap items-start gap-x-3 gap-y-10 mt-8">
               {section.measures.map((measure, measureIndex) => {
                 const meter = measureTimeSignature(measure, fallbackMeter);
+                const meterBeats = meter[0] * (4 / meter[1]);
                 const totalBeats = measureBeats(measure);
+                const complete = measureIsComplete(measure, meter);
+                const overfull = totalBeats > meterBeats + 1e-6;
                 const hasMeterOverride = measure.timeSignature !== undefined;
                 const isCursorMeasure =
                   position.section === sectionIndex && position.measure === measureIndex;
@@ -222,19 +248,14 @@ export default function TabDisplay() {
                 const measureStartOrdinal = ordinal;
                 ordinal += measure.frames.length;
 
-                const columns = columnsFor(measure);
-                // Width scales with the bar's beats so a 5/4 bar reads wider than a 4/4,
-                // with a floor per frame so a run of sixteenths stays legible.
-                const measureWidth = Math.max(
-                  totalBeats * 3,
-                  measure.frames.length * 2.4
-                );
+                const columns = columnsFor(measure, meterBeats);
 
                 return (
                   <div
                     key={measureIndex}
-                    className="flex flex-col border-l border-border pl-2 pr-1 last:border-r last:pr-2"
-                    style={{ width: `${measureWidth}em` }}>
+                    className={`flex flex-col border-l pl-2 pr-1 last:border-r last:pr-2 ${
+                      overfull ? "border-destructive/60" : "border-border"
+                    }`}>
                     <DurationBar
                       measure={measure}
                       columns={columns}
@@ -327,6 +348,15 @@ export default function TabDisplay() {
                           className="flex items-center rounded-sm p-0.5 text-muted-foreground/50 hover:text-foreground hover:bg-foreground/10 cursor-pointer">
                           <PlusIcon size={11} />
                         </button>
+                        {!complete && (
+                          <span
+                            title={`This bar holds ${formatBeats(totalBeats)} of ${formatBeats(
+                              meterBeats
+                            )} beats`}
+                            className={overfull ? "text-destructive" : "text-amber-600 dark:text-amber-500"}>
+                            {formatBeats(totalBeats)}/{formatBeats(meterBeats)}
+                          </span>
+                        )}
                         <span
                           title={
                             hasMeterOverride

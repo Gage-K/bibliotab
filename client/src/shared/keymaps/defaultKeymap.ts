@@ -33,7 +33,8 @@ export type EditorAction =
   | "deleteFrame"
   | "duplicateFrame"
   | "durationLonger"
-  | "durationShorter";
+  | "durationShorter"
+  | "toggleDot";
 
 export type Keymap = Record<string, EditorAction>;
 
@@ -82,9 +83,10 @@ export const defaultKeymap: Keymap = {
   X: "deleteFrame",
   d: "duplicateFrame",
 
-  // Duration ( , = shorter note, . = longer note )
+  // Duration ( , = shorter note, . = longer note, ; = toggle dot )
   ".": "durationLonger",
   ",": "durationShorter",
+  ";": "toggleDot",
 
   // Escape
   Escape: "escape",

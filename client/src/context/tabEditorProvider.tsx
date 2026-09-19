@@ -5,6 +5,7 @@ import {
   getFrame,
   getMeasures,
   stepDuration,
+  toggleDot,
 } from "../utils/tabOperations";
 import { useTab, useUpdateTab } from "../hooks/useTabs";
 import { useEditorKeybindings } from "../hooks/useEditorKeybindings";
@@ -599,6 +600,16 @@ export function TabEditorProvider({
           dispatch({
             type: "SET_FRAME_DURATION",
             payload: { section, measure, frame, duration: next },
+          });
+          break;
+        }
+
+        case "toggleDot": {
+          const current = getFrame(tab, section, measure, frame);
+          if (!current) break;
+          dispatch({
+            type: "SET_FRAME_DURATION",
+            payload: { section, measure, frame, duration: toggleDot(frameDuration(current)) },
           });
           break;
         }

@@ -5,7 +5,14 @@ import { getFrame } from "../utils/tabOperations";
 import { chordNameForFrame } from "../utils/chords";
 import { noteNamesForFrame } from "../utils/pitch";
 import { MEASURE_METERS, NOTE_VALUES } from "../shared/types/consts";
-import { frameDuration, isRestFrame } from "../utils/tabOperations";
+import {
+  baseDuration,
+  frameDuration,
+  isDottedDuration,
+  isRestFrame,
+  toggleDot,
+} from "../utils/tabOperations";
+import { NoteValueIcon } from "./NoteValueIcon";
 import { Input } from "@/components/ui/input";
 import { Toggle } from "@/components/ui/toggle";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -41,6 +48,8 @@ export default function TabForm() {
   );
   const duration = currentFrame ? frameDuration(currentFrame) : 1;
   const isRest = currentFrame ? isRestFrame(currentFrame) : false;
+  const dotted = isDottedDuration(duration);
+  const baseValue = baseDuration(duration);
 
   const currentMeasure =
     tab.sections[position.section]?.measures[position.measure];
@@ -144,15 +153,12 @@ export default function TabForm() {
           type="single"
           variant="outline"
           size="sm"
-          value={String(duration)}
+          value={String(baseValue)}
           onValueChange={(value) => {
             if (!value) return;
-            setFrameDuration(
-              position.section,
-              position.measure,
-              position.frame,
-              Number(value),
-            );
+            // Picking a value keeps the dot, so a dotted quarter stays dotted as a half.
+            const next = dotted ? Number(value) * 1.5 : Number(value);
+            setFrameDuration(position.section, position.measure, position.frame, next);
           }}
           className="gap-0 w-full"
         >
@@ -161,12 +167,30 @@ export default function TabForm() {
               key={note.beats}
               value={String(note.beats)}
               title={`${note.label} (${note.beats} beat${note.beats === 1 ? "" : "s"})`}
-              className="h-7 flex-1 px-1.5 text-sm cursor-pointer data-[state=on]:bg-blue data-[state=on]:text-blue-foreground data-[state=on]:border-blue"
+              className="h-7 flex-1 px-1.5 cursor-pointer data-[state=on]:bg-blue data-[state=on]:text-blue-foreground data-[state=on]:border-blue"
             >
-              {note.symbol}
+              <NoteValueIcon beats={note.beats} className="h-4 w-4" />
             </ToggleGroupItem>
           ))}
         </ToggleGroup>
+        <Toggle
+          size="sm"
+          variant="outline"
+          pressed={dotted}
+          onPressedChange={() =>
+            setFrameDuration(
+              position.section,
+              position.measure,
+              position.frame,
+              toggleDot(duration),
+            )
+          }
+          aria-label="Dotted note"
+          title="Dot — makes the note half again as long"
+          className="h-7 px-2 text-base leading-none shrink-0 cursor-pointer data-[state=on]:bg-blue data-[state=on]:text-blue-foreground data-[state=on]:border-blue"
+        >
+          .
+        </Toggle>
       </div>
 
       <div className="flex items-center gap-3 mb-3 px-1">
