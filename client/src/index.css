@@ -110,6 +110,19 @@ body {
   opacity: 100%;
 }
 
+/* A rest reads as faint diagonal hatching in the note area, echoing the hollow
+   segment above it in the duration bar. */
+.td-rest {
+  background-image: repeating-linear-gradient(
+    45deg,
+    color-mix(in oklch, var(--muted-foreground) 18%, transparent) 0 1px,
+    transparent 1px 6px
+  );
+  border-radius: 2px;
+  font-size: 1.1em;
+  line-height: 1;
+}
+
 .td-measure-start {
   border-left: 1px solid rgba(192, 192, 192, 75%);
 }

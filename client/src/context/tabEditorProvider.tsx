@@ -21,7 +21,6 @@ import {
 } from "./tabEditorReducer";
 import { normalizeTracks, trackStringCount } from "../utils/trackOperations";
 import { useTabPlayback } from "../hooks/useTabPlayback";
-import { usePlayhead } from "../hooks/usePlayhead";
 
 const FRET_EMPTY = -2;
 const FRET_MUTED = -1;
@@ -50,8 +49,6 @@ interface TabEditorContextType {
   stringCount: number;
   isPlaying: boolean;
   togglePlayback: () => void;
-  /** Playback position in ticks, or null when stopped. Drives the timeline playhead. */
-  playheadTick: number | null;
   /** Frames in the longest track — zero means there is nothing to play. */
   totalSteps: number;
   updateDetails: (name: string, value: string) => void;
@@ -337,8 +334,6 @@ export function TabEditorProvider({
     onStep: handlePlaybackStep,
   });
 
-  const playheadTick = usePlayhead(isPlaying, details.bpm);
-
   // Fret digit buffering
   const digitBufferRef = useRef("");
   const digitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -585,7 +580,6 @@ export function TabEditorProvider({
         stringCount,
         isPlaying,
         togglePlayback,
-        playheadTick,
         totalSteps,
         updateDetails,
         setNotes,
