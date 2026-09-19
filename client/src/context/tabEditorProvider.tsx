@@ -63,6 +63,17 @@ interface TabEditorContextType {
     frame: number,
     duration: number,
   ) => void;
+  setFrameRest: (
+    section: number,
+    measure: number,
+    frame: number,
+    isRest: boolean,
+  ) => void;
+  setMeasureTimeSignature: (
+    section: number,
+    measure: number,
+    timeSignature: TimeSignatureType | null,
+  ) => void;
   saveChanges: () => Promise<void>;
   handleOpeningEditor: () => void;
   updatePosition: (section: number, measure: number, frame: number) => void;
@@ -191,6 +202,26 @@ export function TabEditorProvider({
     duration: number,
   ) {
     dispatch({ type: "SET_FRAME_DURATION", payload: { section, measure, frame, duration } });
+  }
+
+  function setFrameRest(
+    section: number,
+    measure: number,
+    frame: number,
+    isRest: boolean,
+  ) {
+    dispatch({ type: "SET_FRAME_REST", payload: { section, measure, frame, isRest } });
+  }
+
+  function setMeasureTimeSignature(
+    section: number,
+    measure: number,
+    timeSignature: TimeSignatureType | null,
+  ) {
+    dispatch({
+      type: "SET_MEASURE_TIME_SIGNATURE",
+      payload: { section, measure, timeSignature },
+    });
   }
 
   function setActiveTrack(index: number) {
@@ -587,6 +618,8 @@ export function TabEditorProvider({
         setBpm,
         setTimeSignature,
         setFrameDuration,
+        setFrameRest,
+        setMeasureTimeSignature,
         saveChanges,
         handleOpeningEditor,
         updatePosition,

@@ -422,3 +422,30 @@ describe("notes", () => {
     ).toBe(state);
   });
 });
+
+describe("rests and per-measure meter", () => {
+  it("marks a frame a rest on the active track", () => {
+    const tab = body({ name: "Intro", measures: [1] });
+    const next = tabEditorReducer(stateWith(tab), {
+      type: "SET_FRAME_REST",
+      payload: { section: 0, measure: 0, frame: 0, isRest: true },
+    });
+    expect(activeBody(next).sections[0].measures[0].frames[0].isRest).toBe(true);
+    expect(next.isEditing).toBe(true);
+  });
+
+  it("overrides and clears a measure's meter", () => {
+    const tab = body({ name: "Intro", measures: [1] });
+    const overridden = tabEditorReducer(stateWith(tab), {
+      type: "SET_MEASURE_TIME_SIGNATURE",
+      payload: { section: 0, measure: 0, timeSignature: [5, 4] },
+    });
+    expect(activeBody(overridden).sections[0].measures[0].timeSignature).toEqual([5, 4]);
+
+    const cleared = tabEditorReducer(overridden, {
+      type: "SET_MEASURE_TIME_SIGNATURE",
+      payload: { section: 0, measure: 0, timeSignature: null },
+    });
+    expect(activeBody(cleared).sections[0].measures[0].timeSignature).toBeUndefined();
+  });
+});

@@ -4,8 +4,8 @@ import type { NoteFretType } from "../shared/types/tab.types";
 import { getFrame } from "../utils/tabOperations";
 import { chordNameForFrame } from "../utils/chords";
 import { noteNamesForFrame } from "../utils/pitch";
-import { NOTE_VALUES } from "../shared/types/consts";
-import { frameDuration } from "../utils/tabOperations";
+import { MEASURE_METERS, NOTE_VALUES } from "../shared/types/consts";
+import { frameDuration, isRestFrame } from "../utils/tabOperations";
 import { Input } from "@/components/ui/input";
 import { Toggle } from "@/components/ui/toggle";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -24,9 +24,12 @@ export default function TabForm() {
     tab,
     position,
     track,
+    details,
     stringCount,
     updateTabData,
     setFrameDuration,
+    setFrameRest,
+    setMeasureTimeSignature,
     getEmptyFrame,
   } = useTabEditor();
 
@@ -37,6 +40,15 @@ export default function TabForm() {
     position.frame,
   );
   const duration = currentFrame ? frameDuration(currentFrame) : 1;
+  const isRest = currentFrame ? isRestFrame(currentFrame) : false;
+
+  const currentMeasure =
+    tab.sections[position.section]?.measures[position.measure];
+  // undefined means "inherit the tab's meter"; the select shows that as "Inherit".
+  const measureMeter = currentMeasure?.timeSignature;
+  const measureMeterValue = measureMeter
+    ? `${measureMeter[0]}/${measureMeter[1]}`
+    : "inherit";
 
   const tuning = track?.tuning ?? [];
 
@@ -156,7 +168,71 @@ export default function TabForm() {
           ))}
         </ToggleGroup>
       </div>
-      <div className="flex flex-col gap-0.5 mb-3">
+
+      <div className="flex items-center gap-3 mb-3 px-1">
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-medium text-muted-foreground shrink-0">
+            Rest
+          </span>
+          <Toggle
+            size="sm"
+            variant="outline"
+            pressed={isRest}
+            onPressedChange={(pressed) =>
+              setFrameRest(
+                position.section,
+                position.measure,
+                position.frame,
+                pressed,
+              )
+            }
+            aria-label="Mark this frame as a rest"
+            title="A rest holds silence for the frame's duration"
+            className="h-7 px-2 text-xs cursor-pointer data-[state=on]:bg-blue data-[state=on]:text-blue-foreground data-[state=on]:border-blue"
+          >
+            𝄽 Rest
+          </Toggle>
+        </div>
+
+        <div className="flex items-center gap-2 ml-auto">
+          <span className="text-xs font-medium text-muted-foreground shrink-0">
+            Bar meter
+          </span>
+          <select
+            aria-label="Time signature for this measure"
+            title="Override this bar's meter, or inherit the tab default"
+            value={measureMeterValue}
+            onChange={(event) => {
+              const value = event.target.value;
+              const meter =
+                value === "inherit"
+                  ? null
+                  : (value.split("/").map(Number) as [number, number]);
+              setMeasureTimeSignature(position.section, position.measure, meter);
+            }}
+            className="h-7 rounded-sm border border-border bg-transparent px-1.5 text-xs outline-none focus:border-foreground/40 cursor-pointer"
+          >
+            <option value="inherit">
+              Inherit ({details.timeSignature[0]}/{details.timeSignature[1]})
+            </option>
+            {MEASURE_METERS.map(([beats, value]) => (
+              <option key={`${beats}/${value}`} value={`${beats}/${value}`}>
+                {beats}/{value}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {isRest && (
+        <p className="mb-3 px-1 text-xs text-muted-foreground">
+          This frame is a rest — silent for its duration. Turn off Rest to add notes.
+        </p>
+      )}
+
+      <div
+        className={`flex flex-col gap-0.5 mb-3 ${isRest ? "opacity-40 pointer-events-none" : ""}`}
+      >
         {strings.toReversed().map((string) => {
           const note = formData[string - 1];
           if (!note) return null;

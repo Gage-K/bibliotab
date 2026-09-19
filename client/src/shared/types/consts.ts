@@ -49,6 +49,17 @@ export const DEFAULT_TIME_SIGNATURE: [number, number] = [4, 4];
 export const MIN_BPM = 30;
 export const MAX_BPM = 300;
 
+/** Meters offered for a per-measure override; the tab default covers everything else. */
+export const MEASURE_METERS: [number, number][] = [
+  [4, 4],
+  [3, 4],
+  [2, 4],
+  [5, 4],
+  [6, 8],
+  [7, 8],
+  [12, 8],
+];
+
 /** Note values offered in the editor, in beats. */
 export const NOTE_VALUES = [
   { label: "Whole", beats: 4, symbol: "\u{1D15D}" },

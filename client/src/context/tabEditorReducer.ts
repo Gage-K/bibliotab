@@ -21,6 +21,8 @@ import {
   removeFrame,
   updateFrameNotes,
   setFrameDuration,
+  setFrameRest,
+  setMeasureTimeSignature,
   findFrameById,
   resolvePositionAfterFrameDelete,
   insertSection,
@@ -92,6 +94,18 @@ export type TabEditorAction =
   | {
       type: "SET_FRAME_DURATION";
       payload: { section: number; measure: number; frame: number; duration: number };
+    }
+  | {
+      type: "SET_FRAME_REST";
+      payload: { section: number; measure: number; frame: number; isRest: boolean };
+    }
+  | {
+      type: "SET_MEASURE_TIME_SIGNATURE";
+      payload: {
+        section: number;
+        measure: number;
+        timeSignature: TimeSignatureType | null;
+      };
     }
   | { type: "UPDATE_TAB_FRAME"; payload: { section: number; measure: number; frame: number; formData: NoteFretType[] } }
   | { type: "ADD_MEASURE"; payload: { section: number; measure: number } }
@@ -236,6 +250,27 @@ export function tabEditorReducer(state: TabEditorState, action: TabEditorAction)
     case "SET_FRAME_DURATION": {
       const { section, measure, frame, duration } = action.payload;
       const newTab = setFrameDuration(activeBody(state), section, measure, frame, duration);
+      if (newTab === activeBody(state)) return state;
+      return { ...withBody(state, newTab), isEditing: true };
+    }
+
+    case "SET_FRAME_REST": {
+      const { section, measure, frame, isRest } = action.payload;
+      const newTab = setFrameRest(
+        activeBody(state),
+        section,
+        measure,
+        frame,
+        isRest,
+        stringCount(state)
+      );
+      if (newTab === activeBody(state)) return state;
+      return { ...withBody(state, newTab), isEditing: true };
+    }
+
+    case "SET_MEASURE_TIME_SIGNATURE": {
+      const { section, measure, timeSignature } = action.payload;
+      const newTab = setMeasureTimeSignature(activeBody(state), section, measure, timeSignature);
       if (newTab === activeBody(state)) return state;
       return { ...withBody(state, newTab), isEditing: true };
     }
