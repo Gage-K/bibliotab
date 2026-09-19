@@ -87,10 +87,10 @@ export const defaultKeymap: Keymap = {
   X: "deleteFrame",
   d: "duplicateFrame",
 
-  // Duration ( , = shorter note, . = longer note, ; = toggle dot )
-  ".": "durationLonger",
-  ",": "durationShorter",
-  ";": "toggleDot",
+  // Duration ( - = shorter note, = = longer note, . = toggle dot )
+  "-": "durationShorter",
+  "=": "durationLonger",
+  ".": "toggleDot",
 
   // Move the selection (or current frame): < > nudge, [ ] to prev/next measure
   "<": "moveFramesLeft",
