@@ -174,8 +174,7 @@ describe("section-aware measure and frame ops", () => {
   });
 
   it("keeps a frame's id when its notes change", () => {
-    // Frame ids anchor playback highlighting and lyric mapping, so an edit must not
-    // mint a new one.
+    // Frame ids anchor playback highlighting, so an edit must not mint a new one.
     const tab = body({ name: "Intro", measures: [2] });
     const originalId = tab.sections[0].measures[0].frames[1].id;
 

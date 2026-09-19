@@ -206,8 +206,8 @@ function removeFrameAt(
 }
 
 /**
- * Frame ids are stable anchors — playback highlighting and lyric mapping both key off
- * them — so editing a frame's notes keeps its id. Only insertFrameAt mints a new one.
+ * Frame ids are stable anchors — playback highlighting keys off them — so editing a
+ * frame's notes keeps its id. Only insertFrameAt mints a new one.
  */
 function updateFrameNotesAt(
   measures: MeasureType[],
