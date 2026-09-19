@@ -519,9 +519,9 @@ export function measureIsComplete(
 /**
  * Locates a frame by its id across every section of a body.
  *
- * Lyric anchors store frame ids rather than indices, so resolving one means a scan.
- * Returns null when the frame no longer exists — a binding whose frame was deleted goes
- * inert rather than pointing somewhere wrong.
+ * Callers hold frame ids rather than indices (playback highlight, "go to frame"), so
+ * resolving one means a scan. Returns null when the frame no longer exists — a stale id
+ * goes inert rather than pointing somewhere wrong.
  */
 export function findFrameById(
   tab: TabBodyType,
@@ -540,7 +540,7 @@ export function findFrameById(
   return null;
 }
 
-/** Every frame id in a body, for checking which lyric anchors still resolve. */
+/** Every frame id in a body. */
 export function collectFrameIds(tab: TabBodyType): Set<string> {
   const ids = new Set<string>();
   for (const section of tab.sections) {

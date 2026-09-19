@@ -383,7 +383,8 @@ describe("GO_TO_FRAME", () => {
   });
 
   it("does nothing for a frame that no longer exists", () => {
-    // A lyric anchor outliving its frame must not jump to whatever took that index.
+    // A stale frame id (e.g. from a deleted frame) must not jump to whatever took that
+    // index — it resolves by id, so a miss is a no-op.
     const state = stateWith(tab, { section: 0, measure: 1, frame: 0 });
     expect(
       tabEditorReducer(state, { type: "GO_TO_FRAME", payload: { frameId: "gone" } }),
@@ -400,7 +401,7 @@ describe("GO_TO_FRAME", () => {
   });
 });
 
-describe("notes and lyrics", () => {
+describe("notes", () => {
   const tab = body({ name: "Intro", measures: [1] });
 
   it("stores notes and flags the tab as edited", () => {
@@ -419,14 +420,5 @@ describe("notes and lyrics", () => {
     expect(
       tabEditorReducer(state, { type: "SET_NOTES", payload: { notes: "Capo 2" } }),
     ).toBe(state);
-  });
-
-  it("stores the lyric document", () => {
-    const doc = { type: "doc", content: [] };
-    const next = tabEditorReducer(stateWith(tab), {
-      type: "SET_LYRICS",
-      payload: { lyrics: doc },
-    });
-    expect(next.lyrics).toBe(doc);
   });
 });

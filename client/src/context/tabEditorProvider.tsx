@@ -9,7 +9,6 @@ import type {
   TrackType,
   EditorDetailsType,
   FrameType,
-  LyricsDocType,
   NoteFretType,
   TimeSignatureType,
   TuningType,
@@ -23,29 +22,6 @@ import {
 import { normalizeTracks, trackStringCount } from "../utils/trackOperations";
 import { useTabPlayback } from "../hooks/useTabPlayback";
 import { usePlayhead } from "../hooks/usePlayhead";
-
-/** Class the sounding syllable carries; styling lives with the lyric editor. */
-const ACTIVE_ANCHOR_CLASS = "lyric-anchor-active";
-
-function clearLyricHighlights() {
-  document
-    .querySelectorAll(`.${ACTIVE_ANCHOR_CLASS}`)
-    .forEach((element) => element.classList.remove(ACTIVE_ANCHOR_CLASS));
-}
-
-/**
- * Highlights the lyric syllables bound to the frame currently sounding.
- *
- * Reaching into the DOM rather than routing through React state is deliberate: this
- * fires once per frame during playback, and re-rendering the lyric document at that
- * rate would fight the editor for control of its own content.
- */
-function highlightLyricAnchor(frameId: string) {
-  clearLyricHighlights();
-  document
-    .querySelectorAll(`[data-frame-id="${CSS.escape(frameId)}"]`)
-    .forEach((element) => element.classList.add(ACTIVE_ANCHOR_CLASS));
-}
 
 const FRET_EMPTY = -2;
 const FRET_MUTED = -1;
@@ -63,7 +39,6 @@ interface TabEditorContextType {
   track: TrackType | undefined;
   details: EditorDetailsType;
   notes: string;
-  lyrics: LyricsDocType | null;
   isLoading: boolean;
   position: TabPositionType;
   selection: TabSelectionType;
@@ -81,7 +56,6 @@ interface TabEditorContextType {
   totalSteps: number;
   updateDetails: (name: string, value: string) => void;
   setNotes: (notes: string) => void;
-  setLyrics: (lyrics: LyricsDocType | null) => void;
   /** Moves the cursor to a frame by id. A no-op if that frame no longer exists. */
   goToFrameById: (frameId: string) => void;
   setBpm: (bpm: number) => void;
@@ -134,7 +108,6 @@ export function TabEditorProvider({
     tracks: TrackType[];
     details: EditorDetailsType;
     notes?: string;
-    lyrics?: LyricsDocType | null;
   };
   children: React.ReactNode;
 }) {
@@ -145,7 +118,6 @@ export function TabEditorProvider({
     activeTrack,
     details,
     notes,
-    lyrics,
     position,
     selection,
     editorIsOpen,
@@ -168,7 +140,6 @@ export function TabEditorProvider({
         payload: {
           ...demoData,
           notes: demoData.notes ?? "",
-          lyrics: demoData.lyrics ?? null,
           tracks: normalizeTracks({ tracks: demoData.tracks }),
         },
       });
@@ -188,7 +159,6 @@ export function TabEditorProvider({
           // can still be a pre-tracks shape (see normalizeTracks).
           tracks: normalizeTracks({ tracks: serverTab.tracks }),
           notes: serverTab.notes ?? "",
-          lyrics: serverTab.lyrics ?? null,
         },
       });
     }
@@ -203,10 +173,6 @@ export function TabEditorProvider({
 
   function setNotes(next: string) {
     dispatch({ type: "SET_NOTES", payload: { notes: next } });
-  }
-
-  function setLyrics(next: LyricsDocType | null) {
-    dispatch({ type: "SET_LYRICS", payload: { lyrics: next } });
   }
 
   function goToFrameById(frameId: string) {
@@ -272,7 +238,6 @@ export function TabEditorProvider({
       bpm: details.bpm,
       time_signature: details.timeSignature,
       notes,
-      lyrics,
     };
 
     updateTabMutation.mutate(data, {
@@ -370,17 +335,9 @@ export function TabEditorProvider({
     activeTrack,
     bpm: details.bpm,
     onStep: handlePlaybackStep,
-    onFrameSound: highlightLyricAnchor,
   });
 
   const playheadTick = usePlayhead(isPlaying, details.bpm);
-
-  // Leaving a stale highlight behind after stopping would suggest playback is still
-  // somewhere in the song.
-  useEffect(() => {
-    if (isPlaying) return;
-    clearLyricHighlights();
-  }, [isPlaying]);
 
   // Fret digit buffering
   const digitBufferRef = useRef("");
@@ -618,7 +575,6 @@ export function TabEditorProvider({
         track,
         details,
         notes,
-        lyrics,
         isLoading,
         position,
         selection,
@@ -633,7 +589,6 @@ export function TabEditorProvider({
         totalSteps,
         updateDetails,
         setNotes,
-        setLyrics,
         goToFrameById,
         setBpm,
         setTimeSignature,

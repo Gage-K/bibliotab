@@ -294,7 +294,7 @@ describe("frame durations", () => {
 
     expect(updated.sections[0].measures[0][0].duration).toBe(1);
     expect(updated.sections[0].measures[0][1].duration).toBe(0.5);
-    // Ids anchor playback and lyrics; a duration edit must not mint a new one.
+    // Ids anchor playback highlighting; a duration edit must not mint a new one.
     expect(updated.sections[0].measures[0][1].id).toBe(
       tab.sections[0].measures[0][1].id,
     );
@@ -341,7 +341,7 @@ describe("frame lookup by id", () => {
   });
 
   it("returns null for an id that is not there", () => {
-    // A lyric anchor whose frame was deleted must go inert, not resolve to a neighbour.
+    // A stale frame id (its frame deleted) must go inert, not resolve to a neighbour.
     expect(findFrameById(tab, "gone")).toBeNull();
   });
 

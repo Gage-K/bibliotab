@@ -43,6 +43,13 @@
       "when": 1788917200674,
       "tag": "0005_add_tab_lyrics",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1789833714008,
+      "tag": "0006_drop_tab_lyrics",
+      "breakpoints": true
     }
   ]
 }

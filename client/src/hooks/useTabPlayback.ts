@@ -20,8 +20,6 @@ type PlaybackOptions = {
   tracks: TrackType[];
   /** Cursor updates follow this track; the others sound but don't move the cursor. */
   activeTrack: number;
-  /** Called with the sounding frame's id, for highlighting bound lyric syllables. */
-  onFrameSound?: (frameId: string) => void;
   /** Tab tempo. Durations are in beats, so this is the only thing that scales time. */
   bpm: number;
   onStep: (position: TabPositionType) => void;
@@ -40,7 +38,6 @@ export function useTabPlayback({
   activeTrack,
   bpm,
   onStep,
-  onFrameSound,
 }: PlaybackOptions) {
   const [isPlaying, setIsPlaying] = useState(false);
 
@@ -52,11 +49,9 @@ export function useTabPlayback({
   const tracksRef = useRef(tracks);
   const activeTrackRef = useRef(activeTrack);
   const onStepRef = useRef(onStep);
-  const onFrameSoundRef = useRef(onFrameSound);
   tracksRef.current = tracks;
   activeTrackRef.current = activeTrack;
   onStepRef.current = onStep;
-  onFrameSoundRef.current = onFrameSound;
 
   const totalSteps = trackLength(tracks);
 
@@ -126,7 +121,6 @@ export function useTabPlayback({
             // cursor visually in step without blocking the audio thread.
             Tone.getDraw().schedule(() => {
               onStepRef.current(position);
-              onFrameSoundRef.current?.(frame.id);
             }, time);
           }
         }, start);

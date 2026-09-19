@@ -12,7 +12,6 @@ import { users } from "./users.schema";
 // Type-only import: erased at build, keeps the JSONB columns typed as the shared
 // domain types without pulling the shared package into drizzle-kit's loader.
 import type {
-  LyricsDocType,
   TabTracksType,
   TimeSignatureType,
   TuningType,
@@ -49,9 +48,6 @@ export const tabs = pgTable(
       .default([4, 4]),
     // Freeform markdown. TEXT rather than JSONB — it has no structure to query.
     notes: text("notes").notNull().default(""),
-    // Tiptap document. Nullable: a tab without lyrics stores nothing rather than an
-    // empty doc, so "never written" and "deliberately empty" stay distinguishable.
-    lyrics: jsonb("lyrics").$type<LyricsDocType>(),
     createdAt: timestamp("created_at").defaultNow(),
     modifiedAt: timestamp("modified_at").defaultNow(),
   },

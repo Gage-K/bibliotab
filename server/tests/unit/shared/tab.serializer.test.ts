@@ -2,7 +2,6 @@ import { describe, it, expect } from "vitest";
 import {
   normalizeTabBody,
   validateBpm,
-  validateLyrics,
   validateTimeSignature,
   normalizeTabTracks,
   validateTabSize,
@@ -102,37 +101,6 @@ describe("tempo and meter", () => {
       notes: "Capo 2",
     } as unknown as TabEntity;
     expect(tabEntityToResponse(entity).notes).toBe("Capo 2");
-  });
-
-  it("defaults lyrics to null and passes a stored document through", () => {
-    expect(
-      tabEntityToResponse(entityWith({ sections: [section([measure(1)])] })).lyrics
-    ).toBeNull();
-
-    const doc = { type: "doc", content: [] };
-    const entity = {
-      ...entityWith({ sections: [section([measure(1)])] }),
-      lyrics: doc,
-    } as unknown as TabEntity;
-    expect(tabEntityToResponse(entity).lyrics).toEqual(doc);
-  });
-
-  it("validates lyric documents by envelope, not schema", () => {
-    // The Tiptap schema lives in the editor's extensions; duplicating it here would go
-    // stale, so only the envelope and the size are checked.
-    expect(validateLyrics(null)).toEqual({ valid: true });
-    expect(validateLyrics({ type: "doc", content: [] })).toEqual({ valid: true });
-    expect(validateLyrics("<p>hi</p>")).toMatchObject({ valid: false });
-    expect(validateLyrics([])).toMatchObject({ valid: false });
-    expect(validateLyrics({ content: [] })).toMatchObject({ valid: false });
-  });
-
-  it("rejects an oversized lyric document", () => {
-    const huge = {
-      type: "doc",
-      content: [{ type: "text", text: "x".repeat(200_001) }],
-    };
-    expect(validateLyrics(huge)).toMatchObject({ valid: false });
   });
 
   it("validates time signatures", () => {

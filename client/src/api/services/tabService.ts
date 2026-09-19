@@ -1,7 +1,6 @@
 import type { AxiosInstance } from "axios";
 import { API_ENDPOINTS } from "../endpoints";
 import type {
-  LyricsDocType,
   TabTracksType,
   TabType,
   TimeSignatureType,
@@ -33,7 +32,6 @@ export interface SaveTabPayload {
   bpm: number;
   time_signature: TimeSignatureType;
   notes: string;
-  lyrics: LyricsDocType | null;
 }
 
 export const tabService = {

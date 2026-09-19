@@ -83,9 +83,11 @@ the error**. If `db:migrate` fails with no message, check whether the DB was bas
   durations, so it is safe to re-run, and `--dry-run` reports without writing.
 - **`0004_add_tab_notes.sql` and `0005_add_tab_lyrics.sql` are generated.** Both add a
   single column with a safe default (empty string, and null respectively), so neither
-  needs a backfill. Lyrics are JSONB because the document is structured — the
-  syllable-to-frame bindings are marks inside it — and nullable so "never written" stays
-  distinguishable from "deliberately cleared".
+  needs a backfill.
+- **`0006_drop_tab_lyrics.sql` is generated.** The Tiptap lyric mapper was removed, so
+  the `lyrics` column added in 0005 is dropped. Freeform text lives in `notes`. The drop
+  is destructive by design — the feature is gone — and `init.sql` no longer defines the
+  column either.
 - `db/init.sql` still bootstraps a fresh Postgres container (mounted in
   `docker-compose.yml`). It and the baseline migration describe the same schema; a fresh
   Docker DB is initialized by `init.sql` and then just needs `db:baseline`.
