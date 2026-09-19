@@ -19,8 +19,8 @@ const DEMO_TRACKS: TrackType[] = [
     body: {
       sections: [
         createSection("Intro", [
-          [createEmptyFrame(), createEmptyFrame(), createEmptyFrame(), createEmptyFrame()],
-          [createEmptyFrame(), createEmptyFrame(), createEmptyFrame(), createEmptyFrame()],
+          { frames: [createEmptyFrame(), createEmptyFrame(), createEmptyFrame(), createEmptyFrame()] },
+          { frames: [createEmptyFrame(), createEmptyFrame(), createEmptyFrame(), createEmptyFrame()] },
         ]),
       ],
     },

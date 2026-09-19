@@ -48,9 +48,23 @@ export type FrameType = {
    * DEFAULT_FRAME_DURATION rather than directly.
    */
   duration?: number;
+  /**
+   * A rest sounds nothing for its duration — silence, distinct from a frame not yet
+   * filled in. Optional so pre-rest rows read as non-rests; read it through
+   * `isRestFrame` rather than directly.
+   */
+  isRest?: boolean;
 };
 
-export type MeasureType = FrameType[];
+/**
+ * One bar. Carries its frames and, optionally, its own time signature so meter can
+ * change bar to bar. An absent `timeSignature` inherits the tab default; read it
+ * through `measureTimeSignature`.
+ */
+export type MeasureType = {
+  frames: FrameType[];
+  timeSignature?: TimeSignatureType;
+};
 
 export type SectionType = { id: string; name: string; measures: MeasureType[] };
 

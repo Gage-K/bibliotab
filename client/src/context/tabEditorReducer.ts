@@ -311,7 +311,7 @@ export function tabEditorReducer(state: TabEditorState, action: TabEditorAction)
           position: {
             section,
             measure: prevMeasure,
-            frame: getMeasures(newTab, section)[prevMeasure]?.length - 1 || 0,
+            frame: getMeasures(newTab, section)[prevMeasure]?.frames.length - 1 || 0,
             string: 0,
           },
           isEditing: true,
@@ -341,7 +341,7 @@ export function tabEditorReducer(state: TabEditorState, action: TabEditorAction)
       const measures = getMeasures(tab, section);
 
       // Past the end of a measure: next measure, else first measure of the next section.
-      if (frame >= (measures[measure]?.length ?? 0)) {
+      if (frame >= (measures[measure]?.frames.length ?? 0)) {
         const nextMeasure = measure + 1;
         if (nextMeasure < measures.length) {
           return {
@@ -372,7 +372,7 @@ export function tabEditorReducer(state: TabEditorState, action: TabEditorAction)
             position: {
               section,
               measure: prevMeasure,
-              frame: measures[prevMeasure]?.length - 1 || 0,
+              frame: measures[prevMeasure]?.frames.length - 1 || 0,
               string: state.position.string,
             },
           };
@@ -387,7 +387,7 @@ export function tabEditorReducer(state: TabEditorState, action: TabEditorAction)
             position: {
               section: prevSection,
               measure: lastMeasure,
-              frame: prevSectionMeasures[lastMeasure].length - 1,
+              frame: prevSectionMeasures[lastMeasure].frames.length - 1,
               string: state.position.string,
             },
           };

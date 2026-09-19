@@ -16,7 +16,9 @@ const frame = (notes = 6) => ({
   notes: Array.from({ length: notes }, () => ({ fret: -2, style: "none" as const })),
 });
 
-const measure = (frames = 1): MeasureType => Array.from({ length: frames }, () => frame());
+const measure = (frames = 1): MeasureType => ({
+  frames: Array.from({ length: frames }, () => frame()),
+});
 
 const section = (measures: MeasureType[], name = "Section 1") => ({
   id: "s",
@@ -38,6 +40,14 @@ describe("normalizeTabBody", () => {
   it("passes a sectioned body through untouched", () => {
     const body = { sections: [section([measure()], "Chorus")] };
     expect(normalizeTabBody(body)).toBe(body);
+  });
+
+  it("upgrades legacy array-measures into the { frames } shape", () => {
+    // Before per-measure meter, a measure was a bare FrameType[]. Such a measure is
+    // wrapped so downstream code can read measure.frames and measure.timeSignature.
+    const legacyMeasure = [frame(), frame()];
+    const normalized = normalizeTabBody([legacyMeasure]);
+    expect(normalized.sections[0].measures[0]).toEqual({ frames: legacyMeasure });
   });
 
   it("yields no sections for junk, which the route validator rejects", () => {
@@ -119,7 +129,7 @@ describe("normalizeTabTracks", () => {
 
     expect(tracks).toHaveLength(1);
     expect(tracks[0].instrument).toBe("guitar");
-    expect(tracks[0].body.sections[0].measures[0]).toHaveLength(2);
+    expect(tracks[0].body.sections[0].measures[0].frames).toHaveLength(2);
   });
 
   it("wraps a sectioned body in one track using the fallback tuning", () => {
@@ -162,7 +172,7 @@ describe("tabEntityToResponse", () => {
 
     expect(response.tracks).toHaveLength(1);
     expect(response.tracks[0].body.sections).toHaveLength(1);
-    expect(response.tracks[0].body.sections[0].measures[0]).toHaveLength(2);
+    expect(response.tracks[0].body.sections[0].measures[0].frames).toHaveLength(2);
   });
 
   it("pulls the legacy tuning column onto the track", () => {
@@ -212,13 +222,13 @@ describe("validateTabSize", () => {
   });
 
   it("accepts non-6-string frames but still bounds them", () => {
-    expect(validateTabSize({ sections: [section([[frame(4)]])] })).toEqual({ valid: true });
-    expect(validateTabSize({ sections: [section([[frame(2)]])] })).toMatchObject({ valid: false });
-    expect(validateTabSize({ sections: [section([[frame(13)]])] })).toMatchObject({ valid: false });
+    expect(validateTabSize({ sections: [section([{ frames: [frame(4)] }])] })).toEqual({ valid: true });
+    expect(validateTabSize({ sections: [section([{ frames: [frame(2)] }])] })).toMatchObject({ valid: false });
+    expect(validateTabSize({ sections: [section([{ frames: [frame(13)] }])] })).toMatchObject({ valid: false });
   });
 
   it("requires one note per string when given a string count", () => {
-    const bass = { sections: [section([[frame(4)]])] };
+    const bass = { sections: [section([{ frames: [frame(4)] }])] };
     expect(validateTabSize(bass, 4)).toEqual({ valid: true });
 
     const mismatch = validateTabSize(bass, 6);
@@ -240,7 +250,7 @@ describe("validateTabTracks", () => {
   it("accepts a well-formed multi-track blob", () => {
     const bassTrack = {
       ...track(BASS),
-      body: { sections: [section([[frame(4)]])] },
+      body: { sections: [section([{ frames: [frame(4)] }])] },
     };
     expect(validateTabTracks({ tracks: [track(GUITAR), bassTrack] })).toEqual({
       valid: true,

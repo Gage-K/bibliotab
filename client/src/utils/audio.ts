@@ -19,8 +19,9 @@ export function absoluteNote(
   return `${PITCH_CLASS_NAMES[pitchClass]}${octave}`;
 }
 
-/** The notes a frame actually sounds. Empty and muted strings contribute nothing. */
+/** The notes a frame actually sounds. Rests, empty and muted strings contribute nothing. */
 export function frameToNotes(frame: FrameType, track: TrackType): string[] {
+  if (frame.isRest) return [];
   return frame.notes
     .flatMap((note, i) => {
       if (note.fret === FRET_EMPTY || note.fret === FRET_MUTED) return [];
@@ -53,7 +54,7 @@ export function flattenTrack(track: TrackType): ScheduledFrame[] {
 
   track.body.sections.forEach((section, sectionIndex) => {
     section.measures.forEach((measure, measureIndex) => {
-      measure.forEach((frame, frameIndex) => {
+      measure.frames.forEach((frame, frameIndex) => {
         const beats = frameDuration(frame);
         flattened.push({
           frame,

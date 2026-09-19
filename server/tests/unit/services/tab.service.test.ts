@@ -31,7 +31,7 @@ function makeEntity(overrides: Partial<TabEntity> = {}): TabEntity {
           octaves: [4, 3, 3, 3, 2, 2],
           body: {
             sections: [
-              { id: "section-1", name: "Intro", measures: [[makeFrame("f1")]] },
+              { id: "section-1", name: "Intro", measures: [{ frames: [makeFrame("f1")] }] },
             ],
           },
         },
@@ -97,7 +97,10 @@ describe("TabService", () => {
       const body = result.tracks[0].body;
       expect(body.sections).toHaveLength(1);
       expect(body.sections[0].name).toBe("Section 1");
-      expect(body.sections[0].measures).toEqual([[makeFrame("f1")], [makeFrame("f2")]]);
+      expect(body.sections[0].measures).toEqual([
+        { frames: [makeFrame("f1")] },
+        { frames: [makeFrame("f2")] },
+      ]);
     });
 
     it("should pull the legacy tuning column onto the wrapped track", async () => {
@@ -145,7 +148,7 @@ describe("TabService", () => {
       const persisted = vi.mocked(mockTabRepository.create).mock.calls[0][1];
       expect(persisted.tab_data.tracks).toHaveLength(1);
       expect(persisted.tab_data.tracks[0].body.sections[0].measures).toEqual([
-        [makeFrame("f1")],
+        { frames: [makeFrame("f1")] },
       ]);
     });
 
@@ -167,7 +170,7 @@ describe("TabService", () => {
                 instrument: "bass",
                 tuning: bass,
                 octaves: [2, 2, 1, 1],
-                body: { sections: [{ id: "s", name: "Intro", measures: [[makeFrame("f1")]] }] },
+                body: { sections: [{ id: "s", name: "Intro", measures: [{ frames: [makeFrame("f1")] }] }] },
               },
             ],
           },

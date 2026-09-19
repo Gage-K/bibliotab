@@ -103,7 +103,7 @@ export default function TabDisplay() {
   let framesSoFar = 0;
   for (const section of tab.sections) {
     sectionFrameOffsets.push(framesSoFar);
-    framesSoFar += section.measures.reduce((sum, measure) => sum + measure.length, 0);
+    framesSoFar += section.measures.reduce((sum, measure) => sum + measure.frames.length, 0);
   }
 
   const isCurrentFrame = (pos: FramePosition) =>
@@ -122,7 +122,7 @@ export default function TabDisplay() {
             : `Measures ${measureOffset + 1}–${measureOffset + section.measures.length}`;
 
         const flattenedSection = section.measures.flatMap((measure, measureIndex) =>
-          measure.map((frame, frameIndex) => ({ frame, measureIndex, frameIndex }))
+          measure.frames.map((frame, frameIndex) => ({ frame, measureIndex, frameIndex }))
         );
 
         // Soft signal only — a tab in progress is allowed to have short measures.

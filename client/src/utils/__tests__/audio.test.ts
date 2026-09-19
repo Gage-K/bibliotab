@@ -56,6 +56,11 @@ describe("frameToNotes", () => {
     expect(frameToNotes(createEmptyFrame(), guitar)).toEqual([]);
   });
 
+  it("sounds nothing for a rest, even if it carries frets", () => {
+    const rest = { ...frameWithFrets([0, 0, 0, 0, 0, 0]), isRest: true };
+    expect(frameToNotes(rest, guitar)).toEqual([]);
+  });
+
   it("uses each track's own tuning and octaves", () => {
     const bass = createTrack({ name: "Bass", instrument: "bass", tuning: BASS });
     // Open bass strings: G2 D2 A1 E1.
@@ -74,10 +79,10 @@ describe("flattenTrack", () => {
     body: {
       sections: [
         createSection("Intro", [
-          [createEmptyFrame(), createEmptyFrame()],
-          [createEmptyFrame()],
+          { frames: [createEmptyFrame(), createEmptyFrame()] },
+          { frames: [createEmptyFrame()] },
         ]),
-        createSection("Verse", [[createEmptyFrame()]]),
+        createSection("Verse", [{ frames: [createEmptyFrame()] }]),
       ],
     },
   });
@@ -109,7 +114,7 @@ describe("withTiming", () => {
       body: {
         sections: [
           createSection("Intro", [
-            durations.map((duration) => ({ ...createEmptyFrame(), duration })),
+            { frames: durations.map((duration) => ({ ...createEmptyFrame(), duration })) },
           ]),
         ],
       },
@@ -158,10 +163,12 @@ describe("withTiming", () => {
       body: {
         sections: [
           createSection("Intro", [
-            [
-              { id: "a", notes: createEmptyFrame().notes },
-              { id: "b", notes: createEmptyFrame().notes },
-            ],
+            {
+              frames: [
+                { id: "a", notes: createEmptyFrame().notes },
+                { id: "b", notes: createEmptyFrame().notes },
+              ],
+            },
           ]),
         ],
       },

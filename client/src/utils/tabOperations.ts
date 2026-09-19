@@ -5,6 +5,7 @@ import type {
   MeasureType,
   FrameType,
   NoteFretType,
+  TimeSignatureType,
 } from "../shared/types/tab.types"
 import type { TabPositionType } from "../shared/types/utilities.types";
 import {
@@ -42,7 +43,7 @@ export function createEmptyFrame(
 export function createEmptyMeasure(
   stringCount: number = DEFAULT_STRING_COUNT
 ): MeasureType {
-  return [createEmptyFrame(stringCount)];
+  return { frames: [createEmptyFrame(stringCount)] };
 }
 
 export function createSection(
@@ -66,7 +67,7 @@ export function createEmptyBody(
 /** String count a body was built for, read off its first frame. */
 export function bodyStringCount(tab: TabBodyType): number {
   return (
-    tab.sections[0]?.measures[0]?.[0]?.notes.length ?? DEFAULT_STRING_COUNT
+    tab.sections[0]?.measures[0]?.frames[0]?.notes.length ?? DEFAULT_STRING_COUNT
   );
 }
 
@@ -80,12 +81,44 @@ export function normalizeBody(
   stringCount: number = DEFAULT_STRING_COUNT
 ): TabBodyType {
   if (Array.isArray(raw)) {
-    return { sections: [createSection(DEFAULT_SECTION_NAME, raw as MeasureType[])] };
+    return {
+      sections: [
+        createSection(DEFAULT_SECTION_NAME, (raw as unknown[]).map(normalizeMeasure)),
+      ],
+    };
   }
   if (raw && typeof raw === "object" && Array.isArray((raw as TabBodyType).sections)) {
-    return raw as TabBodyType;
+    const body = raw as TabBodyType;
+    // Preserve the reference when nothing needs upgrading — callers rely on a
+    // pass-through for already-current bodies. Only a legacy array-measure forces a copy.
+    if (!bodyHasLegacyMeasures(body)) return body;
+    return {
+      sections: body.sections.map((section) => ({
+        ...section,
+        measures: (section.measures as unknown[]).map(normalizeMeasure),
+      })),
+    };
   }
   return createEmptyBody(stringCount);
+}
+
+/**
+ * Upgrades a legacy `FrameType[]` measure into the `{ frames }` shape. A measure that is
+ * already an object passes through unchanged. Mirrors the server's normalizeTabBody.
+ */
+export function normalizeMeasure(raw: unknown): MeasureType {
+  if (Array.isArray(raw)) return { frames: raw as FrameType[] };
+  if (raw && typeof raw === "object" && Array.isArray((raw as MeasureType).frames)) {
+    return raw as MeasureType;
+  }
+  return { frames: [] };
+}
+
+/** True if any measure is still a bare `FrameType[]` (pre measure-object shape). */
+function bodyHasLegacyMeasures(body: TabBodyType): boolean {
+  return body.sections.some((section) =>
+    (section.measures as unknown[]).some((measure) => Array.isArray(measure))
+  );
 }
 
 /**
@@ -103,14 +136,15 @@ export function resizeFrames(
     ...tab,
     sections: tab.sections.map((section) => ({
       ...section,
-      measures: section.measures.map((measure) =>
-        measure.map((frame) => ({
+      measures: section.measures.map((measure) => ({
+        ...measure,
+        frames: measure.frames.map((frame) => ({
           ...frame,
           notes: Array.from({ length: stringCount }, (_unused, i) =>
             frame.notes[i] ?? { fret: FRET_EMPTY, style: "none" as const }
           ),
-        }))
-      ),
+        })),
+      })),
     })),
   };
 }
@@ -139,15 +173,18 @@ function insertFrameAt(
 ): MeasureType[] {
   const newFrame = isEmpty
     ? createEmptyFrame(stringCount)
-    : { ...measures[measure][frame], id: nanoid() };
+    : { ...measures[measure].frames[frame], id: nanoid() };
 
   return measures.map((prevMeasure, i) =>
     i === measure
-      ? [
-          ...prevMeasure.slice(0, frame + 1),
-          newFrame,
-          ...prevMeasure.slice(frame + 1),
-        ]
+      ? {
+          ...prevMeasure,
+          frames: [
+            ...prevMeasure.frames.slice(0, frame + 1),
+            newFrame,
+            ...prevMeasure.frames.slice(frame + 1),
+          ],
+        }
       : prevMeasure
   );
 }
@@ -163,7 +200,7 @@ function removeFrameAt(
 ): MeasureType[] {
   return measures.map((prevMeasure, i) =>
     i === measure
-      ? prevMeasure.filter((_prevFrame, j) => j !== frame)
+      ? { ...prevMeasure, frames: prevMeasure.frames.filter((_f, j) => j !== frame) }
       : prevMeasure
   );
 }
@@ -179,11 +216,14 @@ function updateFrameNotesAt(
   formData: NoteFretType[]
 ): MeasureType[] {
   return measures.map((prevMeasure, measureIndex) =>
-    prevMeasure.map((prevFrame, frameIndex) =>
-      frameIndex === frame && measureIndex === measure
-        ? { ...prevFrame, notes: formData }
-        : prevFrame
-    )
+    measureIndex !== measure
+      ? prevMeasure
+      : {
+          ...prevMeasure,
+          frames: prevMeasure.frames.map((prevFrame, frameIndex) =>
+            frameIndex === frame ? { ...prevFrame, notes: formData } : prevFrame
+          ),
+        }
   );
 }
 
@@ -220,7 +260,7 @@ export function getFrame(
   measure: number,
   frame: number
 ): FrameType | undefined {
-  return tab.sections[section]?.measures[measure]?.[frame];
+  return tab.sections[section]?.measures[measure]?.frames[frame];
 }
 
 export function isExistingPosition(
@@ -237,7 +277,7 @@ export function isOnlyFrame(
   section: number,
   measure: number
 ): boolean {
-  return getMeasures(tab, section)[measure]?.length === 1;
+  return getMeasures(tab, section)[measure]?.frames.length === 1;
 }
 
 export function isOnlyMeasure(tab: TabBodyType, section: number): boolean {
@@ -448,7 +488,7 @@ export function frameOrdinal(
       if (s === position.section && m === position.measure) {
         return ordinal + position.frame;
       }
-      ordinal += measures[m].length;
+      ordinal += measures[m].frames.length;
     }
   }
   return ordinal;
@@ -475,6 +515,19 @@ export function frameDuration(frame: FrameType): number {
   return frame.duration ?? DEFAULT_FRAME_DURATION;
 }
 
+/** Whether a frame is a rest (silence for its duration). */
+export function isRestFrame(frame: FrameType): boolean {
+  return frame.isRest === true;
+}
+
+/** A measure's effective meter — its own override, or the tab default. */
+export function measureTimeSignature(
+  measure: MeasureType,
+  fallback: TimeSignatureType
+): TimeSignatureType {
+  return measure.timeSignature ?? fallback;
+}
+
 export function setFrameDuration(
   tab: TabBodyType,
   section: number,
@@ -486,20 +539,83 @@ export function setFrameDuration(
     MAX_FRAME_DURATION,
     Math.max(MIN_FRAME_DURATION, duration)
   );
+  return mapFrameInMeasure(tab, section, measure, frame, (prevFrame) => ({
+    ...prevFrame,
+    duration: clamped,
+  }));
+}
+
+/**
+ * Marks a frame as a rest (or clears the flag). A rest sounds nothing but keeps its
+ * duration, so the bar's timing is unchanged. Setting the flag clears the frame's notes
+ * so a rest never carries stray frets that would only confuse the display.
+ */
+export function setFrameRest(
+  tab: TabBodyType,
+  section: number,
+  measure: number,
+  frame: number,
+  isRest: boolean,
+  stringCount: number = bodyStringCount(tab)
+): TabBodyType {
+  return mapFrameInMeasure(tab, section, measure, frame, (prevFrame) =>
+    isRest
+      ? {
+          ...prevFrame,
+          isRest: true,
+          notes: Array.from({ length: stringCount }, () => ({
+            fret: FRET_EMPTY,
+            style: "none" as const,
+          })),
+        }
+      : { ...prevFrame, isRest: false }
+  );
+}
+
+/** Sets this measure's meter override, or clears it (inherit the tab default). */
+export function setMeasureTimeSignature(
+  tab: TabBodyType,
+  section: number,
+  measure: number,
+  timeSignature: TimeSignatureType | null
+): TabBodyType {
+  return mapSectionMeasures(tab, section, (measures) =>
+    measures.map((prevMeasure, measureIndex) => {
+      if (measureIndex !== measure) return prevMeasure;
+      if (timeSignature === null) {
+        const { timeSignature: _dropped, ...rest } = prevMeasure;
+        return rest;
+      }
+      return { ...prevMeasure, timeSignature };
+    })
+  );
+}
+
+/** Replaces one frame within one measure, leaving everything else identical. */
+function mapFrameInMeasure(
+  tab: TabBodyType,
+  section: number,
+  measure: number,
+  frame: number,
+  fn: (frame: FrameType) => FrameType
+): TabBodyType {
   return mapSectionMeasures(tab, section, (measures) =>
     measures.map((prevMeasure, measureIndex) =>
       measureIndex !== measure
         ? prevMeasure
-        : prevMeasure.map((prevFrame, frameIndex) =>
-            frameIndex === frame ? { ...prevFrame, duration: clamped } : prevFrame
-          )
+        : {
+            ...prevMeasure,
+            frames: prevMeasure.frames.map((prevFrame, frameIndex) =>
+              frameIndex === frame ? fn(prevFrame) : prevFrame
+            ),
+          }
     )
   );
 }
 
 /** Total beats in a measure — what a time signature is checked against. */
 export function measureBeats(measure: MeasureType): number {
-  return measure.reduce((sum, frame) => sum + frameDuration(frame), 0);
+  return measure.frames.reduce((sum, frame) => sum + frameDuration(frame), 0);
 }
 
 /**
@@ -530,8 +646,9 @@ export function findFrameById(
   for (let s = 0; s < tab.sections.length; s++) {
     const measures = tab.sections[s].measures;
     for (let m = 0; m < measures.length; m++) {
-      for (let f = 0; f < measures[m].length; f++) {
-        if (measures[m][f].id === frameId) {
+      const frames = measures[m].frames;
+      for (let f = 0; f < frames.length; f++) {
+        if (frames[f].id === frameId) {
           return { section: s, measure: m, frame: f, string: 0 };
         }
       }
@@ -545,7 +662,7 @@ export function collectFrameIds(tab: TabBodyType): Set<string> {
   const ids = new Set<string>();
   for (const section of tab.sections) {
     for (const measure of section.measures) {
-      for (const frame of measure) ids.add(frame.id);
+      for (const frame of measure.frames) ids.add(frame.id);
     }
   }
   return ids;

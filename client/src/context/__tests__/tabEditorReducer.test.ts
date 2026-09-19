@@ -6,7 +6,7 @@ import { createTrack } from "../../utils/trackOperations";
 import type { MeasureType, TabBodyType, TuningType } from "@/shared/types/tab.types";
 
 function measure(frames: number): MeasureType {
-  return Array.from({ length: frames }, () => createEmptyFrame());
+  return { frames: Array.from({ length: frames }, () => createEmptyFrame()) };
 }
 
 function body(...sections: { name: string; measures: number[] }[]): TabBodyType {
@@ -85,7 +85,7 @@ describe("frame and measure edits stay inside their section", () => {
       payload: { section: 1, measure: 0, frame: 0, string: 0, fret: 5 },
     });
 
-    expect(activeBody(next).sections[1].measures[0][0].notes[0].fret).toBe(5);
+    expect(activeBody(next).sections[1].measures[0].frames[0].notes[0].fret).toBe(5);
     expect(activeBody(next).sections[0]).toBe(tab.sections[0]);
     expect(next.isEditing).toBe(true);
   });
@@ -173,7 +173,7 @@ describe("section actions", () => {
     });
 
     expect(activeBody(next).sections[0].measures).toHaveLength(1);
-    expect(activeBody(next).sections[1].measures.map((m) => m.length)).toEqual([2, 3]);
+    expect(activeBody(next).sections[1].measures.map((m) => m.frames.length)).toEqual([2, 3]);
     expect(next.position).toMatchObject({ section: 1, measure: 0, frame: 0 });
   });
 });
@@ -212,7 +212,7 @@ describe("changing a track's tuning changes its string count", () => {
     });
 
     expect(next.tracks[0].tuning).toHaveLength(4);
-    for (const frame of activeBody(next).sections[0].measures[0]) {
+    for (const frame of activeBody(next).sections[0].measures[0].frames) {
       expect(frame.notes).toHaveLength(4);
     }
     // The cursor was on string 6, which no longer exists.
@@ -254,7 +254,7 @@ describe("changing a track's tuning changes its string count", () => {
 
   it("builds new sections and measures at the current string count", () => {
     const state = stateWith(
-      { sections: [createSection("Intro", [[createEmptyFrame(4)]])] },
+      { sections: [createSection("Intro", [{ frames: [createEmptyFrame(4)] }])] },
       {},
       BASS_TUNING,
     );
@@ -263,13 +263,13 @@ describe("changing a track's tuning changes its string count", () => {
       type: "ADD_SECTION",
       payload: { index: 1, name: "Verse" },
     });
-    expect(activeBody(withSection).sections[1].measures[0][0].notes).toHaveLength(4);
+    expect(activeBody(withSection).sections[1].measures[0].frames[0].notes).toHaveLength(4);
 
     const withMeasure = tabEditorReducer(state, {
       type: "ADD_MEASURE",
       payload: { section: 0, measure: 1 },
     });
-    expect(activeBody(withMeasure).sections[0].measures[1][0].notes).toHaveLength(4);
+    expect(activeBody(withMeasure).sections[0].measures[1].frames[0].notes).toHaveLength(4);
   });
 });
 
@@ -284,7 +284,7 @@ describe("track actions", () => {
           instrument: "bass",
           tuning: BASS_TUNING,
           body: {
-            sections: [createSection("Intro", [[createEmptyFrame(4)]])],
+            sections: [createSection("Intro", [{ frames: [createEmptyFrame(4)] }])],
           },
         }),
       ],
@@ -300,7 +300,7 @@ describe("track actions", () => {
       payload: { section: 0, measure: 0, frame: 0, string: 0, fret: 5 },
     });
 
-    expect(next.tracks[0].body.sections[0].measures[0][0].notes[0].fret).toBe(5);
+    expect(next.tracks[0].body.sections[0].measures[0].frames[0].notes[0].fret).toBe(5);
     expect(next.tracks[1]).toBe(state.tracks[1]);
   });
 
@@ -332,7 +332,7 @@ describe("track actions", () => {
 
     expect(next.tracks).toHaveLength(3);
     expect(next.activeTrack).toBe(2);
-    expect(next.tracks[2].body.sections[0].measures[0][0].notes).toHaveLength(4);
+    expect(next.tracks[2].body.sections[0].measures[0].frames[0].notes).toHaveLength(4);
   });
 
   it("shifts the active index when an earlier track is removed", () => {
@@ -362,7 +362,7 @@ describe("track actions", () => {
     });
 
     expect(next.tracks[1].tuning).toHaveLength(5);
-    expect(next.tracks[1].body.sections[0].measures[0][0].notes).toHaveLength(5);
+    expect(next.tracks[1].body.sections[0].measures[0].frames[0].notes).toHaveLength(5);
     expect(next.position).toBe(state.position);
   });
 });
@@ -372,7 +372,7 @@ describe("GO_TO_FRAME", () => {
 
   it("moves the cursor to the frame with that id", () => {
     const state = stateWith(tab);
-    const target = tab.sections[1].measures[0][1];
+    const target = tab.sections[1].measures[0].frames[1];
 
     const next = tabEditorReducer(state, {
       type: "GO_TO_FRAME",
@@ -395,7 +395,7 @@ describe("GO_TO_FRAME", () => {
     const state = stateWith(tab, { string: 4 });
     const next = tabEditorReducer(state, {
       type: "GO_TO_FRAME",
-      payload: { frameId: tab.sections[1].measures[0][0].id },
+      payload: { frameId: tab.sections[1].measures[0].frames[0].id },
     });
     expect(next.position.string).toBe(4);
   });

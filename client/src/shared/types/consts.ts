@@ -162,15 +162,17 @@ export const DEFAULT_TAB: CreateTabPayload = {
               id: "1",
               name: "Section 1",
               measures: [
-                [
-                  {
-                    id: "1",
-                    notes: Array.from({ length: 6 }, () => ({
-                      fret: FRET_EMPTY,
-                      style: "none" as const,
-                    })),
-                  },
-                ],
+                {
+                  frames: [
+                    {
+                      id: "1",
+                      notes: Array.from({ length: 6 }, () => ({
+                        fret: FRET_EMPTY,
+                        style: "none" as const,
+                      })),
+                    },
+                  ],
+                },
               ],
             },
           ],

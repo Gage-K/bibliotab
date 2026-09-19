@@ -20,10 +20,12 @@ function trackOf(name: string, durations: number[], tuning?: TuningType) {
     body: {
       sections: [
         createSection("Intro", [
-          durations.map((duration) => ({
-            ...createEmptyFrame(tuning?.length ?? 6),
-            duration,
-          })),
+          {
+            frames: durations.map((duration) => ({
+              ...createEmptyFrame(tuning?.length ?? 6),
+              duration,
+            })),
+          },
         ]),
       ],
     },

@@ -15,6 +15,10 @@ import {
   bodyStringCount,
   frameDuration,
   setFrameDuration,
+  setFrameRest,
+  isRestFrame,
+  setMeasureTimeSignature,
+  measureTimeSignature,
   measureBeats,
   measureIsComplete,
   findFrameById,
@@ -29,7 +33,7 @@ import type { MeasureType, TabBodyType } from "@/shared/types/tab.types";
 
 // A measure of `frames` empty frames.
 function measure(frames: number): MeasureType {
-  return Array.from({ length: frames }, () => createEmptyFrame());
+  return { frames: Array.from({ length: frames }, () => createEmptyFrame()) };
 }
 
 // Body with one section per entry, each holding measures of the given frame counts.
@@ -86,7 +90,7 @@ describe("section operations", () => {
   it("gives a new section one empty measure", () => {
     const created = insertSection(body({ name: "Intro", measures: [1] }), 1, "Verse");
     expect(created.sections[1].measures).toHaveLength(1);
-    expect(created.sections[1].measures[0]).toHaveLength(1);
+    expect(created.sections[1].measures[0].frames).toHaveLength(1);
   });
 
   it("renames a section without touching its measures", () => {
@@ -124,7 +128,7 @@ describe("moveMeasure", () => {
     const moved = moveMeasure(tab, { section: 0, measure: 2 }, { section: 0, measure: 0 });
 
     expect(moved.sections[0].measures[0]).toBe(third);
-    expect(moved.sections[0].measures.map((m) => m.length)).toEqual([3, 1, 2]);
+    expect(moved.sections[0].measures.map((m) => m.frames.length)).toEqual([3, 1, 2]);
   });
 
   it("refuses to move a section's only measure away", () => {
@@ -135,7 +139,7 @@ describe("moveMeasure", () => {
   it("clamps an out-of-range target index", () => {
     const tab = body({ name: "Intro", measures: [1, 2] }, { name: "Verse", measures: [3] });
     const moved = moveMeasure(tab, { section: 0, measure: 0 }, { section: 1, measure: 99 });
-    expect(moved.sections[1].measures.map((m) => m.length)).toEqual([3, 1]);
+    expect(moved.sections[1].measures.map((m) => m.frames.length)).toEqual([3, 1]);
   });
 
   it("reports where the measure lands", () => {
@@ -165,30 +169,30 @@ describe("section-aware measure and frame ops", () => {
     const tab = body({ name: "Intro", measures: [3] }, { name: "Verse", measures: [3] });
     const removed = removeFrame(tab, 1, 0, 1);
 
-    expect(removed.sections[0].measures[0]).toHaveLength(3);
-    expect(removed.sections[1].measures[0]).toHaveLength(2);
+    expect(removed.sections[0].measures[0].frames).toHaveLength(3);
+    expect(removed.sections[1].measures[0].frames).toHaveLength(2);
   });
 
   it("keeps a frame's id when its notes change", () => {
     // Frame ids anchor playback highlighting and lyric mapping, so an edit must not
     // mint a new one.
     const tab = body({ name: "Intro", measures: [2] });
-    const originalId = tab.sections[0].measures[0][1].id;
+    const originalId = tab.sections[0].measures[0].frames[1].id;
 
     const edited = updateFrameNotes(tab, 0, 0, 1, [{ fret: 5, style: "none" }]);
 
-    expect(edited.sections[0].measures[0][1].id).toBe(originalId);
-    expect(edited.sections[0].measures[0][1].notes).toEqual([{ fret: 5, style: "none" }]);
+    expect(edited.sections[0].measures[0].frames[1].id).toBe(originalId);
+    expect(edited.sections[0].measures[0].frames[1].notes).toEqual([{ fret: 5, style: "none" }]);
   });
 
   it("gives a duplicated frame a fresh id", () => {
     const tab = body({ name: "Intro", measures: [1] });
-    const sourceId = tab.sections[0].measures[0][0].id;
+    const sourceId = tab.sections[0].measures[0].frames[0].id;
 
     const duplicated = insertFrame(tab, 0, 0, 0, false);
 
-    expect(duplicated.sections[0].measures[0]).toHaveLength(2);
-    expect(duplicated.sections[0].measures[0][1].id).not.toBe(sourceId);
+    expect(duplicated.sections[0].measures[0].frames).toHaveLength(2);
+    expect(duplicated.sections[0].measures[0].frames[1].id).not.toBe(sourceId);
   });
 
   it("knows which positions exist", () => {
@@ -225,20 +229,20 @@ describe("variable string counts", () => {
 
   it("reads a body's string count off its first frame", () => {
     const bass = {
-      sections: [createSection("Intro", [[createEmptyFrame(4)]])],
+      sections: [createSection("Intro", [{ frames: [createEmptyFrame(4)] }])],
     };
     expect(bodyStringCount(bass)).toBe(4);
   });
 
   it("propagates the string count through inserts", () => {
     const bass = {
-      sections: [createSection("Intro", [[createEmptyFrame(4)]])],
+      sections: [createSection("Intro", [{ frames: [createEmptyFrame(4)] }])],
     };
 
-    expect(insertMeasure(bass, 0, 1).sections[0].measures[1][0].notes).toHaveLength(4);
-    expect(insertFrame(bass, 0, 0, 0, true).sections[0].measures[0][1].notes).toHaveLength(4);
+    expect(insertMeasure(bass, 0, 1).sections[0].measures[1].frames[0].notes).toHaveLength(4);
+    expect(insertFrame(bass, 0, 0, 0, true).sections[0].measures[0].frames[1].notes).toHaveLength(4);
     expect(
-      insertSection(bass, 1, "Verse").sections[1].measures[0][0].notes,
+      insertSection(bass, 1, "Verse").sections[1].measures[0].frames[0].notes,
     ).toHaveLength(4);
   });
 
@@ -246,7 +250,7 @@ describe("variable string counts", () => {
     const tab = body({ name: "Intro", measures: [2] });
     const grown = resizeFrames(tab, 7);
 
-    for (const frame of grown.sections[0].measures[0]) {
+    for (const frame of grown.sections[0].measures[0].frames) {
       expect(frame.notes).toHaveLength(7);
       expect(frame.notes[6]).toEqual({ fret: -2, style: "none" });
     }
@@ -254,7 +258,7 @@ describe("variable string counts", () => {
 
   it("truncates from the low end when the string count shrinks, keeping ids", () => {
     const tab = body({ name: "Intro", measures: [1] });
-    const originalId = tab.sections[0].measures[0][0].id;
+    const originalId = tab.sections[0].measures[0].frames[0].id;
     const withNotes = updateFrameNotes(tab, 0, 0, 0, [
       { fret: 1, style: "none" },
       { fret: 2, style: "none" },
@@ -265,7 +269,7 @@ describe("variable string counts", () => {
     ]);
 
     const shrunk = resizeFrames(withNotes, 4);
-    const frame = shrunk.sections[0].measures[0][0];
+    const frame = shrunk.sections[0].measures[0].frames[0];
 
     expect(frame.id).toBe(originalId);
     expect(frame.notes.map((n) => n.fret)).toEqual([1, 2, 3, 4]);
@@ -292,18 +296,18 @@ describe("frame durations", () => {
     const tab = body({ name: "Intro", measures: [2] });
     const updated = setFrameDuration(tab, 0, 0, 1, 0.5);
 
-    expect(updated.sections[0].measures[0][0].duration).toBe(1);
-    expect(updated.sections[0].measures[0][1].duration).toBe(0.5);
+    expect(updated.sections[0].measures[0].frames[0].duration).toBe(1);
+    expect(updated.sections[0].measures[0].frames[1].duration).toBe(0.5);
     // Ids anchor playback highlighting; a duration edit must not mint a new one.
-    expect(updated.sections[0].measures[0][1].id).toBe(
-      tab.sections[0].measures[0][1].id,
+    expect(updated.sections[0].measures[0].frames[1].id).toBe(
+      tab.sections[0].measures[0].frames[1].id,
     );
   });
 
   it("clamps durations to the supported range", () => {
     const tab = body({ name: "Intro", measures: [1] });
-    expect(setFrameDuration(tab, 0, 0, 0, 999).sections[0].measures[0][0].duration).toBe(16);
-    expect(setFrameDuration(tab, 0, 0, 0, 0).sections[0].measures[0][0].duration).toBe(
+    expect(setFrameDuration(tab, 0, 0, 0, 999).sections[0].measures[0].frames[0].duration).toBe(16);
+    expect(setFrameDuration(tab, 0, 0, 0, 0).sections[0].measures[0].frames[0].duration).toBe(
       0.0625,
     );
   });
@@ -324,6 +328,43 @@ describe("frame durations", () => {
   });
 });
 
+describe("rests", () => {
+  it("flags a frame as a rest and clears its notes, keeping its duration", () => {
+    const tab = setFrameDuration(body({ name: "Intro", measures: [2] }), 0, 0, 0, 2);
+    const rested = setFrameRest(tab, 0, 0, 0, true);
+    const frame = rested.sections[0].measures[0].frames[0];
+
+    expect(isRestFrame(frame)).toBe(true);
+    expect(frame.duration).toBe(2);
+    expect(frame.notes.every((note) => note.fret === -2)).toBe(true);
+    // A rest still occupies its time in the bar.
+    expect(measureBeats(rested.sections[0].measures[0])).toBe(3);
+  });
+
+  it("clears the rest flag without touching notes", () => {
+    const tab = setFrameRest(body({ name: "Intro", measures: [1] }), 0, 0, 0, true);
+    const unrested = setFrameRest(tab, 0, 0, 0, false);
+    expect(isRestFrame(unrested.sections[0].measures[0].frames[0])).toBe(false);
+  });
+});
+
+describe("per-measure time signature", () => {
+  it("inherits the tab default until overridden", () => {
+    const tab = body({ name: "Intro", measures: [4] });
+    expect(measureTimeSignature(tab.sections[0].measures[0], [4, 4])).toEqual([4, 4]);
+
+    const overridden = setMeasureTimeSignature(tab, 0, 0, [5, 4]);
+    expect(measureTimeSignature(overridden.sections[0].measures[0], [4, 4])).toEqual([5, 4]);
+  });
+
+  it("clears an override back to the tab default", () => {
+    const tab = setMeasureTimeSignature(body({ name: "Intro", measures: [4] }), 0, 0, [5, 4]);
+    const cleared = setMeasureTimeSignature(tab, 0, 0, null);
+    expect(cleared.sections[0].measures[0].timeSignature).toBeUndefined();
+    expect(measureTimeSignature(cleared.sections[0].measures[0], [4, 4])).toEqual([4, 4]);
+  });
+});
+
 describe("frame lookup by id", () => {
   const tab = body(
     { name: "Intro", measures: [2, 1] },
@@ -331,7 +372,7 @@ describe("frame lookup by id", () => {
   );
 
   it("finds a frame anywhere in the body", () => {
-    const target = tab.sections[1].measures[1][1];
+    const target = tab.sections[1].measures[1].frames[1];
     expect(findFrameById(tab, target.id)).toEqual({
       section: 1,
       measure: 1,
@@ -348,11 +389,11 @@ describe("frame lookup by id", () => {
   it("collects every frame id in the body", () => {
     const ids = collectFrameIds(tab);
     expect(ids.size).toBe(6);
-    expect(ids.has(tab.sections[0].measures[0][0].id)).toBe(true);
+    expect(ids.has(tab.sections[0].measures[0].frames[0].id)).toBe(true);
   });
 
   it("keeps ids stable across a measure move, so anchors survive", () => {
-    const movedId = tab.sections[0].measures[0][0].id;
+    const movedId = tab.sections[0].measures[0].frames[0].id;
     const moved = moveMeasure(tab, { section: 0, measure: 0 }, { section: 1, measure: 0 });
 
     expect(findFrameById(moved, movedId)).toEqual({

@@ -43,17 +43,43 @@ export function normalizeTabBody(raw: unknown): TabBodyType {
         {
           id: randomUUID(),
           name: DEFAULT_SECTION_NAME,
-          measures: raw as MeasureType[],
+          measures: raw.map(normalizeMeasure),
         },
       ],
     };
   }
 
   if (raw && typeof raw === "object" && Array.isArray((raw as TabBodyType).sections)) {
-    return raw as TabBodyType;
+    const body = raw as TabBodyType;
+    // Pass an already-current body through by reference; only a legacy array-measure,
+    // which predates the measure-object shape, forces a rebuild.
+    const hasLegacyMeasures = body.sections.some((section) =>
+      (section.measures as unknown[]).some((measure) => Array.isArray(measure))
+    );
+    if (!hasLegacyMeasures) return body;
+    return {
+      ...body,
+      sections: body.sections.map((section) => ({
+        ...section,
+        measures: (section.measures as unknown[]).map(normalizeMeasure),
+      })),
+    };
   }
 
   return { sections: [] };
+}
+
+/**
+ * Upgrades a legacy `FrameType[]` measure into the `{ frames }` shape (the measure
+ * gained an optional per-bar time signature, so it is an object now). Measures already
+ * in object form pass through.
+ */
+export function normalizeMeasure(raw: unknown): MeasureType {
+  if (Array.isArray(raw)) return { frames: raw };
+  if (raw && typeof raw === "object" && Array.isArray((raw as MeasureType).frames)) {
+    return raw as MeasureType;
+  }
+  return { frames: [] };
 }
 
 /**
@@ -262,22 +288,32 @@ export function validateTabSize(
 
     for (let i = 0; i < section.measures.length; i++) {
       const measure = section.measures[i];
-      if (!Array.isArray(measure)) {
+      if (!measure || typeof measure !== "object" || !Array.isArray(measure.frames)) {
         return {
           valid: false,
-          error: `Measure ${i} in section ${s} is not an array of frames`,
+          error: `Measure ${i} in section ${s} must be an object with a frames array`,
         };
       }
 
-      if (measure.length > MAX_FRAMES_PER_MEASURE) {
+      if (
+        measure.timeSignature !== undefined &&
+        !validateTimeSignature(measure.timeSignature).valid
+      ) {
+        return {
+          valid: false,
+          error: `Measure ${i} in section ${s} has an invalid time signature`,
+        };
+      }
+
+      if (measure.frames.length > MAX_FRAMES_PER_MEASURE) {
         return {
           valid: false,
           error: `Measure ${i} in section ${s} exceeds maximum of ${MAX_FRAMES_PER_MEASURE} frames`,
         };
       }
 
-      for (let j = 0; j < measure.length; j++) {
-        const frame = measure[j];
+      for (let j = 0; j < measure.frames.length; j++) {
+        const frame = measure.frames[j];
         if (!frame || typeof frame !== "object" || !Array.isArray(frame.notes)) {
           return {
             valid: false,

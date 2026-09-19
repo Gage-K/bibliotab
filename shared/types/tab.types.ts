@@ -50,12 +50,26 @@ export type FrameType = {
    * duration; read it through DEFAULT_FRAME_DURATION rather than directly.
    */
   duration?: number;
+  /**
+   * A rest sounds nothing for its duration — silence, distinct from a frame that just
+   * hasn't been filled in yet. Optional so pre-rest rows read as non-rests. Read it
+   * through `isRestFrame` rather than directly.
+   */
+  isRest?: boolean;
 };
-
-export type MeasureType = FrameType[];
 
 /** Beats per measure and the note value that gets the beat, e.g. [4, 4]. */
 export type TimeSignatureType = [number, number];
+
+/**
+ * One bar. A measure carries its frames and, optionally, its own time signature so a
+ * song can change meter bar to bar (three 4/4 bars then a 5/4). An absent
+ * `timeSignature` inherits the tab's default; read it through `measureTimeSignature`.
+ */
+export type MeasureType = {
+  frames: FrameType[];
+  timeSignature?: TimeSignatureType;
+};
 
 // Tab metadata. Tuning lives on the track, not here — each instrument tunes
 // independently.
