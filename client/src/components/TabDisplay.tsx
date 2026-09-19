@@ -279,7 +279,7 @@ export default function TabDisplay() {
                               }
                               className={`h-full flex flex-col rounded-sm cursor-pointer ${
                                 current
-                                  ? "bg-accent"
+                                  ? "bg-blue/15 outline outline-1 outline-blue/50"
                                   : selected
                                     ? "bg-primary/20"
                                     : "hover:bg-foreground/5"
