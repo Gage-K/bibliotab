@@ -29,13 +29,6 @@ export default function Header() {
                 }>
                 tabs
               </NavLink>
-              <NavLink
-                to="/orchid"
-                className={(isActive) =>
-                  isActive.isActive ? activeStyle : linkBaseStyle
-                }>
-                orchid
-              </NavLink>
             </nav>
           </div>
           <div className="flex gap-4 text-muted-foreground text-sm font-medium items-center">

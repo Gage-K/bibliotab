@@ -19,15 +19,13 @@ import AppLayoutNoFooter from "./layouts/AppLayoutNoFooter";
 import SidebarLayout from "./layouts/SidebarLayout";
 
 /**
- * The two heavy routes are loaded on demand.
+ * The editor is loaded on demand.
  *
- * The editor pulls in Tiptap and ProseMirror (~127 kB gzipped) for the lyric panel and
- * react-markdown (~36 kB) for the notes panel; the Orchid pulls in its synth engine.
- * Neither is reachable from the landing page, so shipping them in the initial bundle
- * meant a first-time visitor downloaded a rich-text editor to look at a marketing page.
+ * It pulls in tone.js for playback and react-markdown (~36 kB) for the notes panel, and
+ * isn't reachable from the landing page — shipping it in the initial bundle meant a
+ * first-time visitor downloaded the whole editor to look at a marketing page.
  */
 const MainTabEditor = lazy(() => import("./components/MainTabEditor"));
-const Orchid = lazy(() => import("./pages/Orchid"));
 
 /**
  * Wraps a lazy route in its own Suspense boundary.
@@ -75,15 +73,6 @@ function App() {
                 {/* Pages with Header only (no Footer) */}
                 <Route element={<AppLayoutNoFooter />}>
                   <Route path="/updates" element={<Updates />} />
-                  {/* Standalone play surface — no tab context needed. */}
-                  <Route
-                    path="/orchid"
-                    element={
-                      <LazyRoute>
-                        <Orchid />
-                      </LazyRoute>
-                    }
-                  />
                 </Route>
 
                 {/* Authenticated pages with sidebar */}
