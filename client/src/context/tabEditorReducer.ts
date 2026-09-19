@@ -31,6 +31,9 @@ import {
   moveMeasure,
   resolveMoveTarget,
   resizeFrames,
+  nudgeFrameRange,
+  moveFrameRangeToMeasure,
+  type FrameRange,
 } from "../utils/tabOperations";
 import {
   createTrack,
@@ -117,6 +120,8 @@ export type TabEditorAction =
   | { type: "SET_NOTE_FRET"; payload: { section: number; measure: number; frame: number; string: number; fret: number } }
   | { type: "SET_NOTE_STYLE"; payload: { section: number; measure: number; frame: number; string: number; style: NoteStyleType } }
   | { type: "EXTEND_SELECTION"; payload: { section: number; measure: number; frame: number } }
+  | { type: "MOVE_FRAMES"; payload: { direction: "left" | "right" } }
+  | { type: "MOVE_FRAMES_TO_MEASURE"; payload: { delta: -1 | 1 } }
   | { type: "ADD_SECTION"; payload: { index: number; name: string } }
   | { type: "RENAME_SECTION"; payload: { index: number; name: string } }
   | { type: "DELETE_SECTION"; payload: { index: number } }
@@ -179,6 +184,60 @@ function withBody(state: TabEditorState, body: TabBodyType): TabEditorState {
     tracks: state.tracks.map((track, i) =>
       i === state.activeTrack ? { ...track, body } : track
     ),
+  };
+}
+
+/**
+ * The block a move acts on: the selection when it sits within one measure, otherwise the
+ * cursor's single frame. Cross-measure selections fall back to the single frame rather
+ * than attempting a move whose shape isn't well defined.
+ */
+function currentRange(state: TabEditorState): FrameRange {
+  const { selection, position } = state;
+  if (
+    selection &&
+    selection.anchor.section === selection.head.section &&
+    selection.anchor.measure === selection.head.measure
+  ) {
+    return {
+      section: selection.anchor.section,
+      measure: selection.anchor.measure,
+      start: Math.min(selection.anchor.frame, selection.head.frame),
+      end: Math.max(selection.anchor.frame, selection.head.frame),
+    };
+  }
+  return {
+    section: position.section,
+    measure: position.measure,
+    start: position.frame,
+    end: position.frame,
+  };
+}
+
+/** Applies a move result: re-selects the moved block and lands the cursor on its end. */
+function stateAfterMove(
+  state: TabEditorState,
+  result: { tab: TabBodyType; range: FrameRange }
+): TabEditorState {
+  if (result.tab === activeBody(state)) return state;
+  const { range } = result;
+  const selection =
+    range.end > range.start
+      ? {
+          anchor: { section: range.section, measure: range.measure, frame: range.start, string: 0 },
+          head: { section: range.section, measure: range.measure, frame: range.end, string: 0 },
+        }
+      : null;
+  return {
+    ...withBody(state, result.tab),
+    position: {
+      section: range.section,
+      measure: range.measure,
+      frame: range.end,
+      string: state.position.string,
+    },
+    selection,
+    isEditing: true,
   };
 }
 
@@ -501,6 +560,18 @@ export function tabEditorReducer(state: TabEditorState, action: TabEditorAction)
         },
       };
     }
+
+    case "MOVE_FRAMES":
+      return stateAfterMove(
+        state,
+        nudgeFrameRange(activeBody(state), currentRange(state), action.payload.direction)
+      );
+
+    case "MOVE_FRAMES_TO_MEASURE":
+      return stateAfterMove(
+        state,
+        moveFrameRangeToMeasure(activeBody(state), currentRange(state), action.payload.delta)
+      );
 
     case "ADD_SECTION": {
       const { index, name } = action.payload;

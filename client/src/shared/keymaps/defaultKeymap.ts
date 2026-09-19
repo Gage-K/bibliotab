@@ -34,7 +34,11 @@ export type EditorAction =
   | "duplicateFrame"
   | "durationLonger"
   | "durationShorter"
-  | "toggleDot";
+  | "toggleDot"
+  | "moveFramesLeft"
+  | "moveFramesRight"
+  | "moveFramesToPrevMeasure"
+  | "moveFramesToNextMeasure";
 
 export type Keymap = Record<string, EditorAction>;
 
@@ -87,6 +91,12 @@ export const defaultKeymap: Keymap = {
   ".": "durationLonger",
   ",": "durationShorter",
   ";": "toggleDot",
+
+  // Move the selection (or current frame): < > nudge, [ ] to prev/next measure
+  "<": "moveFramesLeft",
+  ">": "moveFramesRight",
+  "[": "moveFramesToPrevMeasure",
+  "]": "moveFramesToNextMeasure",
 
   // Escape
   Escape: "escape",

@@ -471,6 +471,187 @@ export function resolveMoveTarget(
 }
 
 // ============================================================================
+// Moving a run of frames
+//
+// A FrameRange is a contiguous block of frames inside one measure (a single frame when
+// start === end). Nudging shifts it one position, hopping into the neighbouring measure
+// at a bar edge; "to measure" relocates it wholesale. Each op returns the new body and
+// where the block landed, so the caller can keep it selected.
+// ============================================================================
+
+export type FrameRange = {
+  section: number;
+  measure: number;
+  start: number;
+  end: number;
+};
+
+/** Replaces one measure's frames and reports the block's new range. */
+function withMeasureFrames(
+  tab: TabBodyType,
+  section: number,
+  measure: number,
+  frames: FrameType[],
+  range: FrameRange
+): { tab: TabBodyType; range: FrameRange } {
+  const next = {
+    ...tab,
+    sections: tab.sections.map((prevSection, s) =>
+      s !== section
+        ? prevSection
+        : {
+            ...prevSection,
+            measures: prevSection.measures.map((prevMeasure, m) =>
+              m === measure ? { ...prevMeasure, frames } : prevMeasure
+            ),
+          }
+    ),
+  };
+  return { tab: next, range };
+}
+
+/**
+ * Lifts the block out of its measure and drops it into `targetMeasure` (appended or
+ * prepended). If the source measure is left empty it is removed — but never the section's
+ * last measure. Returns the block's new range.
+ */
+function relocateBlock(
+  tab: TabBodyType,
+  range: FrameRange,
+  targetMeasure: number,
+  mode: "append" | "prepend"
+): { tab: TabBodyType; range: FrameRange } {
+  const section = tab.sections[range.section];
+  if (!section) return { tab, range };
+  const measures = section.measures;
+  const source = measures[range.measure];
+  const target = measures[targetMeasure];
+  if (!source || !target) return { tab, range };
+
+  const block = source.frames.slice(range.start, range.end + 1);
+  const remaining = [
+    ...source.frames.slice(0, range.start),
+    ...source.frames.slice(range.end + 1),
+  ];
+  const targetLenBefore = target.frames.length;
+
+  let newMeasures = measures.map((measure, m) => {
+    if (m === range.measure) return { ...measure, frames: remaining };
+    if (m === targetMeasure) {
+      return {
+        ...measure,
+        frames: mode === "append" ? [...measure.frames, ...block] : [...block, ...measure.frames],
+      };
+    }
+    return measure;
+  });
+
+  let landedMeasure = targetMeasure;
+  const sourceEmptied = remaining.length === 0;
+  if (sourceEmptied && newMeasures.length > 1) {
+    newMeasures = newMeasures.filter((_measure, m) => m !== range.measure);
+    if (range.measure < targetMeasure) landedMeasure = targetMeasure - 1;
+  }
+
+  const start = mode === "append" ? targetLenBefore : 0;
+  const newRange: FrameRange = {
+    section: range.section,
+    measure: landedMeasure,
+    start,
+    end: start + block.length - 1,
+  };
+
+  return {
+    tab: {
+      ...tab,
+      sections: tab.sections.map((prevSection, s) =>
+        s === range.section ? { ...prevSection, measures: newMeasures } : prevSection
+      ),
+    },
+    range: newRange,
+  };
+}
+
+/**
+ * Shifts a block one position left or right. Inside a measure it swaps with the single
+ * adjacent frame; at the measure's edge it hops into the neighbouring measure (to that
+ * measure's near end). A no-op — same tab and range — at the very start or end of a
+ * section.
+ */
+export function nudgeFrameRange(
+  tab: TabBodyType,
+  range: FrameRange,
+  direction: "left" | "right"
+): { tab: TabBodyType; range: FrameRange } {
+  const section = tab.sections[range.section];
+  const measure = section?.measures[range.measure];
+  if (!measure) return { tab, range };
+  const frames = measure.frames;
+  const { start, end } = range;
+  if (start < 0 || end >= frames.length || start > end) return { tab, range };
+
+  const block = frames.slice(start, end + 1);
+
+  if (direction === "left") {
+    if (start > 0) {
+      const before = frames[start - 1];
+      const newFrames = [
+        ...frames.slice(0, start - 1),
+        ...block,
+        before,
+        ...frames.slice(end + 1),
+      ];
+      return withMeasureFrames(tab, range.section, range.measure, newFrames, {
+        ...range,
+        start: start - 1,
+        end: end - 1,
+      });
+    }
+    if (range.measure > 0) {
+      return relocateBlock(tab, range, range.measure - 1, "append");
+    }
+    return { tab, range };
+  }
+
+  if (end < frames.length - 1) {
+    const after = frames[end + 1];
+    const newFrames = [
+      ...frames.slice(0, start),
+      after,
+      ...block,
+      ...frames.slice(end + 2),
+    ];
+    return withMeasureFrames(tab, range.section, range.measure, newFrames, {
+      ...range,
+      start: start + 1,
+      end: end + 1,
+    });
+  }
+  if (range.measure < section.measures.length - 1) {
+    return relocateBlock(tab, range, range.measure + 1, "prepend");
+  }
+  return { tab, range };
+}
+
+/**
+ * Relocates a block to the previous or next measure in its section — to the end of the
+ * previous measure, or the start of the next. A no-op at the section's first/last measure.
+ */
+export function moveFrameRangeToMeasure(
+  tab: TabBodyType,
+  range: FrameRange,
+  delta: -1 | 1
+): { tab: TabBodyType; range: FrameRange } {
+  const section = tab.sections[range.section];
+  if (!section) return { tab, range };
+  const targetMeasure = range.measure + delta;
+  if (targetMeasure < 0 || targetMeasure >= section.measures.length) {
+    return { tab, range };
+  }
+  return relocateBlock(tab, range, targetMeasure, delta > 0 ? "prepend" : "append");
+}
+
+// ============================================================================
 // Flattening — a single running index across every section
 // ============================================================================
 

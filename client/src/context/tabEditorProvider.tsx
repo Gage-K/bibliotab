@@ -614,6 +614,20 @@ export function TabEditorProvider({
           break;
         }
 
+        // Moving a run of frames (or the current frame when nothing is selected).
+        case "moveFramesLeft":
+          dispatch({ type: "MOVE_FRAMES", payload: { direction: "left" } });
+          break;
+        case "moveFramesRight":
+          dispatch({ type: "MOVE_FRAMES", payload: { direction: "right" } });
+          break;
+        case "moveFramesToPrevMeasure":
+          dispatch({ type: "MOVE_FRAMES_TO_MEASURE", payload: { delta: -1 } });
+          break;
+        case "moveFramesToNextMeasure":
+          dispatch({ type: "MOVE_FRAMES_TO_MEASURE", payload: { delta: 1 } });
+          break;
+
         // Escape
         case "escape":
           dispatch({ type: "SET_POSITION", payload: { section, measure, frame } });

@@ -8,6 +8,8 @@ import {
   renameSection,
   moveMeasure,
   resolveMoveTarget,
+  nudgeFrameRange,
+  moveFrameRangeToMeasure,
   insertMeasure,
   removeFrame,
   insertFrame,
@@ -328,6 +330,94 @@ describe("frame durations", () => {
     // 6/8 is three quarter notes' worth, not six.
     const threeQuarters = body({ name: "Intro", measures: [3] }).sections[0].measures[0];
     expect(measureIsComplete(threeQuarters, [6, 8])).toBe(true);
+  });
+});
+
+describe("moving a run of frames", () => {
+  // Section 0: measure [a b c d], measure [e f]. Frames labelled by id.
+  function labelled(): TabBodyType {
+    const frame = (id: string) => ({ id, notes: [] });
+    return {
+      sections: [
+        createSection("Intro", [
+          { frames: ["a", "b", "c", "d"].map(frame) },
+          { frames: ["e", "f"].map(frame) },
+        ]),
+      ],
+    };
+  }
+  const ids = (tab: TabBodyType, m: number) =>
+    tab.sections[0].measures[m].frames.map((f) => f.id);
+
+  it("nudges a single frame right within a measure", () => {
+    const { tab, range } = nudgeFrameRange(
+      labelled(),
+      { section: 0, measure: 0, start: 1, end: 1 },
+      "right"
+    );
+    expect(ids(tab, 0)).toEqual(["a", "c", "b", "d"]);
+    expect(range).toMatchObject({ measure: 0, start: 2, end: 2 });
+  });
+
+  it("nudges a block left within a measure", () => {
+    const { tab, range } = nudgeFrameRange(
+      labelled(),
+      { section: 0, measure: 0, start: 1, end: 2 },
+      "left"
+    );
+    expect(ids(tab, 0)).toEqual(["b", "c", "a", "d"]);
+    expect(range).toMatchObject({ start: 0, end: 1 });
+  });
+
+  it("hops into the next measure at the right edge", () => {
+    const { tab, range } = nudgeFrameRange(
+      labelled(),
+      { section: 0, measure: 0, start: 3, end: 3 },
+      "right"
+    );
+    expect(ids(tab, 0)).toEqual(["a", "b", "c"]);
+    expect(ids(tab, 1)).toEqual(["d", "e", "f"]);
+    expect(range).toMatchObject({ measure: 1, start: 0, end: 0 });
+  });
+
+  it("hops into the previous measure at the left edge", () => {
+    const { tab, range } = nudgeFrameRange(
+      labelled(),
+      { section: 0, measure: 1, start: 0, end: 0 },
+      "left"
+    );
+    expect(ids(tab, 0)).toEqual(["a", "b", "c", "d", "e"]);
+    expect(ids(tab, 1)).toEqual(["f"]);
+    expect(range).toMatchObject({ measure: 0, start: 4, end: 4 });
+  });
+
+  it("no-ops at the section's very start", () => {
+    const start = labelled();
+    expect(
+      nudgeFrameRange(start, { section: 0, measure: 0, start: 0, end: 0 }, "left").tab
+    ).toBe(start);
+  });
+
+  it("moves a block to the next measure, prepending", () => {
+    const { tab, range } = moveFrameRangeToMeasure(
+      labelled(),
+      { section: 0, measure: 0, start: 0, end: 1 },
+      1
+    );
+    expect(ids(tab, 0)).toEqual(["c", "d"]);
+    expect(ids(tab, 1)).toEqual(["a", "b", "e", "f"]);
+    expect(range).toMatchObject({ measure: 1, start: 0, end: 1 });
+  });
+
+  it("drops a measure emptied by the move", () => {
+    const { tab, range } = moveFrameRangeToMeasure(
+      labelled(),
+      { section: 0, measure: 1, start: 0, end: 1 },
+      -1
+    );
+    expect(tab.sections[0].measures).toHaveLength(1);
+    expect(ids(tab, 0)).toEqual(["a", "b", "c", "d", "e", "f"]);
+    expect(range).toMatchObject({ measure: 0, start: 4, end: 5 });
   });
 });
 
