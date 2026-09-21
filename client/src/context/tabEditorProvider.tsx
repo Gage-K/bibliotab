@@ -88,6 +88,8 @@ interface TabEditorContextType {
   addNewMeasure: (section: number, measure: number) => void;
   addNewFrame: (section: number, measure: number, frame: number, isEmpty: boolean) => void;
   addFrameAndAdvance: (section: number, measure: number, frame: number, isEmpty: boolean) => void;
+  /** Duplicates the current selection, or the cursor's frame when nothing is selected. */
+  duplicateFrames: () => void;
   deleteMeasure: (section: number, measure: number) => void;
   deleteFrame: (section: number, measure: number, frame: number) => void;
   updateTabData: (section: number, measure: number, frame: number, formData: NoteFretType[]) => void;
@@ -304,6 +306,10 @@ export function TabEditorProvider({
 
   function addFrameAndAdvance(section: number, measure: number, frame: number, isEmpty: boolean) {
     dispatch({ type: "ADD_FRAME_AND_ADVANCE", payload: { section, measure, frame, isEmpty } });
+  }
+
+  function duplicateFrames() {
+    dispatch({ type: "DUPLICATE_FRAMES" });
   }
 
   function deleteMeasure(section: number, measure: number) {
@@ -574,7 +580,7 @@ export function TabEditorProvider({
           dispatch({ type: "ADD_FRAME", payload: { section, measure, frame, isEmpty: true } });
           break;
         case "duplicateFrame":
-          dispatch({ type: "ADD_FRAME_AND_ADVANCE", payload: { section, measure, frame, isEmpty: false } });
+          dispatch({ type: "DUPLICATE_FRAMES" });
           break;
         case "addMeasureBefore":
           dispatch({ type: "ADD_MEASURE", payload: { section, measure } });
@@ -674,6 +680,7 @@ export function TabEditorProvider({
         addNewMeasure,
         addNewFrame,
         addFrameAndAdvance,
+        duplicateFrames,
         deleteMeasure,
         deleteFrame,
         updateTabData,

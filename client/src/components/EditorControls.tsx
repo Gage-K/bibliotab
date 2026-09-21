@@ -35,6 +35,7 @@ export default function EditorControls() {
     handleOpeningEditor,
     updatePosition,
     addFrameAndAdvance,
+    duplicateFrames,
     deleteFrame,
     addNewMeasure,
     addSection,
@@ -48,7 +49,7 @@ export default function EditorControls() {
 
   const movePrev = () => updatePosition(section, measure, frame - 1);
   const moveNext = () => updatePosition(section, measure, frame + 1);
-  const duplicate = () => addFrameAndAdvance(section, measure, frame, false);
+  const duplicate = () => duplicateFrames();
   const insertFrame = () => addFrameAndAdvance(section, measure, frame, true);
   const insertMeasure = () => addNewMeasure(section, measure + 1);
   const handleDeleteFrame = () => deleteFrame(section, measure, frame);

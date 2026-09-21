@@ -651,6 +651,97 @@ export function moveFrameRangeToMeasure(
   return relocateBlock(tab, range, targetMeasure, delta > 0 ? "prepend" : "append");
 }
 
+/**
+ * Deletes the frames in a range. If that empties the measure it is removed (unless it is
+ * the section's only measure, in which case the section is removed — or, for the last
+ * section, the measure is reset to a single empty frame). Returns where the cursor should
+ * land.
+ */
+export function deleteFrameRange(
+  tab: TabBodyType,
+  range: FrameRange
+): { tab: TabBodyType; position: TabPositionType } {
+  const fallback: TabPositionType = {
+    section: range.section,
+    measure: range.measure,
+    frame: 0,
+    string: 0,
+  };
+  const section = tab.sections[range.section];
+  const measure = section?.measures[range.measure];
+  if (!measure) return { tab, position: fallback };
+
+  const remaining = [
+    ...measure.frames.slice(0, range.start),
+    ...measure.frames.slice(range.end + 1),
+  ];
+
+  if (remaining.length > 0) {
+    const { tab: next } = withMeasureFrames(
+      tab,
+      range.section,
+      range.measure,
+      remaining,
+      range
+    );
+    const frame = Math.min(range.start, remaining.length - 1);
+    return {
+      tab: next,
+      position: { section: range.section, measure: range.measure, frame, string: 0 },
+    };
+  }
+
+  // The measure is now empty.
+  if (section.measures.length > 1) {
+    const newMeasures = section.measures.filter((_measure, m) => m !== range.measure);
+    const next = mapSectionMeasures(tab, range.section, () => newMeasures);
+    const prevMeasure = Math.max(range.measure - 1, 0);
+    const frame = Math.max(newMeasures[prevMeasure].frames.length - 1, 0);
+    return {
+      tab: next,
+      position: { section: range.section, measure: prevMeasure, frame, string: 0 },
+    };
+  }
+
+  if (tab.sections.length > 1) {
+    const next = removeSection(tab, range.section);
+    const newSection = Math.min(range.section, next.sections.length - 1);
+    return { tab: next, position: { section: newSection, measure: 0, frame: 0, string: 0 } };
+  }
+
+  // The only measure of the only section: never leave the tab empty.
+  const empty = createEmptyFrame(bodyStringCount(tab));
+  const { tab: next } = withMeasureFrames(tab, range.section, range.measure, [empty], range);
+  return { tab: next, position: fallback };
+}
+
+/**
+ * Duplicates a range of frames, inserting fresh-id copies right after it. Returns the new
+ * range covering the copies, so the caller can leave them selected.
+ */
+export function duplicateFrameRange(
+  tab: TabBodyType,
+  range: FrameRange
+): { tab: TabBodyType; range: FrameRange } {
+  const measure = tab.sections[range.section]?.measures[range.measure];
+  if (!measure) return { tab, range };
+  const block = measure.frames.slice(range.start, range.end + 1);
+  if (block.length === 0) return { tab, range };
+
+  const copies = block.map((frame) => ({ ...frame, id: nanoid() }));
+  const newFrames = [
+    ...measure.frames.slice(0, range.end + 1),
+    ...copies,
+    ...measure.frames.slice(range.end + 1),
+  ];
+  return withMeasureFrames(tab, range.section, range.measure, newFrames, {
+    section: range.section,
+    measure: range.measure,
+    start: range.end + 1,
+    end: range.end + copies.length,
+  });
+}
+
 // ============================================================================
 // Flattening — a single running index across every section
 // ============================================================================

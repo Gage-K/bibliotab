@@ -10,6 +10,8 @@ import {
   resolveMoveTarget,
   nudgeFrameRange,
   moveFrameRangeToMeasure,
+  deleteFrameRange,
+  duplicateFrameRange,
   insertMeasure,
   removeFrame,
   insertFrame,
@@ -418,6 +420,68 @@ describe("moving a run of frames", () => {
     expect(tab.sections[0].measures).toHaveLength(1);
     expect(ids(tab, 0)).toEqual(["a", "b", "c", "d", "e", "f"]);
     expect(range).toMatchObject({ measure: 0, start: 4, end: 5 });
+  });
+});
+
+describe("deleting and duplicating a run of frames", () => {
+  const frame = (id: string) => ({ id, notes: [] });
+  const twoMeasure = (): TabBodyType => ({
+    sections: [
+      createSection("Intro", [
+        { frames: ["a", "b", "c", "d"].map(frame) },
+        { frames: ["e", "f"].map(frame) },
+      ]),
+    ],
+  });
+  const ids = (tab: TabBodyType, m: number) =>
+    tab.sections[0].measures[m].frames.map((f) => f.id);
+
+  it("deletes a range within a measure and lands the cursor on it", () => {
+    const { tab, position } = deleteFrameRange(twoMeasure(), {
+      section: 0,
+      measure: 0,
+      start: 1,
+      end: 2,
+    });
+    expect(ids(tab, 0)).toEqual(["a", "d"]);
+    expect(position).toMatchObject({ section: 0, measure: 0, frame: 1 });
+  });
+
+  it("drops a measure emptied by the delete", () => {
+    const { tab } = deleteFrameRange(twoMeasure(), {
+      section: 0,
+      measure: 0,
+      start: 0,
+      end: 3,
+    });
+    expect(tab.sections[0].measures).toHaveLength(1);
+    expect(ids(tab, 0)).toEqual(["e", "f"]);
+  });
+
+  it("keeps one empty frame rather than empty the only measure", () => {
+    const only: TabBodyType = {
+      sections: [createSection("Intro", [{ frames: ["a", "b"].map(frame) }])],
+    };
+    const { tab } = deleteFrameRange(only, { section: 0, measure: 0, start: 0, end: 1 });
+    expect(tab.sections[0].measures[0].frames).toHaveLength(1);
+    expect(tab.sections[0].measures[0].frames[0].id).not.toBe("a");
+  });
+
+  it("duplicates a range, inserting fresh-id copies after it", () => {
+    const { tab, range } = duplicateFrameRange(twoMeasure(), {
+      section: 0,
+      measure: 0,
+      start: 1,
+      end: 2,
+    });
+    const result = ids(tab, 0);
+    expect(result).toHaveLength(6);
+    expect(result.slice(0, 3)).toEqual(["a", "b", "c"]);
+    expect(result[5]).toBe("d");
+    // The two inserted frames are copies with new ids.
+    expect(result[3]).not.toBe("b");
+    expect(result[4]).not.toBe("c");
+    expect(range).toMatchObject({ measure: 0, start: 3, end: 4 });
   });
 });
 

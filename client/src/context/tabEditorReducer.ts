@@ -33,6 +33,8 @@ import {
   resizeFrames,
   nudgeFrameRange,
   moveFrameRangeToMeasure,
+  deleteFrameRange,
+  duplicateFrameRange,
   type FrameRange,
 } from "../utils/tabOperations";
 import {
@@ -122,6 +124,7 @@ export type TabEditorAction =
   | { type: "EXTEND_SELECTION"; payload: { section: number; measure: number; frame: number } }
   | { type: "MOVE_FRAMES"; payload: { direction: "left" | "right" } }
   | { type: "MOVE_FRAMES_TO_MEASURE"; payload: { delta: -1 | 1 } }
+  | { type: "DUPLICATE_FRAMES" }
   | { type: "ADD_SECTION"; payload: { index: number; name: string } }
   | { type: "RENAME_SECTION"; payload: { index: number; name: string } }
   | { type: "DELETE_SECTION"; payload: { index: number } }
@@ -391,6 +394,19 @@ export function tabEditorReducer(state: TabEditorState, action: TabEditorAction)
     }
 
     case "DELETE_FRAME": {
+      // A multi-frame selection deletes the whole run in one go.
+      const range = currentRange(state);
+      if (range.end > range.start) {
+        const result = deleteFrameRange(activeBody(state), range);
+        if (result.tab === activeBody(state)) return state;
+        return {
+          ...withBody(state, result.tab),
+          position: result.position,
+          selection: null,
+          isEditing: true,
+        };
+      }
+
       const { section, measure, frame } = action.payload;
 
       if (isOnlyFrame(activeBody(state), section, measure)) {
@@ -571,6 +587,13 @@ export function tabEditorReducer(state: TabEditorState, action: TabEditorAction)
       return stateAfterMove(
         state,
         moveFrameRangeToMeasure(activeBody(state), currentRange(state), action.payload.delta)
+      );
+
+    case "DUPLICATE_FRAMES":
+      // Duplicates the selection (or the cursor's frame) and leaves the copies selected.
+      return stateAfterMove(
+        state,
+        duplicateFrameRange(activeBody(state), currentRange(state))
       );
 
     case "ADD_SECTION": {
