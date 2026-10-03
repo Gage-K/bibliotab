@@ -110,11 +110,7 @@ export function useTabPlayback({
         Tone.getTransport().schedule((time) => {
           const notes = frameToNotes(frame, track);
           if (notes.length > 0) {
-            voice.synth.triggerAttackRelease(
-              notes,
-              seconds * NOTE_LENGTH_RATIO,
-              time,
-            );
+            voice.triggerAttackRelease(notes, seconds * NOTE_LENGTH_RATIO, time);
           }
           if (isActive) {
             // Draw defers to the animation frame nearest `time`, which keeps the

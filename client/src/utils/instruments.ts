@@ -17,51 +17,74 @@ type DeepPartial<T> = {
   [K in keyof T]?: T[K] extends object ? DeepPartial<T[K]> : T[K];
 };
 
+/**
+ * A playable voice. The caller doesn't care whether it is a plucked-string model or a
+ * subtractive synth underneath — it just triggers notes and disposes when done.
+ */
 export type VoiceHandle = {
-  synth: Tone.PolySynth;
+  triggerAttackRelease: (
+    notes: string | string[],
+    duration: number,
+    time: number,
+  ) => void;
   /** Everything the voice owns, disposed together. */
   dispose: () => void;
 };
 
 /**
- * Synth presets. A plucked string is mostly a fast attack and a decaying envelope over
- * a bright-ish oscillator; the differences between these are mostly envelope shape and
- * how much high end survives the filter.
+ * Plucked strings (guitar, bass, ukulele) use Karplus–Strong synthesis — Tone.PluckSynth
+ * — which models a struck string rather than approximating one with an oscillator and an
+ * envelope. It sounds far more like the real thing, and its sharp transient keeps fast
+ * passages rhythmically crisp instead of smearing. No samples to load.
  */
-const VOICES: Record<
-  InstrumentVoiceId,
-  {
-    options: DeepPartial<Tone.SynthOptions>;
-    /** Cutoff of the per-voice tone-shaping filter, in Hz. */
-    cutoff: number;
-    volume: number;
-  }
-> = {
+type PluckPreset = {
+  kind: "pluck";
+  /** Noise burst that excites the string — higher is a brighter, harder pluck. */
+  attackNoise: number;
+  /** Damping filter in the feedback loop; higher keeps more highs and rings longer. */
+  dampening: number;
+  /** Feedback amount (0–1); higher sustains longer. */
+  resonance: number;
+  /** Cutoff of the tone-shaping filter after the string, in Hz. */
+  cutoff: number;
+  volume: number;
+};
+
+/** Keyboard/pad voices stay subtractive — there's no string to model. */
+type SynthPreset = {
+  kind: "synth";
+  options: DeepPartial<Tone.SynthOptions>;
+  cutoff: number;
+  volume: number;
+};
+
+const VOICES: Record<InstrumentVoiceId, PluckPreset | SynthPreset> = {
   guitar: {
-    options: {
-      oscillator: { type: "fmsawtooth", modulationType: "sine", harmonicity: 0.5 },
-      envelope: { attack: 0.005, decay: 0.9, sustain: 0.08, release: 0.9 },
-    },
-    cutoff: 3200,
-    volume: -12,
+    kind: "pluck",
+    attackNoise: 0.9,
+    dampening: 4200,
+    resonance: 0.95,
+    cutoff: 6000,
+    volume: -5,
   },
   bass: {
-    options: {
-      oscillator: { type: "fmsquare", modulationType: "sine", harmonicity: 0.4 },
-      envelope: { attack: 0.01, decay: 0.7, sustain: 0.15, release: 0.6 },
-    },
-    cutoff: 900,
-    volume: -8,
+    kind: "pluck",
+    attackNoise: 0.7,
+    dampening: 1500,
+    resonance: 0.96,
+    cutoff: 2600,
+    volume: -3,
   },
   ukulele: {
-    options: {
-      oscillator: { type: "triangle" },
-      envelope: { attack: 0.004, decay: 0.5, sustain: 0.03, release: 0.5 },
-    },
-    cutoff: 4500,
-    volume: -13,
+    kind: "pluck",
+    attackNoise: 1.1,
+    dampening: 5200,
+    resonance: 0.9,
+    cutoff: 7000,
+    volume: -8,
   },
   electricPiano: {
+    kind: "synth",
     options: {
       oscillator: { type: "fmsine", modulationType: "sine", harmonicity: 3.01 },
       envelope: { attack: 0.006, decay: 1.6, sustain: 0.12, release: 1.4 },
@@ -70,6 +93,7 @@ const VOICES: Record<
     volume: -11,
   },
   fm: {
+    kind: "synth",
     options: {
       oscillator: { type: "fmsine", modulationType: "square", harmonicity: 1.5 },
       envelope: { attack: 0.02, decay: 0.6, sustain: 0.3, release: 1.2 },
@@ -78,6 +102,7 @@ const VOICES: Record<
     volume: -14,
   },
   pad: {
+    kind: "synth",
     options: {
       oscillator: { type: "fatsawtooth", count: 3, spread: 30 },
       envelope: { attack: 0.6, decay: 1.4, sustain: 0.6, release: 2.4 },
@@ -86,6 +111,10 @@ const VOICES: Record<
     volume: -18,
   },
 };
+
+/** One PluckSynth is monophonic, so a chord needs several. Enough for a six-string
+ * chord plus a little overlap into the next one. */
+const PLUCK_POLYPHONY = 10;
 
 /** Maps a track's free-text instrument onto a voice, falling back to guitar. */
 export function voiceForInstrument(instrument: string): InstrumentVoiceId {
@@ -110,18 +139,45 @@ export function createVoice(
 ): VoiceHandle {
   const preset = VOICES[id] ?? VOICES.guitar;
   const filter = new tone.Filter(preset.cutoff, "lowpass");
-  const synth = new tone.PolySynth(tone.Synth, preset.options as never);
-  synth.volume.value = preset.volume;
+  if (destination) filter.connect(destination);
+  else filter.toDestination();
 
-  synth.connect(filter);
-  if (destination) {
-    filter.connect(destination);
-  } else {
-    filter.toDestination();
+  if (preset.kind === "pluck") {
+    // A round-robin pool of monophonic strings. Each note of a chord lands on the next
+    // string; retriggering an older one just cuts it, which is what caps the ring.
+    const strings = Array.from({ length: PLUCK_POLYPHONY }, () => {
+      const pluck = new tone.PluckSynth({
+        attackNoise: preset.attackNoise,
+        dampening: preset.dampening,
+        resonance: preset.resonance,
+      });
+      pluck.volume.value = preset.volume;
+      pluck.connect(filter);
+      return pluck;
+    });
+
+    let next = 0;
+    return {
+      triggerAttackRelease: (notes, duration, time) => {
+        const list = Array.isArray(notes) ? notes : [notes];
+        for (const note of list) {
+          strings[next % strings.length].triggerAttackRelease(note, duration, time);
+          next++;
+        }
+      },
+      dispose: () => {
+        strings.forEach((string) => string.dispose());
+        filter.dispose();
+      },
+    };
   }
 
+  const synth = new tone.PolySynth(tone.Synth, preset.options as never);
+  synth.volume.value = preset.volume;
+  synth.connect(filter);
   return {
-    synth,
+    triggerAttackRelease: (notes, duration, time) =>
+      synth.triggerAttackRelease(notes, duration, time),
     dispose: () => {
       synth.dispose();
       filter.dispose();
