@@ -61,10 +61,12 @@ type SynthPreset = {
 const VOICES: Record<InstrumentVoiceId, PluckPreset | SynthPreset> = {
   guitar: {
     kind: "pluck",
-    attackNoise: 0.9,
-    dampening: 4200,
-    resonance: 0.95,
-    cutoff: 6000,
+    // Warmer and rounder than a bright acoustic: a softer pluck (less attack noise), a
+    // darker string (lower dampening), and a filter that rolls off the metallic highs.
+    attackNoise: 0.5,
+    dampening: 2600,
+    resonance: 0.93,
+    cutoff: 3400,
     volume: -5,
   },
   bass: {
