@@ -28,7 +28,6 @@ import {
   measureTimeSignature,
   measureBeats,
   measureIsComplete,
-  findFrameById,
   updateFrameNotes,
   frameOrdinal,
   sectionMeasureOffset,
@@ -544,36 +543,15 @@ describe("per-measure time signature", () => {
   });
 });
 
-describe("frame lookup by id", () => {
-  const tab = body(
-    { name: "Intro", measures: [2, 1] },
-    { name: "Verse", measures: [1, 2] },
-  );
-
-  it("finds a frame anywhere in the body", () => {
-    const target = tab.sections[1].measures[1].frames[1];
-    expect(findFrameById(tab, target.id)).toEqual({
-      section: 1,
-      measure: 1,
-      frame: 1,
-      string: 0,
-    });
-  });
-
-  it("returns null for an id that is not there", () => {
-    // A stale frame id (its frame deleted) must go inert, not resolve to a neighbour.
-    expect(findFrameById(tab, "gone")).toBeNull();
-  });
-
-  it("keeps ids stable across a measure move, so anchors survive", () => {
+describe("frame ids", () => {
+  it("survive a measure move, so the display keeps each frame's element", () => {
+    const tab = body(
+      { name: "Intro", measures: [2, 1] },
+      { name: "Verse", measures: [1, 2] },
+    );
     const movedId = tab.sections[0].measures[0].frames[0].id;
     const moved = moveMeasure(tab, { section: 0, measure: 0 }, { section: 1, measure: 0 });
 
-    expect(findFrameById(moved, movedId)).toEqual({
-      section: 1,
-      measure: 0,
-      frame: 0,
-      string: 0,
-    });
+    expect(moved.sections[1].measures[0].frames[0].id).toBe(movedId);
   });
 });

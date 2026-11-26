@@ -6,21 +6,13 @@ import {
   useReducer,
   useRef,
   useState,
+  type Dispatch,
 } from "react";
-import {
-  createEmptyFrame,
-  frameDuration,
-  getFrame,
-  stepDuration,
-  toggleDot,
-} from "../utils/tabOperations";
 import { useTab, useUpdateTab } from "../hooks/useTabs";
 import { useEditorKeybindings } from "../hooks/useEditorKeybindings";
 import type { EditorAction } from "../shared/keymaps/defaultKeymap";
 import type {
-  FrameType,
   NoteFretType,
-  NoteStyleType,
   TabBodyType,
   TimeSignatureType,
   TrackType,
@@ -36,6 +28,7 @@ import {
   tabEditorReducer,
   initialTabEditorState,
   activeBody,
+  type TabEditorAction,
 } from "./tabEditorReducer";
 import { trackStringCount } from "../utils/trackOperations";
 import { createFretEntry } from "../utils/fretEntry";
@@ -44,16 +37,82 @@ import { useTabPlayback } from "../hooks/useTabPlayback";
 
 type MeasureRef = { section: number; measure: number };
 
-const FRET_DIGIT_PREFIX = "fretDigit";
+/**
+ * The edits the editor offers its components. Each one only dispatches, so the object is
+ * built once per editor and never changes. Adding an edit is one entry here plus its
+ * case in the reducer.
+ */
+function createCommands(dispatch: Dispatch<TabEditorAction>) {
+  return {
+    /** Song or artist. Tuning belongs to a track: see setTrackTuning. */
+    updateDetails: (name: string, value: string) =>
+      dispatch({ type: "UPDATE_DETAILS", payload: { name, value } }),
+    setNotes: (notes: string) => dispatch({ type: "SET_NOTES", payload: { notes } }),
+    setBpm: (bpm: number) => dispatch({ type: "SET_BPM", payload: { bpm } }),
+    setTimeSignature: (timeSignature: TimeSignatureType) =>
+      dispatch({ type: "SET_TIME_SIGNATURE", payload: { timeSignature } }),
 
-/** The digit a number-key action stands for, or null for any other action. */
-function fretDigit(action: EditorAction): number | null {
-  return action.startsWith(FRET_DIGIT_PREFIX)
-    ? Number(action.slice(FRET_DIGIT_PREFIX.length))
-    : null;
+    /**
+     * Moves the cursor: a frame, measure, or string at a time (crossing measure and
+     * section boundaries), or straight to a frame. See utils/cursor.
+     */
+    moveCursor: (motion: CursorMotion) => dispatch({ type: "MOVE_CURSOR", payload: motion }),
+
+    updateTabData: (section: number, measure: number, frame: number, formData: NoteFretType[]) =>
+      dispatch({ type: "UPDATE_TAB_FRAME", payload: { section, measure, frame, formData } }),
+    setFrameDuration: (section: number, measure: number, frame: number, duration: number) =>
+      dispatch({ type: "SET_FRAME_DURATION", payload: { section, measure, frame, duration } }),
+    setFrameRest: (section: number, measure: number, frame: number, isRest: boolean) =>
+      dispatch({ type: "SET_FRAME_REST", payload: { section, measure, frame, isRest } }),
+    /** A meter for one measure, or null to inherit the tab's. */
+    setMeasureTimeSignature: (
+      section: number,
+      measure: number,
+      timeSignature: TimeSignatureType | null,
+    ) =>
+      dispatch({ type: "SET_MEASURE_TIME_SIGNATURE", payload: { section, measure, timeSignature } }),
+
+    /** Inserts a frame after `frame` and moves the cursor onto it. */
+    addFrameAndAdvance: (section: number, measure: number, frame: number, isEmpty: boolean) =>
+      dispatch({ type: "ADD_FRAME_AND_ADVANCE", payload: { section, measure, frame, isEmpty } }),
+    /** Duplicates the selection, or the cursor's frame when nothing is selected. */
+    duplicateFrames: () => dispatch({ type: "DUPLICATE_FRAMES" }),
+    /** Deletes the selection, or this frame when nothing is selected. */
+    deleteFrame: (section: number, measure: number, frame: number) =>
+      dispatch({ type: "DELETE_FRAME", payload: { section, measure, frame } }),
+    /** Inserts an empty measure at index `measure` of the section. */
+    addNewMeasure: (section: number, measure: number) =>
+      dispatch({ type: "ADD_MEASURE", payload: { section, measure } }),
+    moveMeasure: (from: MeasureRef, to: MeasureRef) =>
+      dispatch({ type: "MOVE_MEASURE", payload: { from, to } }),
+
+    addSection: (index: number, name: string) =>
+      dispatch({ type: "ADD_SECTION", payload: { index, name } }),
+    renameSection: (index: number, name: string) =>
+      dispatch({ type: "RENAME_SECTION", payload: { index, name } }),
+    deleteSection: (index: number) => dispatch({ type: "DELETE_SECTION", payload: { index } }),
+
+    setActiveTrack: (index: number) => dispatch({ type: "SET_ACTIVE_TRACK", payload: { index } }),
+    addTrack: (options: {
+      name: string;
+      instrument: string;
+      tuning: TuningType;
+      octaves?: number[];
+    }) => dispatch({ type: "ADD_TRACK", payload: options }),
+    removeTrack: (index: number) => dispatch({ type: "REMOVE_TRACK", payload: { index } }),
+    renameTrack: (index: number, name: string) =>
+      dispatch({ type: "RENAME_TRACK", payload: { index, name } }),
+    setTrackTuning: (
+      index: number,
+      tuning: TuningType,
+      options?: { instrument?: string; octaves?: number[] },
+    ) => dispatch({ type: "SET_TRACK_TUNING", payload: { index, tuning, ...options } }),
+
+    handleOpeningEditor: () => dispatch({ type: "TOGGLE_EDITOR" }),
+  };
 }
 
-interface TabEditorContextType {
+interface TabEditorContextType extends ReturnType<typeof createCommands> {
   /** The active track's body — what the tab display and editing actions operate on. */
   tab: TabBodyType;
   tracks: TrackType[];
@@ -75,66 +134,19 @@ interface TabEditorContextType {
   togglePlayback: () => void;
   /** Frames in the longest track — zero means there is nothing to play. */
   totalSteps: number;
-  updateDetails: (name: string, value: string) => void;
-  setNotes: (notes: string) => void;
-  /** Moves the cursor to a frame by id. A no-op if that frame no longer exists. */
-  goToFrameById: (frameId: string) => void;
-  setBpm: (bpm: number) => void;
-  setTimeSignature: (timeSignature: TimeSignatureType) => void;
-  setFrameDuration: (
-    section: number,
-    measure: number,
-    frame: number,
-    duration: number,
-  ) => void;
-  setFrameRest: (
-    section: number,
-    measure: number,
-    frame: number,
-    isRest: boolean,
-  ) => void;
-  setMeasureTimeSignature: (
-    section: number,
-    measure: number,
-    timeSignature: TimeSignatureType | null,
-  ) => void;
   saveChanges: () => Promise<void>;
-  handleOpeningEditor: () => void;
-  /**
-   * Moves the cursor: a frame, measure, or string at a time (crossing measure and
-   * section boundaries), or straight to a frame. See utils/cursor.
-   */
-  moveCursor: (motion: CursorMotion) => void;
-  getEmptyFrame: () => FrameType;
-  addNewMeasure: (section: number, measure: number) => void;
-  addNewFrame: (section: number, measure: number, frame: number, isEmpty: boolean) => void;
-  addFrameAndAdvance: (section: number, measure: number, frame: number, isEmpty: boolean) => void;
-  /** Duplicates the current selection, or the cursor's frame when nothing is selected. */
-  duplicateFrames: () => void;
-  deleteMeasure: (section: number, measure: number) => void;
-  deleteFrame: (section: number, measure: number, frame: number) => void;
-  updateTabData: (section: number, measure: number, frame: number, formData: NoteFretType[]) => void;
-  addSection: (index: number, name: string) => void;
-  renameSection: (index: number, name: string) => void;
-  deleteSection: (index: number) => void;
-  moveMeasure: (from: MeasureRef, to: MeasureRef) => void;
-  setActiveTrack: (index: number) => void;
-  addTrack: (options: {
-    name: string;
-    instrument: string;
-    tuning: TuningType;
-    octaves?: number[];
-  }) => void;
-  removeTrack: (index: number) => void;
-  renameTrack: (index: number, name: string) => void;
-  setTrackTuning: (
-    index: number,
-    tuning: TuningType,
-    options?: { instrument?: string; octaves?: number[] },
-  ) => void;
 }
 
 const TabEditorContext = createContext<TabEditorContextType | null>(null);
+
+const FRET_DIGIT_PREFIX = "fretDigit";
+
+/** The digit a number-key action stands for, or null for any other action. */
+function fretDigit(action: EditorAction): number | null {
+  return action.startsWith(FRET_DIGIT_PREFIX)
+    ? Number(action.slice(FRET_DIGIT_PREFIX.length))
+    : null;
+}
 
 export function TabEditorProvider({
   tabId,
@@ -151,6 +163,7 @@ export function TabEditorProvider({
 }) {
   const isDemo = !!demoData;
   const [state, dispatch] = useReducer(tabEditorReducer, initialTabEditorState);
+  const [commands] = useState(() => createCommands(dispatch));
   const {
     tracks,
     activeTrack,
@@ -206,84 +219,6 @@ export function TabEditorProvider({
   const isLoading = isDemo ? false : isQueryLoading || tracks.length === 0;
   const stringCount = trackStringCount(track);
 
-  function updateDetails(name: string, value: string) {
-    dispatch({ type: "UPDATE_DETAILS", payload: { name, value } });
-  }
-
-  function setNotes(next: string) {
-    dispatch({ type: "SET_NOTES", payload: { notes: next } });
-  }
-
-  function goToFrameById(frameId: string) {
-    dispatch({ type: "GO_TO_FRAME", payload: { frameId } });
-  }
-
-  function setBpm(bpm: number) {
-    dispatch({ type: "SET_BPM", payload: { bpm } });
-  }
-
-  function setTimeSignature(timeSignature: TimeSignatureType) {
-    dispatch({ type: "SET_TIME_SIGNATURE", payload: { timeSignature } });
-  }
-
-  function setFrameDuration(
-    section: number,
-    measure: number,
-    frame: number,
-    duration: number,
-  ) {
-    dispatch({ type: "SET_FRAME_DURATION", payload: { section, measure, frame, duration } });
-  }
-
-  function setFrameRest(
-    section: number,
-    measure: number,
-    frame: number,
-    isRest: boolean,
-  ) {
-    dispatch({ type: "SET_FRAME_REST", payload: { section, measure, frame, isRest } });
-  }
-
-  function setMeasureTimeSignature(
-    section: number,
-    measure: number,
-    timeSignature: TimeSignatureType | null,
-  ) {
-    dispatch({
-      type: "SET_MEASURE_TIME_SIGNATURE",
-      payload: { section, measure, timeSignature },
-    });
-  }
-
-  function setActiveTrack(index: number) {
-    dispatch({ type: "SET_ACTIVE_TRACK", payload: { index } });
-  }
-
-  function addTrack(options: {
-    name: string;
-    instrument: string;
-    tuning: TuningType;
-    octaves?: number[];
-  }) {
-    dispatch({ type: "ADD_TRACK", payload: options });
-  }
-
-  function removeTrack(index: number) {
-    dispatch({ type: "REMOVE_TRACK", payload: { index } });
-  }
-
-  function renameTrack(index: number, name: string) {
-    dispatch({ type: "RENAME_TRACK", payload: { index, name } });
-  }
-
-  function setTrackTuning(
-    index: number,
-    tuning: TuningType,
-    options?: { instrument?: string; octaves?: number[] },
-  ) {
-    dispatch({ type: "SET_TRACK_TUNING", payload: { index, tuning, ...options } });
-  }
-
   async function saveChanges() {
     if (isDemo) return;
     dispatch({ type: "SAVE_START" });
@@ -310,80 +245,20 @@ export function TabEditorProvider({
     });
   }
 
-  function handleOpeningEditor() {
-    dispatch({ type: "TOGGLE_EDITOR" });
-  }
-
-  function moveCursor(motion: CursorMotion) {
-    dispatch({ type: "MOVE_CURSOR", payload: motion });
-  }
-
-  function addNewMeasure(section: number, measure: number) {
-    dispatch({ type: "ADD_MEASURE", payload: { section, measure } });
-  }
-
-  function addNewFrame(section: number, measure: number, frame: number, isEmpty: boolean) {
-    dispatch({ type: "ADD_FRAME", payload: { section, measure, frame, isEmpty } });
-  }
-
-  function addFrameAndAdvance(section: number, measure: number, frame: number, isEmpty: boolean) {
-    dispatch({ type: "ADD_FRAME_AND_ADVANCE", payload: { section, measure, frame, isEmpty } });
-  }
-
-  function duplicateFrames() {
-    dispatch({ type: "DUPLICATE_FRAMES" });
-  }
-
-  function deleteMeasure(section: number, measure: number) {
-    dispatch({ type: "DELETE_FRAME", payload: { section, measure, frame: 0 } });
-  }
-
-  function deleteFrame(section: number, measure: number, frame: number) {
-    dispatch({ type: "DELETE_FRAME", payload: { section, measure, frame } });
-  }
-
-  function updateTabData(
-    section: number,
-    measure: number,
-    frame: number,
-    formData: NoteFretType[]
-  ) {
-    dispatch({ type: "UPDATE_TAB_FRAME", payload: { section, measure, frame, formData } });
-  }
-
-  function addSection(index: number, name: string) {
-    dispatch({ type: "ADD_SECTION", payload: { index, name } });
-  }
-
-  function renameSection(index: number, name: string) {
-    dispatch({ type: "RENAME_SECTION", payload: { index, name } });
-  }
-
-  function deleteSection(index: number) {
-    dispatch({ type: "DELETE_SECTION", payload: { index } });
-  }
-
-  function moveMeasure(from: MeasureRef, to: MeasureRef) {
-    dispatch({ type: "MOVE_MEASURE", payload: { from, to } });
-  }
-
-  const getEmptyFrame = useCallback(
-    () => createEmptyFrame(stringCount),
-    [stringCount]
-  );
-
   // ==========================================================================
   // Playback
   //
   // Lives here rather than in the transport component because two consumers need it:
   // the transport button and the timeline's playhead.
   // ==========================================================================
-  const handlePlaybackStep = useCallback((step: TabPositionType) => {
-    dispatch({
-      type: "MOVE_CURSOR",
-      payload: { to: { section: step.section, measure: step.measure, frame: step.frame } },
-    });
-  }, []);
+  const handlePlaybackStep = useCallback(
+    (step: TabPositionType) => {
+      commands.moveCursor({
+        to: { section: step.section, measure: step.measure, frame: step.frame },
+      });
+    },
+    [commands],
+  );
 
   const {
     isPlaying,
@@ -406,28 +281,8 @@ export function TabEditorProvider({
   // A held digit must not commit into an editor that has gone away.
   useEffect(() => () => fretEntry.cancel(), [fretEntry]);
 
-  const toggleStyle = useCallback(
-    (style: NoteStyleType) => {
-      const currentFrame = getFrame(tab, position.section, position.measure, position.frame);
-      if (!currentFrame) return;
-      const note = currentFrame.notes[position.string];
-      if (!note || note.fret === FRET_EMPTY || note.fret === FRET_MUTED) return;
-
-      const newStyle: NoteStyleType = note.style === style ? "none" : style;
-      dispatch({
-        type: "SET_NOTE_STYLE",
-        payload: {
-          section: position.section,
-          measure: position.measure,
-          frame: position.frame,
-          string: position.string,
-          style: newStyle,
-        },
-      });
-    },
-    [tab, position]
-  );
-
+  // The keyboard. Edits that depend on what is under the cursor (styles, durations) are
+  // decided by the reducer, which sees state as it is now rather than as last drawn.
   const handleEditorAction = useCallback(
     (action: EditorAction) => {
       const { section, measure, frame } = position;
@@ -442,6 +297,7 @@ export function TabEditorProvider({
       if (action === "escape") fretEntry.cancel();
       else fretEntry.flush();
 
+      const { moveCursor } = commands;
       switch (action) {
         // Navigation
         case "moveUp":
@@ -479,37 +335,31 @@ export function TabEditorProvider({
 
         // Note operations
         case "clearNote":
-          dispatch({
-            type: "SET_NOTE_FRET",
-            payload: {
-              section,
-              measure,
-              frame,
-              string: position.string,
-              fret: FRET_EMPTY,
-            },
-          });
+          dispatch({ type: "SET_NOTE_FRET", payload: { ...position, fret: FRET_EMPTY } });
           break;
         case "muteNote":
-          dispatch({
-            type: "SET_NOTE_FRET",
-            payload: {
-              section,
-              measure,
-              frame,
-              string: position.string,
-              fret: FRET_MUTED,
-            },
-          });
+          dispatch({ type: "SET_NOTE_FRET", payload: { ...position, fret: FRET_MUTED } });
           break;
 
         // Styles
-        case "styleBend": toggleStyle("bend"); break;
-        case "styleSlide": toggleStyle("slide"); break;
-        case "styleHammerOn": toggleStyle("hammerOn"); break;
-        case "stylePullOff": toggleStyle("pullOff"); break;
-        case "styleHarmonic": toggleStyle("harmonic"); break;
-        case "styleTap": toggleStyle("tap"); break;
+        case "styleBend":
+          dispatch({ type: "TOGGLE_NOTE_STYLE", payload: { style: "bend" } });
+          break;
+        case "styleSlide":
+          dispatch({ type: "TOGGLE_NOTE_STYLE", payload: { style: "slide" } });
+          break;
+        case "styleHammerOn":
+          dispatch({ type: "TOGGLE_NOTE_STYLE", payload: { style: "hammerOn" } });
+          break;
+        case "stylePullOff":
+          dispatch({ type: "TOGGLE_NOTE_STYLE", payload: { style: "pullOff" } });
+          break;
+        case "styleHarmonic":
+          dispatch({ type: "TOGGLE_NOTE_STYLE", payload: { style: "harmonic" } });
+          break;
+        case "styleTap":
+          dispatch({ type: "TOGGLE_NOTE_STYLE", payload: { style: "tap" } });
+          break;
 
         // Inserts
         case "addFrameBefore":
@@ -536,31 +386,16 @@ export function TabEditorProvider({
           dispatch({ type: "DELETE_FRAME", payload: { section, measure, frame } });
           break;
 
-        // Duration — step the current frame through the editor's note values.
+        // Duration — step the cursor's frame through the editor's note values.
         case "durationLonger":
-        case "durationShorter": {
-          const current = getFrame(tab, section, measure, frame);
-          if (!current) break;
-          const next = stepDuration(
-            frameDuration(current),
-            action === "durationLonger" ? "longer" : "shorter",
-          );
-          dispatch({
-            type: "SET_FRAME_DURATION",
-            payload: { section, measure, frame, duration: next },
-          });
+          dispatch({ type: "ADJUST_FRAME_DURATION", payload: { adjust: "longer" } });
           break;
-        }
-
-        case "toggleDot": {
-          const current = getFrame(tab, section, measure, frame);
-          if (!current) break;
-          dispatch({
-            type: "SET_FRAME_DURATION",
-            payload: { section, measure, frame, duration: toggleDot(frameDuration(current)) },
-          });
+        case "durationShorter":
+          dispatch({ type: "ADJUST_FRAME_DURATION", payload: { adjust: "shorter" } });
           break;
-        }
+        case "toggleDot":
+          dispatch({ type: "ADJUST_FRAME_DURATION", payload: { adjust: "dot" } });
+          break;
 
         // Moving a run of frames (or the current frame when nothing is selected).
         case "moveFramesLeft":
@@ -581,7 +416,7 @@ export function TabEditorProvider({
           break;
       }
     },
-    [tab, position, toggleStyle, fretEntry]
+    [position, fretEntry, commands]
   );
 
   useEditorKeybindings(handleEditorAction);
@@ -589,6 +424,7 @@ export function TabEditorProvider({
   return (
     <TabEditorContext.Provider
       value={{
+        ...commands,
         tab,
         tracks,
         activeTrack,
@@ -606,34 +442,7 @@ export function TabEditorProvider({
         isPlaying,
         togglePlayback,
         totalSteps,
-        updateDetails,
-        setNotes,
-        goToFrameById,
-        setBpm,
-        setTimeSignature,
-        setFrameDuration,
-        setFrameRest,
-        setMeasureTimeSignature,
         saveChanges,
-        handleOpeningEditor,
-        moveCursor,
-        getEmptyFrame,
-        addNewMeasure,
-        addNewFrame,
-        addFrameAndAdvance,
-        duplicateFrames,
-        deleteMeasure,
-        deleteFrame,
-        updateTabData,
-        addSection,
-        renameSection,
-        deleteSection,
-        moveMeasure,
-        setActiveTrack,
-        addTrack,
-        removeTrack,
-        renameTrack,
-        setTrackTuning,
       }}>
       {children}
     </TabEditorContext.Provider>
@@ -647,9 +456,3 @@ export function useTabEditor() {
   }
   return context;
 }
-
-export function useOptionalTabEditor() {
-  return useContext(TabEditorContext);
-}
-
-export default TabEditorContext;

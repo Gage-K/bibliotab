@@ -403,37 +403,72 @@ describe("track actions", () => {
   });
 });
 
-describe("GO_TO_FRAME", () => {
-  const tab = body({ name: "Intro", measures: [2, 1] }, { name: "Verse", measures: [2] });
+// The note under the cursor, read back from state.
+function noteAtCursor(state: TabEditorState) {
+  const { section, measure, frame, string } = state.position;
+  return activeBody(state).sections[section].measures[measure].frames[frame].notes[string];
+}
 
-  it("moves the cursor to the frame with that id", () => {
-    const state = stateWith(tab);
-    const target = tab.sections[1].measures[0].frames[1];
+function withFret(state: TabEditorState, fret: number): TabEditorState {
+  return tabEditorReducer(state, {
+    type: "SET_NOTE_FRET",
+    payload: { ...state.position, fret },
+  });
+}
 
-    const next = tabEditorReducer(state, {
-      type: "GO_TO_FRAME",
-      payload: { frameId: target.id },
-    });
+describe("styling the note at the cursor", () => {
+  const tab = body({ name: "Intro", measures: [2] });
+  const toggle = (style: "bend" | "slide") =>
+    ({ type: "TOGGLE_NOTE_STYLE", payload: { style } }) as const;
 
-    expect(next.position).toMatchObject({ section: 1, measure: 0, frame: 1 });
+  it("styles a fretted note, and the same style again takes it off", () => {
+    const fretted = withFret(stateWith(tab, { frame: 1, string: 2 }), 5);
+    const bent = tabEditorReducer(fretted, toggle("bend"));
+    expect(noteAtCursor(bent)).toEqual({ fret: 5, style: "bend" });
+    expect(bent.isEditing).toBe(true);
+
+    expect(noteAtCursor(tabEditorReducer(bent, toggle("bend"))).style).toBe("none");
   });
 
-  it("does nothing for a frame that no longer exists", () => {
-    // A stale frame id (e.g. from a deleted frame) must not jump to whatever took that
-    // index — it resolves by id, so a miss is a no-op.
-    const state = stateWith(tab, { section: 0, measure: 1, frame: 0 });
-    expect(
-      tabEditorReducer(state, { type: "GO_TO_FRAME", payload: { frameId: "gone" } }),
-    ).toBe(state);
+  it("switches straight from one style to another", () => {
+    const bent = tabEditorReducer(withFret(stateWith(tab), 7), toggle("bend"));
+    expect(noteAtCursor(tabEditorReducer(bent, toggle("slide"))).style).toBe("slide");
   });
 
-  it("keeps the current string", () => {
-    const state = stateWith(tab, { string: 4 });
-    const next = tabEditorReducer(state, {
-      type: "GO_TO_FRAME",
-      payload: { frameId: tab.sections[1].measures[0].frames[0].id },
-    });
-    expect(next.position.string).toBe(4);
+  it("ignores an empty or a muted note", () => {
+    const empty = stateWith(tab);
+    expect(tabEditorReducer(empty, toggle("bend"))).toBe(empty);
+    const muted = withFret(stateWith(tab), -1);
+    expect(tabEditorReducer(muted, toggle("bend"))).toBe(muted);
+  });
+
+  it("styles a fret entered just before it", () => {
+    // Typing 5 then z quickly used to drop the bend: the style was decided from the tab
+    // as last drawn, where the note was still empty.
+    const next = tabEditorReducer(withFret(stateWith(tab), 5), toggle("bend"));
+    expect(noteAtCursor(next)).toEqual({ fret: 5, style: "bend" });
+  });
+});
+
+describe("changing the duration at the cursor", () => {
+  const tab = body({ name: "Intro", measures: [2] });
+  const adjust = (by: "longer" | "shorter" | "dot") =>
+    ({ type: "ADJUST_FRAME_DURATION", payload: { adjust: by } }) as const;
+  const durations = (state: TabEditorState) =>
+    activeBody(state).sections[0].measures[0].frames.map((frame) => frame.duration);
+
+  it("steps the cursor's frame to the next longer or shorter note value", () => {
+    // New frames are quarter notes (1 beat).
+    const state = stateWith(tab, { frame: 1 });
+    expect(durations(tabEditorReducer(state, adjust("longer")))).toEqual([1, 2]);
+    expect(durations(tabEditorReducer(state, adjust("shorter")))).toEqual([1, 0.5]);
+  });
+
+  it("dots the note, and dotting again takes the dot off", () => {
+    const dotted = tabEditorReducer(stateWith(tab), adjust("dot"));
+    expect(durations(dotted)).toEqual([1.5, 1]);
+    expect(dotted.isEditing).toBe(true);
+    expect(durations(tabEditorReducer(dotted, adjust("dot")))).toEqual([1, 1]);
   });
 });
 

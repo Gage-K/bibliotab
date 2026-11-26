@@ -149,8 +149,9 @@ function removeFrameAt(
 }
 
 /**
- * Frame ids are stable anchors — playback highlighting keys off them — so editing a
- * frame's notes keeps its id. Only insertFrameAt mints a new one.
+ * Frame ids are stable — the display keys each frame by its id, so React keeps a frame's
+ * element while it is edited or moved — so editing a frame's notes keeps its id. Only
+ * insertFrameAt mints a new one.
  */
 function updateFrameNotesAt(
   measures: MeasureType[],
@@ -906,29 +907,4 @@ export function measureIsComplete(
   // Durations are in quarter notes; a 6/8 measure is 3 quarter-note beats.
   const expected = beatsPerMeasure * (4 / beatValue);
   return Math.abs(measureBeats(measure) - expected) < 1e-6;
-}
-
-/**
- * Locates a frame by its id across every section of a body.
- *
- * Callers hold frame ids rather than indices (playback highlight, "go to frame"), so
- * resolving one means a scan. Returns null when the frame no longer exists — a stale id
- * goes inert rather than pointing somewhere wrong.
- */
-export function findFrameById(
-  tab: TabBodyType,
-  frameId: string
-): TabPositionType | null {
-  for (let s = 0; s < tab.sections.length; s++) {
-    const measures = tab.sections[s].measures;
-    for (let m = 0; m < measures.length; m++) {
-      const frames = measures[m].frames;
-      for (let f = 0; f < frames.length; f++) {
-        if (frames[f].id === frameId) {
-          return { section: s, measure: m, frame: f, string: 0 };
-        }
-      }
-    }
-  }
-  return null;
 }

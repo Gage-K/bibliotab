@@ -16,7 +16,9 @@ import {
   setFrameDuration,
   setFrameRest,
   setMeasureTimeSignature,
-  findFrameById,
+  frameDuration,
+  stepDuration,
+  toggleDot,
   resolvePositionAfterFrameDelete,
   insertSection,
   removeSection,
@@ -35,6 +37,8 @@ import { moveCursor, type CursorMotion } from "../utils/cursor";
 import {
   DEFAULT_BPM,
   DEFAULT_TIME_SIGNATURE,
+  FRET_EMPTY,
+  FRET_MUTED,
   MAX_BPM,
   MAX_TRACKS,
   MIN_BPM,
@@ -83,7 +87,6 @@ export type TabEditorAction =
       };
     }
   | { type: "SET_NOTES"; payload: { notes: string } }
-  | { type: "GO_TO_FRAME"; payload: { frameId: string } }
   | { type: "UPDATE_DETAILS"; payload: { name: string; value: string } }
   | { type: "SET_BPM"; payload: { bpm: number } }
   | { type: "SET_TIME_SIGNATURE"; payload: { timeSignature: TimeSignatureType } }
@@ -111,7 +114,10 @@ export type TabEditorAction =
   | { type: "MOVE_CURSOR"; payload: CursorMotion }
   | { type: "CLEAR_SELECTION" }
   | { type: "SET_NOTE_FRET"; payload: { section: number; measure: number; frame: number; string: number; fret: number } }
-  | { type: "SET_NOTE_STYLE"; payload: { section: number; measure: number; frame: number; string: number; style: NoteStyleType } }
+  /** Toggles a style on the note at the cursor. */
+  | { type: "TOGGLE_NOTE_STYLE"; payload: { style: NoteStyleType } }
+  /** Makes the frame at the cursor a note value longer or shorter, or toggles its dot. */
+  | { type: "ADJUST_FRAME_DURATION"; payload: { adjust: "longer" | "shorter" | "dot" } }
   | { type: "EXTEND_SELECTION"; payload: { section: number; measure: number; frame: number } }
   | { type: "MOVE_FRAMES"; payload: { direction: "left" | "right" } }
   | { type: "MOVE_FRAMES_TO_MEASURE"; payload: { delta: -1 | 1 } }
@@ -275,18 +281,6 @@ export function tabEditorReducer(state: TabEditorState, action: TabEditorAction)
       if (action.payload.notes === state.notes) return state;
       return { ...state, notes: action.payload.notes, isEditing: true };
 
-    case "GO_TO_FRAME": {
-      // Anchors resolve by id, so a frame that has since been deleted is a no-op
-      // rather than a jump to whatever now sits at that index.
-      const found = findFrameById(activeBody(state), action.payload.frameId);
-      if (!found) return state;
-      return {
-        ...state,
-        position: { ...found, string: state.position.string },
-        selection: null,
-      };
-    }
-
     case "SET_BPM": {
       const bpm = Math.min(MAX_BPM, Math.max(MIN_BPM, Math.round(action.payload.bpm)));
       if (bpm === state.details.bpm) return state;
@@ -305,6 +299,19 @@ export function tabEditorReducer(state: TabEditorState, action: TabEditorAction)
       const newTab = setFrameDuration(activeBody(state), section, measure, frame, duration);
       if (newTab === activeBody(state)) return state;
       return { ...withBody(state, newTab), isEditing: true };
+    }
+
+    case "ADJUST_FRAME_DURATION": {
+      const { section, measure, frame } = state.position;
+      const current = getFrame(activeBody(state), section, measure, frame);
+      if (!current) return state;
+      const beats = frameDuration(current);
+      const { adjust } = action.payload;
+      const duration = adjust === "dot" ? toggleDot(beats) : stepDuration(beats, adjust);
+      return tabEditorReducer(state, {
+        type: "SET_FRAME_DURATION",
+        payload: { section, measure, frame, duration },
+      });
     }
 
     case "SET_FRAME_REST": {
@@ -446,7 +453,12 @@ export function tabEditorReducer(state: TabEditorState, action: TabEditorAction)
       if (!currentFrame) return state;
       const newNotes = currentFrame.notes.map((note, i) =>
         i === stringIdx
-          ? { ...note, fret, ...(fret === -2 || fret === -1 ? { style: "none" as const } : {}) }
+          ? {
+              ...note,
+              fret,
+              // An empty or muted string carries no style.
+              ...(fret === FRET_EMPTY || fret === FRET_MUTED ? { style: "none" as const } : {}),
+            }
           : note
       );
       return {
@@ -458,12 +470,16 @@ export function tabEditorReducer(state: TabEditorState, action: TabEditorAction)
       };
     }
 
-    case "SET_NOTE_STYLE": {
-      const { section, measure, frame, string: stringIdx, style } = action.payload;
+    // The keyboard's edits act on the cursor as it is in state, never as last drawn: a
+    // fret typed a moment earlier is already here, even if the screen hasn't caught up.
+    case "TOGGLE_NOTE_STYLE": {
+      const { section, measure, frame, string: stringIdx } = state.position;
       const currentFrame = getFrame(activeBody(state), section, measure, frame);
       if (!currentFrame) return state;
       const note = currentFrame.notes[stringIdx];
-      if (!note || note.fret === -2 || note.fret === -1) return state;
+      // Only a fretted note can be bent, slid, and so on.
+      if (!note || note.fret === FRET_EMPTY || note.fret === FRET_MUTED) return state;
+      const style = note.style === action.payload.style ? "none" : action.payload.style;
       const newNotes = currentFrame.notes.map((n, i) =>
         i === stringIdx ? { ...n, style } : n
       );

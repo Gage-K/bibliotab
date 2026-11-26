@@ -1,14 +1,15 @@
 import { useState, useEffect, useMemo } from "react";
 import { useTabEditor } from "../context/tabEditorProvider";
 import type { NoteFretType } from "@tablab/shared";
-import { getFrame } from "../utils/tabOperations";
 import { chordNameForFrame } from "../utils/chords";
 import { noteNamesForFrame } from "../utils/pitch";
 import { MEASURE_METERS } from "../shared/types/consts";
 import { NOTE_VALUES } from "@tablab/shared";
 import {
   baseDuration,
+  createEmptyFrame,
   frameDuration,
+  getFrame,
   isDottedDuration,
   isRestFrame,
   toggleDot,
@@ -38,7 +39,6 @@ export default function TabForm() {
     setFrameDuration,
     setFrameRest,
     setMeasureTimeSignature,
-    getEmptyFrame,
   } = useTabEditor();
 
   const currentFrame = getFrame(
@@ -71,8 +71,8 @@ export default function TabForm() {
   const currentNotes = useMemo(
     () =>
       getFrame(tab, position.section, position.measure, position.frame)?.notes ??
-      getEmptyFrame().notes,
-    [tab, position.section, position.measure, position.frame, getEmptyFrame],
+      createEmptyFrame(stringCount).notes,
+    [tab, position.section, position.measure, position.frame, stringCount],
   );
 
   const [formData, setFormData] = useState<NoteFretType[]>(currentNotes);
@@ -125,7 +125,7 @@ export default function TabForm() {
 
   function clearHandler(event: React.MouseEvent<HTMLButtonElement>) {
     event.preventDefault();
-    setFormData(getEmptyFrame().notes);
+    setFormData(createEmptyFrame(stringCount).notes);
   }
 
   function saveFormData(event: React.FormEvent<HTMLFormElement>) {
