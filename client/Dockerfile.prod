@@ -1,7 +1,9 @@
 FROM node:20-alpine AS builder
 WORKDIR /app
 RUN npm install -g pnpm
-COPY package.json pnpm-lock.yaml* ./
+# pnpm-workspace.yaml must be present at install time: it carries the build-script
+# approvals (without them pnpm fails on esbuild) and the security overrides.
+COPY package.json pnpm-lock.yaml* pnpm-workspace.yaml* ./
 RUN pnpm install
 COPY . .
 ARG VITE_BE_URL
