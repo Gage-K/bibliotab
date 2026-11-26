@@ -1,4 +1,12 @@
-import { createContext, useReducer, useEffect, useContext, useRef, useCallback } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useReducer,
+  useRef,
+  useState,
+} from "react";
 import {
   createEmptyFrame,
   frameDuration,
@@ -19,12 +27,7 @@ import type {
   TrackType,
   TuningType,
 } from "@tablab/shared";
-import {
-  FRET_EMPTY,
-  FRET_MUTED,
-  MAX_FRET_NUMBER as MAX_FRET,
-  normalizeTabTracks,
-} from "@tablab/shared";
+import { FRET_EMPTY, FRET_MUTED, normalizeTabTracks } from "@tablab/shared";
 import type {
   EditorDetailsType,
   TabPositionType,
@@ -36,11 +39,19 @@ import {
   activeBody,
 } from "./tabEditorReducer";
 import { trackStringCount } from "../utils/trackOperations";
+import { createFretEntry } from "../utils/fretEntry";
 import { useTabPlayback } from "../hooks/useTabPlayback";
 
-const DIGIT_BUFFER_TIMEOUT_MS = 200;
-
 type MeasureRef = { section: number; measure: number };
+
+const FRET_DIGIT_PREFIX = "fretDigit";
+
+/** The digit a number-key action stands for, or null for any other action. */
+function fretDigit(action: EditorAction): number | null {
+  return action.startsWith(FRET_DIGIT_PREFIX)
+    ? Number(action.slice(FRET_DIGIT_PREFIX.length))
+    : null;
+}
 
 interface TabEditorContextType {
   /** The active track's body — what the tab display and editing actions operate on. */
@@ -385,71 +396,15 @@ export function TabEditorProvider({
     onStep: handlePlaybackStep,
   });
 
-  // Fret digit buffering
-  const digitBufferRef = useRef("");
-  const digitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const commitFret = useCallback(
-    (fret: number) => {
-      if (fret > MAX_FRET) return;
-      dispatch({
-        type: "SET_NOTE_FRET",
-        payload: {
-          section: position.section,
-          measure: position.measure,
-          frame: position.frame,
-          string: position.string,
-          fret,
-        },
-      });
-    },
-    [position]
+  // Fret entry from the number keys. One instance for the provider's life: a held digit
+  // outlives renders, and committing only needs the stable `dispatch`.
+  const [fretEntry] = useState(() =>
+    createFretEntry((target, fret) => {
+      dispatch({ type: "SET_NOTE_FRET", payload: { ...target, fret } });
+    })
   );
-
-  const clearDigitBuffer = useCallback(() => {
-    digitBufferRef.current = "";
-    if (digitTimerRef.current) {
-      clearTimeout(digitTimerRef.current);
-      digitTimerRef.current = null;
-    }
-  }, []);
-
-  const handleDigit = useCallback(
-    (digit: number) => {
-      if (digitTimerRef.current) {
-        clearTimeout(digitTimerRef.current);
-        digitTimerRef.current = null;
-      }
-
-      const buffer = digitBufferRef.current + String(digit);
-      const twoDigit = parseInt(buffer, 10);
-
-      if (buffer.length >= 2) {
-        if (twoDigit <= MAX_FRET) {
-          commitFret(twoDigit);
-        } else {
-          // Two-digit number > 24: commit first digit, start new buffer with second
-          commitFret(parseInt(buffer[0], 10));
-          digitBufferRef.current = buffer[1];
-          digitTimerRef.current = setTimeout(() => {
-            commitFret(parseInt(digitBufferRef.current, 10));
-            clearDigitBuffer();
-          }, DIGIT_BUFFER_TIMEOUT_MS);
-          return;
-        }
-        clearDigitBuffer();
-        return;
-      }
-
-      // Single digit — buffer and wait
-      digitBufferRef.current = buffer;
-      digitTimerRef.current = setTimeout(() => {
-        commitFret(parseInt(digitBufferRef.current, 10));
-        clearDigitBuffer();
-      }, DIGIT_BUFFER_TIMEOUT_MS);
-    },
-    [commitFret, clearDigitBuffer]
-  );
+  // A held digit must not commit into an editor that has gone away.
+  useEffect(() => () => fretEntry.cancel(), [fretEntry]);
 
   const toggleStyle = useCallback(
     (style: NoteStyleType) => {
@@ -476,6 +431,16 @@ export function TabEditorProvider({
   const handleEditorAction = useCallback(
     (action: EditorAction) => {
       const { section, measure, frame } = position;
+
+      const digit = fretDigit(action);
+      if (digit !== null) {
+        fretEntry.push(position, digit);
+        return;
+      }
+      // Settle a held digit before anything else, so edits land in the order they were
+      // typed (a quick `1` then `m` ends muted, not on fret 1). Escape abandons it.
+      if (action === "escape") fretEntry.cancel();
+      else fretEntry.flush();
 
       switch (action) {
         // Navigation
@@ -531,18 +496,6 @@ export function TabEditorProvider({
             payload: { section, measure, frame: frame + 1 },
           });
           break;
-
-        // Fret digits
-        case "fretDigit0": handleDigit(0); break;
-        case "fretDigit1": handleDigit(1); break;
-        case "fretDigit2": handleDigit(2); break;
-        case "fretDigit3": handleDigit(3); break;
-        case "fretDigit4": handleDigit(4); break;
-        case "fretDigit5": handleDigit(5); break;
-        case "fretDigit6": handleDigit(6); break;
-        case "fretDigit7": handleDigit(7); break;
-        case "fretDigit8": handleDigit(8); break;
-        case "fretDigit9": handleDigit(9); break;
 
         // Note operations
         case "clearNote":
@@ -647,7 +600,7 @@ export function TabEditorProvider({
           break;
       }
     },
-    [tab, position, handleDigit, toggleStyle]
+    [tab, position, toggleStyle, fretEntry]
   );
 
   useEditorKeybindings(handleEditorAction);
