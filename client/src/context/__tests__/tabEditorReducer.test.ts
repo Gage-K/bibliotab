@@ -34,46 +34,84 @@ function stateWith(
   };
 }
 
-describe("SET_POSITION across section boundaries", () => {
+// Where each motion lands is tested with the Cursor module (utils/__tests__/cursor.test.ts).
+// These cover what the reducer adds: the body it moves through, and the selection.
+describe("MOVE_CURSOR", () => {
   const tab = body({ name: "Intro", measures: [2, 2] }, { name: "Verse", measures: [2] });
 
-  it("moves to the next measure inside the section", () => {
-    const state = stateWith(tab, { measure: 0, frame: 1 });
-    const next = tabEditorReducer(state, {
-      type: "SET_POSITION",
-      payload: { section: 0, measure: 0, frame: 2 },
-    });
-    expect(next.position).toMatchObject({ section: 0, measure: 1, frame: 0 });
+  // Selects the cursor's frame and the one after it.
+  const withSelection = (state: TabEditorState): TabEditorState => ({
+    ...state,
+    selection: {
+      anchor: { ...state.position },
+      head: { ...state.position, frame: state.position.frame + 1 },
+    },
   });
 
-  it("falls into the next section past the last measure", () => {
+  it("moves through the active track's body, across section boundaries", () => {
     const state = stateWith(tab, { measure: 1, frame: 1 });
     const next = tabEditorReducer(state, {
-      type: "SET_POSITION",
-      payload: { section: 0, measure: 1, frame: 2 },
+      type: "MOVE_CURSOR",
+      payload: { by: "frame", delta: 1 },
     });
-    expect(next.position).toMatchObject({ section: 1, measure: 0, frame: 0 });
+    expect(next.position).toEqual({ section: 1, measure: 0, frame: 0, string: 0 });
   });
 
-  it("falls back into the previous section's last frame", () => {
-    const state = stateWith(tab, { section: 1, measure: 0, frame: 0 });
-    const next = tabEditorReducer(state, {
-      type: "SET_POSITION",
-      payload: { section: 1, measure: 0, frame: -1 },
-    });
-    expect(next.position).toMatchObject({ section: 0, measure: 1, frame: 1 });
-  });
-
-  it("stays put at the very start and the very end", () => {
+  it("returns the same state when the cursor has nowhere to go", () => {
     const start = stateWith(tab);
     expect(
-      tabEditorReducer(start, { type: "SET_POSITION", payload: { section: 0, measure: 0, frame: -1 } }),
+      tabEditorReducer(start, { type: "MOVE_CURSOR", payload: { by: "frame", delta: -1 } }),
     ).toBe(start);
+  });
 
-    const end = stateWith(tab, { section: 1, measure: 0, frame: 1 });
-    expect(
-      tabEditorReducer(end, { type: "SET_POSITION", payload: { section: 1, measure: 0, frame: 2 } }),
-    ).toBe(end);
+  it("ends the selection when moving between frames", () => {
+    const state = withSelection(stateWith(tab));
+    const next = tabEditorReducer(state, {
+      type: "MOVE_CURSOR",
+      payload: { by: "measureStart", delta: 1 },
+    });
+    expect(next.selection).toBeNull();
+  });
+
+  it("ends the selection on a click, even a click on the current frame", () => {
+    const state = withSelection(stateWith(tab));
+    const next = tabEditorReducer(state, {
+      type: "MOVE_CURSOR",
+      payload: { to: { section: 0, measure: 0, frame: 0 } },
+    });
+    expect(next.selection).toBeNull();
+  });
+
+  it("keeps the selection when moving along the strings", () => {
+    const state = withSelection(stateWith(tab));
+    const next = tabEditorReducer(state, {
+      type: "MOVE_CURSOR",
+      payload: { by: "string", delta: 1 },
+    });
+    expect(next.position.string).toBe(1);
+    expect(next.selection).toBe(state.selection);
+  });
+});
+
+describe("CLEAR_SELECTION", () => {
+  const tab = body({ name: "Intro", measures: [2] });
+
+  it("drops the selection and leaves the cursor where it is", () => {
+    const state: TabEditorState = {
+      ...stateWith(tab, { frame: 1 }),
+      selection: {
+        anchor: { section: 0, measure: 0, frame: 0, string: 0 },
+        head: { section: 0, measure: 0, frame: 1, string: 0 },
+      },
+    };
+    const next = tabEditorReducer(state, { type: "CLEAR_SELECTION" });
+    expect(next.selection).toBeNull();
+    expect(next.position).toBe(state.position);
+  });
+
+  it("returns the same state when nothing is selected", () => {
+    const state = stateWith(tab);
+    expect(tabEditorReducer(state, { type: "CLEAR_SELECTION" })).toBe(state);
   });
 });
 
@@ -240,16 +278,14 @@ describe("changing a track's tuning changes its string count", () => {
     expect(next.details.song).toBe("Renamed");
   });
 
-  it("clamps SET_STRING to the current string count", () => {
-    const state = stateWith(tab, {}, BASS_TUNING);
+  it("stops the cursor at the track's own bottom string", () => {
+    const down = { type: "MOVE_CURSOR", payload: { by: "string", delta: 1 } } as const;
 
-    expect(
-      tabEditorReducer(state, { type: "SET_STRING", payload: { string: 3 } }).position.string,
-    ).toBe(3);
-    // String 5 exists on a guitar but not on a 4-string bass.
-    expect(
-      tabEditorReducer(state, { type: "SET_STRING", payload: { string: 4 } }).position.string,
-    ).toBe(0);
+    const onThird = stateWith(tab, { string: 2 }, BASS_TUNING);
+    expect(tabEditorReducer(onThird, down).position.string).toBe(3);
+    // A guitar has a fifth string; a 4-string bass does not.
+    const onFourth = stateWith(tab, { string: 3 }, BASS_TUNING);
+    expect(tabEditorReducer(onFourth, down)).toBe(onFourth);
   });
 
   it("builds new sections and measures at the current string count", () => {

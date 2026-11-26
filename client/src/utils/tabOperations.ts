@@ -932,14 +932,3 @@ export function findFrameById(
   }
   return null;
 }
-
-/** Every frame id in a body. */
-export function collectFrameIds(tab: TabBodyType): Set<string> {
-  const ids = new Set<string>();
-  for (const section of tab.sections) {
-    for (const measure of section.measures) {
-      for (const frame of measure.frames) ids.add(frame.id);
-    }
-  }
-  return ids;
-}

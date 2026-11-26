@@ -29,7 +29,6 @@ import {
   measureBeats,
   measureIsComplete,
   findFrameById,
-  collectFrameIds,
   updateFrameNotes,
   frameOrdinal,
   sectionMeasureOffset,
@@ -564,12 +563,6 @@ describe("frame lookup by id", () => {
   it("returns null for an id that is not there", () => {
     // A stale frame id (its frame deleted) must go inert, not resolve to a neighbour.
     expect(findFrameById(tab, "gone")).toBeNull();
-  });
-
-  it("collects every frame id in the body", () => {
-    const ids = collectFrameIds(tab);
-    expect(ids.size).toBe(6);
-    expect(ids.has(tab.sections[0].measures[0].frames[0].id)).toBe(true);
   });
 
   it("keeps ids stable across a measure move, so anchors survive", () => {

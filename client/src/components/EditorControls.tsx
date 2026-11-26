@@ -33,7 +33,7 @@ export default function EditorControls() {
     isSaving,
     isDemo,
     handleOpeningEditor,
-    updatePosition,
+    moveCursor,
     addFrameAndAdvance,
     duplicateFrames,
     deleteFrame,
@@ -47,8 +47,8 @@ export default function EditorControls() {
   const currentSection = tab.sections[section];
   const measureCount = currentSection?.measures.length ?? 0;
 
-  const movePrev = () => updatePosition(section, measure, frame - 1);
-  const moveNext = () => updatePosition(section, measure, frame + 1);
+  const movePrev = () => moveCursor({ by: "frame", delta: -1 });
+  const moveNext = () => moveCursor({ by: "frame", delta: 1 });
   const duplicate = () => duplicateFrames();
   const insertFrame = () => addFrameAndAdvance(section, measure, frame, true);
   const insertMeasure = () => addNewMeasure(section, measure + 1);

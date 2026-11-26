@@ -2,6 +2,7 @@ import { TrashIcon, PlusIcon } from "@phosphor-icons/react";
 import { useTabEditor } from "../context/tabEditorProvider";
 import {
   frameDuration,
+  frameOrdinal,
   isRestFrame,
   measureBeats,
   measureIsComplete,
@@ -23,25 +24,9 @@ function selectionBounds(
   selection: TabSelectionType
 ): { start: number; end: number } | null {
   if (!selection) return null;
-  const anchor = frameOrdinalOf(tab, selection.anchor);
-  const head = frameOrdinalOf(tab, selection.head);
+  const anchor = frameOrdinal(tab, selection.anchor);
+  const head = frameOrdinal(tab, selection.head);
   return { start: Math.min(anchor, head), end: Math.max(anchor, head) };
-}
-
-/** Document-order index of a frame, counting every frame of every section before it. */
-function frameOrdinalOf(
-  tab: TabBodyType,
-  pos: { section: number; measure: number; frame: number }
-): number {
-  let ordinal = 0;
-  for (let s = 0; s < tab.sections.length; s++) {
-    const measures = tab.sections[s].measures;
-    for (let m = 0; m < measures.length; m++) {
-      if (s === pos.section && m === pos.measure) return ordinal + pos.frame;
-      ordinal += measures[m].frames.length;
-    }
-  }
-  return ordinal;
 }
 
 function isInSelection(
@@ -161,7 +146,7 @@ export default function TabDisplay() {
     details,
     selection,
     stringCount,
-    updatePosition,
+    moveCursor,
     addFrameAndAdvance,
     addNewMeasure,
     renameSection,
@@ -192,7 +177,7 @@ export default function TabDisplay() {
         ).length;
 
         // Running ordinal so a frame's selection index is known without a lookup.
-        let ordinal = frameOrdinalOf(tab, {
+        let ordinal = frameOrdinal(tab, {
           section: sectionIndex,
           measure: 0,
           frame: 0,
@@ -262,7 +247,7 @@ export default function TabDisplay() {
                       columns={columns}
                       activeFrame={activeFrame}
                       onSelect={(frame) =>
-                        updatePosition(sectionIndex, measureIndex, frame)
+                        moveCursor({ to: { section: sectionIndex, measure: measureIndex, frame } })
                       }
                     />
 
@@ -311,7 +296,9 @@ export default function TabDisplay() {
                                 rest ? " · rest" : ""
                               } — bar totals ${totalBeats}`}
                               onClick={() =>
-                                updatePosition(sectionIndex, measureIndex, frameIndex)
+                                moveCursor({
+                                  to: { section: sectionIndex, measure: measureIndex, frame: frameIndex },
+                                })
                               }
                               className={`h-full flex flex-col ${rounding} cursor-pointer ${
                                 selected

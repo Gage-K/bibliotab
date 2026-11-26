@@ -35,3 +35,13 @@ _Avoid_: Fret (the fret is the number within a Note)
 
 **Rest**:
 A Frame that sounds nothing for its duration, distinct from a Frame that has not been filled in yet.
+
+### Editing
+
+**Cursor**:
+The one Note being edited: a string within a Frame of the active Track. Playback moves it through the Frames as they sound.
+_Avoid_: Position, caret, playhead
+
+**Selection**:
+A run of consecutive Frames marked to be moved, duplicated, or deleted together. It starts at the Cursor's Frame.
+_Avoid_: Range, highlight

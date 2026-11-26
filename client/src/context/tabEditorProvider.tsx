@@ -11,7 +11,6 @@ import {
   createEmptyFrame,
   frameDuration,
   getFrame,
-  getMeasures,
   stepDuration,
   toggleDot,
 } from "../utils/tabOperations";
@@ -40,6 +39,7 @@ import {
 } from "./tabEditorReducer";
 import { trackStringCount } from "../utils/trackOperations";
 import { createFretEntry } from "../utils/fretEntry";
+import type { CursorMotion } from "../utils/cursor";
 import { useTabPlayback } from "../hooks/useTabPlayback";
 
 type MeasureRef = { section: number; measure: number };
@@ -100,7 +100,11 @@ interface TabEditorContextType {
   ) => void;
   saveChanges: () => Promise<void>;
   handleOpeningEditor: () => void;
-  updatePosition: (section: number, measure: number, frame: number) => void;
+  /**
+   * Moves the cursor: a frame, measure, or string at a time (crossing measure and
+   * section boundaries), or straight to a frame. See utils/cursor.
+   */
+  moveCursor: (motion: CursorMotion) => void;
   getEmptyFrame: () => FrameType;
   addNewMeasure: (section: number, measure: number) => void;
   addNewFrame: (section: number, measure: number, frame: number, isEmpty: boolean) => void;
@@ -310,8 +314,8 @@ export function TabEditorProvider({
     dispatch({ type: "TOGGLE_EDITOR" });
   }
 
-  function updatePosition(section: number, measure: number, frame: number) {
-    dispatch({ type: "SET_POSITION", payload: { section, measure, frame } });
+  function moveCursor(motion: CursorMotion) {
+    dispatch({ type: "MOVE_CURSOR", payload: motion });
   }
 
   function addNewMeasure(section: number, measure: number) {
@@ -374,15 +378,11 @@ export function TabEditorProvider({
   // Lives here rather than in the transport component because two consumers need it:
   // the transport button and the timeline's playhead.
   // ==========================================================================
-  const updatePositionRef = useRef(updatePosition);
-  updatePositionRef.current = updatePosition;
-
-  const handlePlaybackStep = useCallback((stepPosition: TabPositionType) => {
-    updatePositionRef.current(
-      stepPosition.section,
-      stepPosition.measure,
-      stepPosition.frame,
-    );
+  const handlePlaybackStep = useCallback((step: TabPositionType) => {
+    dispatch({
+      type: "MOVE_CURSOR",
+      payload: { to: { section: step.section, measure: step.measure, frame: step.frame } },
+    });
   }, []);
 
   const {
@@ -445,43 +445,23 @@ export function TabEditorProvider({
       switch (action) {
         // Navigation
         case "moveUp":
-          dispatch({ type: "SET_STRING", payload: { string: position.string - 1 } });
+          moveCursor({ by: "string", delta: -1 });
           break;
         case "moveDown":
-          dispatch({ type: "SET_STRING", payload: { string: position.string + 1 } });
+          moveCursor({ by: "string", delta: 1 });
           break;
         case "moveLeft":
-          dispatch({ type: "SET_POSITION", payload: { section, measure, frame: frame - 1 } });
+          moveCursor({ by: "frame", delta: -1 });
           break;
         case "moveRight":
-          dispatch({ type: "SET_POSITION", payload: { section, measure, frame: frame + 1 } });
+          moveCursor({ by: "frame", delta: 1 });
           break;
-        case "nextMeasureStart": {
-          const next = measure + 1;
-          if (next < getMeasures(tab, section).length) {
-            dispatch({ type: "SET_POSITION", payload: { section, measure: next, frame: 0 } });
-          } else if (getMeasures(tab, section + 1).length > 0) {
-            // Falls through to the first measure of the next section.
-            dispatch({ type: "SET_POSITION", payload: { section: section + 1, measure: 0, frame: 0 } });
-          }
+        case "nextMeasureStart":
+          moveCursor({ by: "measureStart", delta: 1 });
           break;
-        }
-        case "prevMeasureStart": {
-          if (frame > 0) {
-            dispatch({ type: "SET_POSITION", payload: { section, measure, frame: 0 } });
-          } else if (measure - 1 >= 0) {
-            dispatch({ type: "SET_POSITION", payload: { section, measure: measure - 1, frame: 0 } });
-          } else {
-            const prevMeasures = getMeasures(tab, section - 1);
-            if (prevMeasures.length > 0) {
-              dispatch({
-                type: "SET_POSITION",
-                payload: { section: section - 1, measure: prevMeasures.length - 1, frame: 0 },
-              });
-            }
-          }
+        case "prevMeasureStart":
+          moveCursor({ by: "measureStart", delta: -1 });
           break;
-        }
 
         // Selection
         case "selectLeft":
@@ -534,7 +514,8 @@ export function TabEditorProvider({
         // Inserts
         case "addFrameBefore":
           dispatch({ type: "ADD_FRAME", payload: { section, measure, frame: frame - 1, isEmpty: true } });
-          dispatch({ type: "SET_POSITION", payload: { section, measure, frame: frame + 1 } });
+          // Stay on the frame we were on, now one further along.
+          moveCursor({ to: { section, measure, frame: frame + 1 } });
           break;
         case "addFrameAfter":
           dispatch({ type: "ADD_FRAME", payload: { section, measure, frame, isEmpty: true } });
@@ -544,7 +525,8 @@ export function TabEditorProvider({
           break;
         case "addMeasureBefore":
           dispatch({ type: "ADD_MEASURE", payload: { section, measure } });
-          dispatch({ type: "SET_POSITION", payload: { section, measure: measure + 1, frame } });
+          // Stay on the frame we were on, in its measure now one further along.
+          moveCursor({ to: { section, measure: measure + 1, frame } });
           break;
         case "addMeasureAfter":
           dispatch({ type: "ADD_MEASURE", payload: { section, measure: measure + 1 } });
@@ -594,9 +576,8 @@ export function TabEditorProvider({
           dispatch({ type: "MOVE_FRAMES_TO_MEASURE", payload: { delta: 1 } });
           break;
 
-        // Escape
         case "escape":
-          dispatch({ type: "SET_POSITION", payload: { section, measure, frame } });
+          dispatch({ type: "CLEAR_SELECTION" });
           break;
       }
     },
@@ -635,7 +616,7 @@ export function TabEditorProvider({
         setMeasureTimeSignature,
         saveChanges,
         handleOpeningEditor,
-        updatePosition,
+        moveCursor,
         getEmptyFrame,
         addNewMeasure,
         addNewFrame,

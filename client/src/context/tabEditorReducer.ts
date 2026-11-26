@@ -31,6 +31,7 @@ import {
   type FrameRange,
 } from "../utils/tabOperations";
 import { createTrack, trackStringCount } from "../utils/trackOperations";
+import { moveCursor, type CursorMotion } from "../utils/cursor";
 import {
   DEFAULT_BPM,
   DEFAULT_TIME_SIGNATURE,
@@ -107,8 +108,8 @@ export type TabEditorAction =
   | { type: "ADD_FRAME"; payload: { section: number; measure: number; frame: number; isEmpty: boolean } }
   | { type: "ADD_FRAME_AND_ADVANCE"; payload: { section: number; measure: number; frame: number; isEmpty: boolean } }
   | { type: "DELETE_FRAME"; payload: { section: number; measure: number; frame: number } }
-  | { type: "SET_POSITION"; payload: { section: number; measure: number; frame: number } }
-  | { type: "SET_STRING"; payload: { string: number } }
+  | { type: "MOVE_CURSOR"; payload: CursorMotion }
+  | { type: "CLEAR_SELECTION" }
   | { type: "SET_NOTE_FRET"; payload: { section: number; measure: number; frame: number; string: number; fret: number } }
   | { type: "SET_NOTE_STYLE"; payload: { section: number; measure: number; frame: number; string: number; style: NoteStyleType } }
   | { type: "EXTEND_SELECTION"; payload: { section: number; measure: number; frame: number } }
@@ -426,86 +427,18 @@ export function tabEditorReducer(state: TabEditorState, action: TabEditorAction)
       };
     }
 
-    case "SET_POSITION": {
-      const { section, measure, frame } = action.payload;
-      const tab = activeBody(state);
-
-      if (isExistingPosition(tab, section, measure, frame)) {
-        return {
-          ...state,
-          selection: null,
-          position: { section, measure, frame, string: state.position.string },
-        };
-      }
-
-      const measures = getMeasures(tab, section);
-
-      // Past the end of a measure: next measure, else first measure of the next section.
-      if (frame >= (measures[measure]?.frames.length ?? 0)) {
-        const nextMeasure = measure + 1;
-        if (nextMeasure < measures.length) {
-          return {
-            ...state,
-            selection: null,
-            position: { section, measure: nextMeasure, frame: 0, string: state.position.string },
-          };
-        }
-        const nextSection = section + 1;
-        if (isExistingPosition(tab, nextSection, 0, 0)) {
-          return {
-            ...state,
-            selection: null,
-            position: { section: nextSection, measure: 0, frame: 0, string: state.position.string },
-          };
-        }
-        return state;
-      }
-
-      // Before the start of a measure: previous measure, else last measure of the
-      // previous section.
-      if (frame < 0) {
-        const prevMeasure = measure - 1;
-        if (prevMeasure >= 0) {
-          return {
-            ...state,
-            selection: null,
-            position: {
-              section,
-              measure: prevMeasure,
-              frame: measures[prevMeasure]?.frames.length - 1 || 0,
-              string: state.position.string,
-            },
-          };
-        }
-        const prevSection = section - 1;
-        const prevSectionMeasures = getMeasures(tab, prevSection);
-        if (prevSection >= 0 && prevSectionMeasures.length > 0) {
-          const lastMeasure = prevSectionMeasures.length - 1;
-          return {
-            ...state,
-            selection: null,
-            position: {
-              section: prevSection,
-              measure: lastMeasure,
-              frame: prevSectionMeasures[lastMeasure].frames.length - 1,
-              string: state.position.string,
-            },
-          };
-        }
-        return state;
-      }
-
-      return state;
+    case "MOVE_CURSOR": {
+      const motion = action.payload;
+      const position = moveCursor(activeBody(state), state.position, motion, stringCount(state));
+      if (position === state.position) return state;
+      // A selection spans frames, so moving along the strings keeps it; any other move
+      // (including a click on the current frame) ends it.
+      const keepsSelection = "by" in motion && motion.by === "string";
+      return { ...state, position, selection: keepsSelection ? state.selection : null };
     }
 
-    case "SET_STRING": {
-      const newString = action.payload.string;
-      if (newString < 0 || newString > stringCount(state) - 1) return state;
-      return {
-        ...state,
-        position: { ...state.position, string: newString },
-      };
-    }
+    case "CLEAR_SELECTION":
+      return state.selection === null ? state : { ...state, selection: null };
 
     case "SET_NOTE_FRET": {
       const { section, measure, frame, string: stringIdx, fret } = action.payload;
