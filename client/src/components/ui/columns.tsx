@@ -1,5 +1,5 @@
 import { ColumnDef } from "@tanstack/react-table"
-import { TabType } from "../../shared/types/tab.types"
+import { TabType } from "@tablab/shared";
 import { Link } from "react-router"
 import { Button } from "./button"
 import { DotsThree, ArrowUp, ArrowDown } from "@phosphor-icons/react"

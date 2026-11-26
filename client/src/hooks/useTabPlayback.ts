@@ -8,10 +8,8 @@ import {
   type FxBus,
   type VoiceHandle,
 } from "../utils/instruments";
-import type { TrackType } from "../shared/types/tab.types";
+import type { TrackType } from "@tablab/shared";
 import type { TabPositionType } from "../shared/types/utilities.types";
-
-export { MIN_BPM, MAX_BPM, DEFAULT_BPM } from "../shared/types/consts";
 
 /** Fraction of a frame a note rings for, so consecutive frames don't run together. */
 const NOTE_LENGTH_RATIO = 0.9;

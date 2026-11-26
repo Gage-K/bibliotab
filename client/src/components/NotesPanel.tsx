@@ -2,7 +2,7 @@ import { useState } from "react";
 import Markdown from "react-markdown";
 import { EyeIcon, PencilSimpleIcon } from "@phosphor-icons/react";
 import { useTabEditor } from "../context/tabEditorProvider";
-import { MAX_NOTES_LENGTH } from "../shared/types/consts";
+import { MAX_NOTES_LENGTH } from "@tablab/shared";
 
 /**
  * Freeform markdown notes for the tab — tuning quirks, gear, "capo 2", whatever.

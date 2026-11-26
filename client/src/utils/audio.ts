@@ -1,5 +1,5 @@
-import type { FrameType, TrackType } from "../shared/types/tab.types";
-import { FRET_EMPTY, FRET_MUTED } from "../shared/types/consts";
+import type { FrameType, TrackType } from "@tablab/shared";
+import { FRET_EMPTY, FRET_MUTED } from "@tablab/shared";
 import { PITCH_CLASS_NAMES, absoluteSemitone } from "./pitch";
 import { frameDuration } from "./tabOperations";
 import type { TabPositionType } from "../shared/types/utilities.types";

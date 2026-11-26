@@ -21,6 +21,9 @@
     "paths": {
       "@/*": [
         "./src/*"
+      ],
+      "@tablab/shared": [
+        "../shared/index.ts"
       ]
     }
   },

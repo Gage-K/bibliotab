@@ -1,16 +1,20 @@
+# Built from the repo root (see docker-compose.prod.yml), like the backend, so the
+# shared Tab model in `shared/` is in the build context. The client imports it as
+# @tablab/shared and Vite resolves that to ../shared — /app/shared next to /app/client.
 FROM node:20-alpine AS builder
-WORKDIR /app
+WORKDIR /app/client
 RUN npm install -g pnpm
 # pnpm-workspace.yaml must be present at install time: it carries the build-script
 # approvals (without them pnpm fails on esbuild) and the security overrides.
-COPY package.json pnpm-lock.yaml* pnpm-workspace.yaml* ./
+COPY client/package.json client/pnpm-lock.yaml* client/pnpm-workspace.yaml* ./
 RUN pnpm install
-COPY . .
+COPY shared/ /app/shared/
+COPY client/ ./
 ARG VITE_BE_URL
 ENV VITE_BE_URL=$VITE_BE_URL
 RUN pnpm run build
 
 FROM nginx:alpine
-COPY --from=builder /app/dist /usr/share/nginx/html
-COPY nginx.client.conf /etc/nginx/conf.d/default.conf
+COPY --from=builder /app/client/dist /usr/share/nginx/html
+COPY client/nginx.client.conf /etc/nginx/conf.d/default.conf
 EXPOSE 80

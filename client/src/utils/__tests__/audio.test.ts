@@ -9,8 +9,8 @@ import {
 } from "../audio";
 import { createTrack } from "../trackOperations";
 import { createEmptyFrame, createSection } from "../tabOperations";
-import { FRET_EMPTY, FRET_MUTED } from "@/shared/types/consts";
-import type { FrameType, TuningType } from "@/shared/types/tab.types";
+import { FRET_EMPTY, FRET_MUTED } from "@tablab/shared";
+import type { FrameType, TuningType } from "@tablab/shared";
 
 const BASS = ["G", "D", "A", "E"] as TuningType;
 

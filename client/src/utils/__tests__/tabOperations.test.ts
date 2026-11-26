@@ -2,7 +2,6 @@ import { describe, it, expect } from "vitest";
 import {
   createEmptyFrame,
   createSection,
-  normalizeBody,
   insertSection,
   removeSection,
   renameSection,
@@ -37,7 +36,7 @@ import {
   totalMeasures,
   isExistingPosition,
 } from "../tabOperations";
-import type { MeasureType, TabBodyType } from "@/shared/types/tab.types";
+import type { MeasureType, TabBodyType } from "@tablab/shared";
 
 // A measure of `frames` empty frames.
 function measure(frames: number): MeasureType {
@@ -56,27 +55,8 @@ function body(...sections: { name: string; measures: number[] }[]): TabBodyType 
   };
 }
 
-describe("normalizeBody", () => {
-  it("wraps a legacy flat measures array in one default section", () => {
-    const legacy = [measure(2), measure(1)];
-    const normalized = normalizeBody(legacy);
-
-    expect(normalized.sections).toHaveLength(1);
-    expect(normalized.sections[0].name).toBe("Section 1");
-    expect(normalized.sections[0].measures).toEqual(legacy);
-    expect(normalized.sections[0].id).toBeTruthy();
-  });
-
-  it("passes an already-sectioned body through untouched", () => {
-    const sectioned = body({ name: "Verse", measures: [1] });
-    expect(normalizeBody(sectioned)).toBe(sectioned);
-  });
-
-  it("falls back to an empty single-section body for junk", () => {
-    expect(normalizeBody(null).sections).toHaveLength(1);
-    expect(normalizeBody("nope").sections[0].measures).toHaveLength(1);
-  });
-});
+// Normalizing stored bodies is tested with the shared module it lives in
+// (server/tests/unit/shared/tab.serializer.test.ts).
 
 describe("section operations", () => {
   it("inserts a section at an index, clamping out-of-range ones", () => {

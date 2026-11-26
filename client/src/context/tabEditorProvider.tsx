@@ -10,28 +10,34 @@ import {
 import { useTab, useUpdateTab } from "../hooks/useTabs";
 import { useEditorKeybindings } from "../hooks/useEditorKeybindings";
 import type { EditorAction } from "../shared/keymaps/defaultKeymap";
-import type { NoteStyleType } from "../shared/types/tab.types";
 import type {
-  TabBodyType,
-  TrackType,
-  EditorDetailsType,
   FrameType,
   NoteFretType,
+  NoteStyleType,
+  TabBodyType,
   TimeSignatureType,
+  TrackType,
   TuningType,
-} from "../shared/types/tab.types";
-import type { TabPositionType, TabSelectionType } from "../shared/types/utilities.types";
+} from "@tablab/shared";
+import {
+  FRET_EMPTY,
+  FRET_MUTED,
+  MAX_FRET_NUMBER as MAX_FRET,
+  normalizeTabTracks,
+} from "@tablab/shared";
+import type {
+  EditorDetailsType,
+  TabPositionType,
+  TabSelectionType,
+} from "../shared/types/utilities.types";
 import {
   tabEditorReducer,
   initialTabEditorState,
   activeBody,
 } from "./tabEditorReducer";
-import { normalizeTracks, trackStringCount } from "../utils/trackOperations";
+import { trackStringCount } from "../utils/trackOperations";
 import { useTabPlayback } from "../hooks/useTabPlayback";
 
-const FRET_EMPTY = -2;
-const FRET_MUTED = -1;
-const MAX_FRET = 24;
 const DIGIT_BUFFER_TIMEOUT_MS = 200;
 
 type MeasureRef = { section: number; measure: number };
@@ -157,7 +163,7 @@ export function TabEditorProvider({
         payload: {
           ...demoData,
           notes: demoData.notes ?? "",
-          tracks: normalizeTracks({ tracks: demoData.tracks }),
+          tracks: normalizeTabTracks({ tracks: demoData.tracks }).tracks,
         },
       });
     } else if (serverTab && !hasLoaded.current) {
@@ -173,8 +179,9 @@ export function TabEditorProvider({
             timeSignature: serverTab.details.timeSignature,
           },
           // The server already normalizes, but a response cached from an older client
-          // can still be a pre-tracks shape (see normalizeTracks).
-          tracks: normalizeTracks({ tracks: serverTab.tracks }),
+          // can still be a pre-tracks shape. normalizeTabTracks is the same function the
+          // server reads with, so both sides upgrade old shapes identically.
+          tracks: normalizeTabTracks({ tracks: serverTab.tracks }).tracks,
           notes: serverTab.notes ?? "",
         },
       });

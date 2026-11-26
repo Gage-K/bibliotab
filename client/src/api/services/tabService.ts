@@ -1,11 +1,6 @@
 import type { AxiosInstance } from "axios";
 import { API_ENDPOINTS } from "../endpoints";
-import type {
-  TabTracksType,
-  TabType,
-  TimeSignatureType,
-  TuningType,
-} from "../../shared/types/tab.types";
+import type { TabTracksType, TabType, TimeSignatureType, TuningType } from "@tablab/shared";
 
 /** Every tab endpoint wraps its payload in `{ data }`. */
 type ApiEnvelope<T> = { data: T };

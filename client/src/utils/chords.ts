@@ -1,6 +1,6 @@
 import chordsData from "../data/chords.json";
 import { derivePitchClass, deriveBassPitchClass } from "./pitch";
-import type { NoteFretType, TuningNoteType } from "@/shared/types/tab.types";
+import type { NoteFretType, TuningNoteType } from "@tablab/shared";
 
 // ROOT key as spelled in chords.json ("Csharp"/"Fsharp", not "C#") -> pitch class.
 const ROOT_PC: Record<string, number> = {

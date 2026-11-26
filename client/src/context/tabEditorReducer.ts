@@ -1,12 +1,5 @@
-import type {
-  TabBodyType,
-  TrackType,
-  EditorDetailsType,
-  NoteFretType,
-  NoteStyleType,
-  TimeSignatureType,
-  TuningType,
-} from "../shared/types/tab.types";
+import type { TabBodyType, TrackType, NoteFretType, NoteStyleType, TimeSignatureType, TuningType } from "@tablab/shared";
+import type { EditorDetailsType } from "../shared/types/utilities.types";
 import type { TabPositionType, TabSelectionType } from "../shared/types/utilities.types";
 import {
   isExistingPosition,
@@ -37,18 +30,15 @@ import {
   duplicateFrameRange,
   type FrameRange,
 } from "../utils/tabOperations";
-import {
-  createTrack,
-  reconcileOctaves,
-  trackStringCount,
-} from "../utils/trackOperations";
+import { createTrack, trackStringCount } from "../utils/trackOperations";
 import {
   DEFAULT_BPM,
   DEFAULT_TIME_SIGNATURE,
   MAX_BPM,
   MAX_TRACKS,
   MIN_BPM,
-} from "../shared/types/consts";
+  reconcileOctaves,
+} from "@tablab/shared";
 
 export interface TabEditorState {
   /** Freeform markdown notes for the tab. */

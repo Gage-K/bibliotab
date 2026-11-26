@@ -1,5 +1,5 @@
-import type { NoteFretType, TuningNoteType } from "@/shared/types/tab.types";
-import { FRET_EMPTY, FRET_MUTED } from "@/shared/types/consts";
+import type { NoteFretType, TuningNoteType } from "@tablab/shared";
+import { FRET_EMPTY, FRET_MUTED } from "@tablab/shared";
 
 const SEMITONE: Record<TuningNoteType, number> = {
   C: 0,

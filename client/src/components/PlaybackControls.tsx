@@ -1,6 +1,6 @@
 import { PlayIcon, StopIcon } from "@phosphor-icons/react";
 import { useTabEditor } from "../context/tabEditorProvider";
-import { MIN_BPM, MAX_BPM } from "../shared/types/consts";
+import { MIN_BPM, MAX_BPM } from "@tablab/shared";
 
 /**
  * Transport for the tab. Every track sounds through one Tone.Transport; the cursor

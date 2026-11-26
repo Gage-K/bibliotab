@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { pitchClass, noteName, derivePitchClass, noteNamesForFrame } from "../pitch";
 import { chordNameForFrame } from "../chords";
-import type { NoteFretType, TuningNoteType } from "@/shared/types/tab.types";
+import type { NoteFretType, TuningNoteType } from "@tablab/shared";
 
 // Standard tuning, stored high-e first (index 0 = high e ... index 5 = low E).
 const STD: TuningNoteType[] = ["E", "B", "G", "D", "A", "E"];

@@ -1,6 +1,6 @@
 import { DEFAULT_TAB } from "../shared/types/consts";
 import { useTabs, useCreateTab, useDeleteTab } from "../hooks/useTabs";
-import type { TabType } from "../shared/types/tab.types";
+import type { TabType } from "@tablab/shared";
 import type { CreateTabPayload } from "../api/services/tabService";
 
 import { SkeletonText } from "../components/Skeleton";

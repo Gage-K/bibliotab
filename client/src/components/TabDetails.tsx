@@ -1,12 +1,7 @@
 import { useMemo, useState } from "react";
-import { TuningNoteType, TuningType } from "../shared/types/tab.types";
-import {
-  INSTRUMENT_PRESETS,
-  MAX_BPM,
-  MIN_BPM,
-  TUNING_NOTES,
-} from "../shared/types/consts";
-import type { TimeSignatureType } from "../shared/types/tab.types";
+import { TuningNoteType, TuningType } from "@tablab/shared";
+import { INSTRUMENT_PRESETS, MAX_BPM, MIN_BPM, TUNING_NOTES } from "@tablab/shared";
+import type { TimeSignatureType } from "@tablab/shared";
 import { useTabEditor } from "../context/tabEditorProvider";
 
 export default function TabDetails() {

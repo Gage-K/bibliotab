@@ -1,10 +1,11 @@
 import { useState, useEffect, useMemo } from "react";
 import { useTabEditor } from "../context/tabEditorProvider";
-import type { NoteFretType } from "../shared/types/tab.types";
+import type { NoteFretType } from "@tablab/shared";
 import { getFrame } from "../utils/tabOperations";
 import { chordNameForFrame } from "../utils/chords";
 import { noteNamesForFrame } from "../utils/pitch";
-import { MEASURE_METERS, NOTE_VALUES } from "../shared/types/consts";
+import { MEASURE_METERS } from "../shared/types/consts";
+import { NOTE_VALUES } from "@tablab/shared";
 import {
   baseDuration,
   frameDuration,

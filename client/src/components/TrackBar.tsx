@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { PlusIcon, TrashIcon } from "@phosphor-icons/react";
 import { useTabEditor } from "../context/tabEditorProvider";
-import { INSTRUMENT_PRESETS, MAX_TRACKS } from "../shared/types/consts";
-import type { TuningType } from "../shared/types/tab.types";
+import { INSTRUMENT_PRESETS, MAX_TRACKS } from "@tablab/shared";
+import type { TuningType } from "@tablab/shared";
 import {
   DropdownMenu,
   DropdownMenuTrigger,

@@ -1,23 +1,15 @@
 import { nanoid } from "nanoid";
-import type {
-  TabBodyType,
-  SectionType,
-  MeasureType,
-  FrameType,
-  NoteFretType,
-  TimeSignatureType,
-} from "../shared/types/tab.types"
+import type { TabBodyType, SectionType, MeasureType, FrameType, NoteFretType, TimeSignatureType } from "@tablab/shared";
 import type { TabPositionType } from "../shared/types/utilities.types";
 import {
   DEFAULT_FRAME_DURATION,
+  DEFAULT_SECTION_NAME,
   DEFAULT_STRING_COUNT,
   FRET_EMPTY,
   MAX_FRAME_DURATION,
   MIN_FRAME_DURATION,
   NOTE_VALUES,
-} from "../shared/types/consts";
-
-export const DEFAULT_SECTION_NAME = "Section 1";
+} from "@tablab/shared";
 
 /**
  * Three invariants hold everywhere below: a body has at least one section, a section
@@ -69,56 +61,6 @@ export function createEmptyBody(
 export function bodyStringCount(tab: TabBodyType): number {
   return (
     tab.sections[0]?.measures[0]?.frames[0]?.notes.length ?? DEFAULT_STRING_COUNT
-  );
-}
-
-/**
- * Upgrades a legacy flat MeasureType[] body into the sectioned shape. Mirrors
- * normalizeTabBody in shared/utils/tab.serializer.ts — the server normalizes on read
- * and write, this catches anything cached client-side from before the migration.
- */
-export function normalizeBody(
-  raw: unknown,
-  stringCount: number = DEFAULT_STRING_COUNT
-): TabBodyType {
-  if (Array.isArray(raw)) {
-    return {
-      sections: [
-        createSection(DEFAULT_SECTION_NAME, (raw as unknown[]).map(normalizeMeasure)),
-      ],
-    };
-  }
-  if (raw && typeof raw === "object" && Array.isArray((raw as TabBodyType).sections)) {
-    const body = raw as TabBodyType;
-    // Preserve the reference when nothing needs upgrading — callers rely on a
-    // pass-through for already-current bodies. Only a legacy array-measure forces a copy.
-    if (!bodyHasLegacyMeasures(body)) return body;
-    return {
-      sections: body.sections.map((section) => ({
-        ...section,
-        measures: (section.measures as unknown[]).map(normalizeMeasure),
-      })),
-    };
-  }
-  return createEmptyBody(stringCount);
-}
-
-/**
- * Upgrades a legacy `FrameType[]` measure into the `{ frames }` shape. A measure that is
- * already an object passes through unchanged. Mirrors the server's normalizeTabBody.
- */
-export function normalizeMeasure(raw: unknown): MeasureType {
-  if (Array.isArray(raw)) return { frames: raw as FrameType[] };
-  if (raw && typeof raw === "object" && Array.isArray((raw as MeasureType).frames)) {
-    return raw as MeasureType;
-  }
-  return { frames: [] };
-}
-
-/** True if any measure is still a bare `FrameType[]` (pre measure-object shape). */
-function bodyHasLegacyMeasures(body: TabBodyType): boolean {
-  return body.sections.some((section) =>
-    (section.measures as unknown[]).some((measure) => Array.isArray(measure))
   );
 }
 

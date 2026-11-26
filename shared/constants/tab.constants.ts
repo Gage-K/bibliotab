@@ -51,56 +51,56 @@ export type InstrumentPreset = {
 export const INSTRUMENT_PRESETS: InstrumentPreset[] = [
   {
     id: "guitar-standard",
-    label: "Guitar — standard (EADGBE)",
+    label: "Guitar — standard",
     instrument: "guitar",
     tuning: STANDARD_TUNINGS.standard,
     octaves: [4, 3, 3, 3, 2, 2],
   },
   {
     id: "guitar-drop-d",
-    label: "Guitar — drop D (DADGBE)",
+    label: "Guitar — drop D",
     instrument: "guitar",
     tuning: STANDARD_TUNINGS.dropD,
     octaves: [4, 3, 3, 3, 2, 2],
   },
   {
     id: "guitar-half-step-down",
-    label: "Guitar — half step down (E♭A♭D♭G♭B♭E♭)",
+    label: "Guitar — half step down",
     instrument: "guitar",
     tuning: STANDARD_TUNINGS.halfStepDown,
     octaves: [4, 3, 3, 3, 2, 2],
   },
   {
     id: "guitar-open-g",
-    label: "Guitar — open G (DGDGBD)",
+    label: "Guitar — open G",
     instrument: "guitar",
     tuning: STANDARD_TUNINGS.openG,
     octaves: [4, 3, 3, 3, 2, 2],
   },
   {
     id: "guitar-7-string",
-    label: "7-string guitar (BEADGBE)",
+    label: "7-string guitar",
     instrument: "guitar",
     tuning: ["E", "B", "G", "D", "A", "E", "B"] as TuningNoteType[],
     octaves: [4, 3, 3, 3, 2, 2, 1],
   },
   {
     id: "bass-4",
-    label: "Bass — 4-string (EADG)",
+    label: "Bass — 4-string",
     instrument: "bass",
     tuning: ["G", "D", "A", "E"] as TuningNoteType[],
     octaves: [2, 2, 1, 1],
   },
   {
     id: "bass-5",
-    label: "Bass — 5-string (BEADG)",
+    label: "Bass — 5-string",
     instrument: "bass",
     tuning: ["G", "D", "A", "E", "B"] as TuningNoteType[],
     octaves: [2, 2, 1, 1, 0],
   },
   {
     id: "ukulele",
-    label: "Ukulele — standard (GCEA)",
+    label: "Ukulele",
     instrument: "ukulele",
     tuning: ["A", "E", "C", "G"] as TuningNoteType[],
     octaves: [4, 4, 4, 4],
@@ -126,14 +126,17 @@ export const DEFAULT_TIME_SIGNATURE: [number, number] = [4, 4];
 export const MIN_BPM = 30;
 export const MAX_BPM = 300;
 
-/** Note values offered in the editor, in beats. */
+/**
+ * Base note values offered in the editor, in beats, longest first. Dotted values are not
+ * listed — a dot is a separate modifier (×1.5) applied on top, so every entry is a plain
+ * value. The editor's duration stepping walks this list in order.
+ */
 export const NOTE_VALUES = [
-  { label: "Whole", beats: 4, symbol: "\u{1D15D}" },
-  { label: "Half", beats: 2, symbol: "\u{1D15E}" },
-  { label: "Dotted quarter", beats: 1.5, symbol: "\u{1D15F}." },
-  { label: "Quarter", beats: 1, symbol: "\u{1D15F}" },
-  { label: "Eighth", beats: 0.5, symbol: "\u{1D160}" },
-  { label: "Sixteenth", beats: 0.25, symbol: "\u{1D161}" },
+  { label: "Whole", beats: 4 },
+  { label: "Half", beats: 2 },
+  { label: "Quarter", beats: 1 },
+  { label: "Eighth", beats: 0.5 },
+  { label: "Sixteenth", beats: 0.25 },
 ] as const;
 
 /** Generous cap on the markdown notes field, to bound the row size. */

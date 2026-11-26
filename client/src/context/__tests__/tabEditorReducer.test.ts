@@ -3,7 +3,7 @@ import { tabEditorReducer, initialTabEditorState, activeBody } from "../tabEdito
 import type { TabEditorState } from "../tabEditorReducer";
 import { createEmptyFrame, createSection } from "../../utils/tabOperations";
 import { createTrack } from "../../utils/trackOperations";
-import type { MeasureType, TabBodyType, TuningType } from "@/shared/types/tab.types";
+import type { MeasureType, TabBodyType, TuningType } from "@tablab/shared";
 
 function measure(frames: number): MeasureType {
   return { frames: Array.from({ length: frames }, () => createEmptyFrame()) };

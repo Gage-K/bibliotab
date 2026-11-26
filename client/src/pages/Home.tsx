@@ -9,8 +9,9 @@ import TabDisplay from "../components/TabDisplay";
 import useTypedAuth from "../hooks/useTypedAuth";
 import { createEmptyFrame, createSection } from "../utils/tabOperations";
 import { createTrack } from "../utils/trackOperations";
-import type { TrackType, EditorDetailsType } from "../shared/types/tab.types";
-import { DEFAULT_BPM, DEFAULT_TIME_SIGNATURE } from "../shared/types/consts";
+import type { TrackType } from "@tablab/shared";
+import type { EditorDetailsType } from "../shared/types/utilities.types";
+import { DEFAULT_BPM, DEFAULT_TIME_SIGNATURE } from "@tablab/shared";
 
 const DEMO_TRACKS: TrackType[] = [
   createTrack({

@@ -1,4 +1,3 @@
-import { randomUUID } from "crypto";
 import {
   DEFAULT_BPM,
   DEFAULT_TIME_SIGNATURE,
@@ -23,6 +22,7 @@ import {
   TuningNoteType,
 } from "../types/tab.types";
 import { octavesForTuning, reconcileOctaves, DEFAULT_TUNING } from "./tuning";
+import { newId } from "./ids";
 
 export const DEFAULT_SECTION_NAME = "Section 1";
 export const DEFAULT_TRACK_NAME = "Track 1";
@@ -41,7 +41,7 @@ export function normalizeTabBody(raw: unknown): TabBodyType {
     return {
       sections: [
         {
-          id: randomUUID(),
+          id: newId(),
           name: DEFAULT_SECTION_NAME,
           measures: raw.map(normalizeMeasure),
         },
@@ -66,6 +66,8 @@ export function normalizeTabBody(raw: unknown): TabBodyType {
     };
   }
 
+  // Unrecognisable input is not upgraded into an empty tab: it yields no sections, which
+  // validateTabSize rejects, so junk posted to the API is refused rather than stored.
   return { sections: [] };
 }
 
@@ -133,7 +135,7 @@ function normalizeTrack(
       : fallbackTuning;
 
   return {
-    id: track.id ?? randomUUID(),
+    id: track.id ?? newId(),
     name: track.name ?? `Track ${index + 1}`,
     instrument: track.instrument ?? DEFAULT_INSTRUMENT,
     tuning,
@@ -255,6 +257,11 @@ export function validateTabSize(
   const MAX_SECTIONS = 100;
   const MAX_MEASURES = 500;
   const MAX_FRAMES_PER_MEASURE = 64;
+
+  // The editor assumes a body always has a section to put the cursor in.
+  if (body.sections.length === 0) {
+    return { valid: false, error: "Tab body must have at least one section" };
+  }
 
   if (body.sections.length > MAX_SECTIONS) {
     return {

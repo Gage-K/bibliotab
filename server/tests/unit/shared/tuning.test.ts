@@ -1,14 +1,13 @@
 import { describe, it, expect } from "vitest";
 import {
-  createTrack,
   deriveOctaves,
   midiNumber,
-  normalizeTracks,
   octavesForTuning,
   reconcileOctaves,
-} from "../trackOperations";
-import { createEmptyFrame } from "../tabOperations";
-import type { TuningType } from "@/shared/types/tab.types";
+} from "@tablab/shared";
+import type { TuningType } from "@tablab/shared";
+
+// Moved from the client, which used to keep its own copy of this module.
 
 const GUITAR = ["E", "B", "G", "D", "A", "E"] as TuningType;
 const BASS = ["G", "D", "A", "E"] as TuningType;
@@ -65,49 +64,5 @@ describe("midiNumber", () => {
     // Low E of a guitar is E2 = 40; 5th fret is A2 = 45.
     expect(midiNumber("E", 2, 0)).toBe(40);
     expect(midiNumber("E", 2, 5)).toBe(45);
-  });
-});
-
-describe("normalizeTracks", () => {
-  it("wraps a legacy flat measures array in one guitar track", () => {
-    const legacy = [[createEmptyFrame()], [createEmptyFrame()]];
-    const tracks = normalizeTracks(legacy);
-
-    expect(tracks).toHaveLength(1);
-    expect(tracks[0].instrument).toBe("guitar");
-    expect(tracks[0].body.sections[0].measures).toHaveLength(2);
-  });
-
-  it("wraps a sectioned body in one track, keeping the fallback tuning", () => {
-    const sectioned = { sections: [{ id: "s", name: "Intro", measures: [[createEmptyFrame(4)]] }] };
-    const tracks = normalizeTracks(sectioned, BASS);
-
-    expect(tracks).toHaveLength(1);
-    expect(tracks[0].tuning).toEqual(BASS);
-    expect(tracks[0].octaves).toEqual([2, 2, 1, 1]);
-  });
-
-  it("fills in fields a stored track is missing", () => {
-    const partial = {
-      tracks: [{ body: { sections: [{ id: "s", name: "Intro", measures: [[createEmptyFrame()]] }] } }],
-    };
-    const tracks = normalizeTracks(partial);
-
-    expect(tracks[0].id).toBeTruthy();
-    expect(tracks[0].name).toBe("Track 1");
-    expect(tracks[0].tuning).toEqual(GUITAR);
-    expect(tracks[0].octaves).toEqual([4, 3, 3, 3, 2, 2]);
-  });
-
-  it("passes a well-formed multi-track blob through", () => {
-    const tracks = normalizeTracks({
-      tracks: [
-        createTrack({ name: "Guitar" }),
-        createTrack({ name: "Bass", instrument: "bass", tuning: BASS }),
-      ],
-    });
-
-    expect(tracks.map((t) => t.name)).toEqual(["Guitar", "Bass"]);
-    expect(tracks[1].tuning).toEqual(BASS);
   });
 });

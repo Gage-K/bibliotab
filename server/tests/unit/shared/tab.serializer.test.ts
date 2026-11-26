@@ -9,7 +9,7 @@ import {
   validateTuning,
   tabEntityToResponse,
 } from "@tablab/shared";
-import type { TabEntity, MeasureType } from "@tablab/shared";
+import type { TabEntity, MeasureType, TuningType } from "@tablab/shared";
 
 const frame = (notes = 6) => ({
   id: "f",
@@ -197,6 +197,12 @@ describe("validateTabSize", () => {
     expect(validateTabSize(null)).toMatchObject({ valid: false });
   });
 
+  it("rejects a body with no sections", () => {
+    const result = validateTabSize({ sections: [] });
+    expect(result).toMatchObject({ valid: false });
+    expect((result as { error: string }).error).toContain("at least one section");
+  });
+
   it("rejects a section without a measures array", () => {
     const result = validateTabSize({ sections: [{ id: "s", name: "x" }] });
     expect(result).toMatchObject({ valid: false });
@@ -264,6 +270,16 @@ describe("validateTabTracks", () => {
 
   it("rejects an empty tracks array", () => {
     expect(validateTabTracks({ tracks: [] })).toMatchObject({ valid: false });
+  });
+
+  it("rejects junk tab_data the way the route sees it: normalized, then validated", () => {
+    // Junk normalizes to a track with no sections. Before the section check, this passed
+    // validation and was stored as a tab the editor could not open.
+    for (const junk of [null, "nope", 42, {}]) {
+      const result = validateTabTracks(normalizeTabTracks(junk, GUITAR as TuningType));
+      expect(result).toMatchObject({ valid: false });
+      expect((result as { error: string }).error).toContain("at least one section");
+    }
   });
 
   it("checks each track's frames against that track's own tuning", () => {

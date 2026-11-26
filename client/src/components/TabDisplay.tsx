@@ -8,11 +8,7 @@ import {
   measureTimeSignature,
   sectionMeasureOffset,
 } from "../utils/tabOperations";
-import type {
-  MeasureType,
-  TabBodyType,
-  TimeSignatureType,
-} from "../shared/types/tab.types";
+import type { MeasureType, TabBodyType, TimeSignatureType } from "@tablab/shared";
 import type { TabSelectionType } from "../shared/types/utilities.types";
 import { NoteValueIcon } from "./NoteValueIcon";
 
