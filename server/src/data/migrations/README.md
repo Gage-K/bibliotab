@@ -85,6 +85,35 @@ the error**. If `db:migrate` fails with no message, check whether the DB was bas
 > never happens and the rows stay in the old shape. Use `--through <tag>` only for
 > migrations you know are already reflected in that database.
 
+### Production: one-time stamp after the hand-applied 0001–0006
+
+Prod's schema came from `init.sql`, and for PR #16 its migrations 0001–0006 are applied by
+hand with `psql --single-transaction`, not through Drizzle. Prod therefore has the
+current schema but no `drizzle.__drizzle_migrations` table, and every deploy will fail at
+its migrate step with `NotBaselinedError` (the old backend keeps serving) until it is
+stamped once. From a laptop checkout of the commit that is deployed:
+
+```bash
+# Terminal 1: tunnel to prod Postgres (bound to 127.0.0.1:5432 on the VPS)
+ssh -N -L 5433:127.0.0.1:5432 deploy@<SERVER_IP>
+```
+
+```bash
+# Terminal 2, in server/: record 0000–0006 as applied, without running them
+DB_HOST=localhost DB_PORT=5433 DB_USER=<prod user> DB_PASSWORD=<prod password> DB_NAME=<prod db> pnpm db:baseline --through 0006_drop_tab_lyrics
+```
+
+It should print `stamped:` for 0000 through 0006. Then re-run the Deploy workflow; its
+migrate step should log `Database is up to date (latest: 0006_drop_tab_lyrics)`.
+
+- Use `--through 0006_drop_tab_lyrics`, **not** `--all`. `--all` stamps everything in
+  the laptop's journal, so a checkout that has a newer, unapplied migration would mark it
+  done without running it.
+- Plain `pnpm db:baseline` (0000 only) would be wrong here, but it fails safely: the
+  next deploy re-runs 0003, stops on `column "bpm" of relation "tabs" already exists`,
+  and rolls back. Fix that by running the `--through` command above; it skips 0000,
+  which is already stamped.
+
 ## Adding a schema change (future phases)
 
 1. Edit the table(s) in [`../schema/`](../schema) (or add a new schema file).
@@ -136,3 +165,8 @@ the error**. If `db:migrate` fails with no message, check whether the DB was bas
 - The pre-Drizzle hand-written migration is archived at
   [`../../../db/legacy/001_update_tab_schema.sql`](../../../db/legacy/001_update_tab_schema.sql)
   (already reflected in the baseline).
+- **Drizzle at runtime is limited to `../migrate.ts`.** The app itself uses a plain `pg`
+  Pool and raw SQL. The migrator relies on drizzle-orm's migrator, the
+  `meta/_journal.json` format and the `drizzle.__drizzle_migrations` table. Dropping
+  Drizzle means replacing that one file with a runner that keeps the same
+  "refuse when untracked, apply pending in one transaction" behaviour.

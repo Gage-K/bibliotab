@@ -72,8 +72,10 @@ export class NotBaselinedError extends Error {
     super(
       `Refusing to migrate: the database already has tables (${existingTables.join(", ")}) ` +
         "but no Drizzle migration history (drizzle.__drizzle_migrations is empty or missing). " +
-        "Running migration 0000 would try to re-create them. Baseline it once by hand " +
-        "(`pnpm db:baseline`, see server/src/data/migrations/README.md), then redeploy.",
+        "Running migration 0000 would try to re-create them. Stamp it once by hand with " +
+        "`pnpm db:baseline` (only 0000), or `pnpm db:baseline --through <tag>` if later " +
+        "migrations were already applied outside Drizzle, then redeploy. " +
+        "See server/src/data/migrations/README.md.",
     );
     this.name = "NotBaselinedError";
   }
