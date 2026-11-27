@@ -1,9 +1,11 @@
 # Built from the repo root (see docker-compose.prod.yml), like the backend, so the
 # shared Tab model in `shared/` is in the build context. The client imports it as
 # @tablab/shared and Vite resolves that to ../shared — /app/shared next to /app/client.
-FROM node:20-alpine AS builder
+# Node 22 and the pinned pnpm match Dockerfile.dev: pnpm 11, the "packageManager" in
+# package.json, needs Node >= 22.13 and fails to start on Node 20.
+FROM node:22-alpine AS builder
 WORKDIR /app/client
-RUN npm install -g pnpm
+RUN corepack enable && corepack prepare pnpm@11.25.0 --activate
 # pnpm-workspace.yaml must be present at install time: it carries the build-script
 # approvals (without them pnpm fails on esbuild) and the security overrides.
 COPY client/package.json client/pnpm-lock.yaml* client/pnpm-workspace.yaml* ./
