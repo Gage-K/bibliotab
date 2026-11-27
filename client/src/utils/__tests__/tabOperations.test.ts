@@ -33,6 +33,14 @@ import {
   sectionMeasureOffset,
   totalMeasures,
   isExistingPosition,
+  addMeasure,
+  addMeasureBefore,
+  addFrameAndAdvance,
+  addFrameBefore,
+  deleteFrame,
+  addSection,
+  deleteSection,
+  relocateMeasure,
 } from "../tabOperations";
 import type { MeasureType, TabBodyType } from "@tablab/shared";
 
@@ -553,5 +561,154 @@ describe("frame ids", () => {
     const moved = moveMeasure(tab, { section: 0, measure: 0 }, { section: 1, measure: 0 });
 
     expect(moved.sections[1].measures[0].frames[0].id).toBe(movedId);
+  });
+});
+
+describe("edits that land the cursor", () => {
+  const at = (section: number, measure: number, frame: number, string = 0) => ({
+    section,
+    measure,
+    frame,
+    string,
+  });
+  const frameCounts = (tab: TabBodyType, section = 0) =>
+    tab.sections[section].measures.map((m) => m.frames.length);
+
+  it("addMeasure lands on the new measure's first frame and string", () => {
+    const tab = body({ name: "Intro", measures: [2, 3] });
+    const { tab: next, position } = addMeasure(tab, 0, 1);
+    expect(frameCounts(next)).toEqual([2, 1, 3]);
+    expect(position).toEqual(at(0, 1, 0));
+  });
+
+  it("addMeasure at -1 prepends and lands on measure 0", () => {
+    const { tab: next, position } = addMeasure(body({ name: "Intro", measures: [2] }), 0, -1);
+    expect(frameCounts(next)).toEqual([1, 2]);
+    expect(position).toEqual(at(0, 0, 0));
+  });
+
+  it("addMeasureBefore keeps the cursor on its frame, one measure along, on the first string", () => {
+    const tab = body({ name: "Intro", measures: [2, 3] });
+    const { tab: next, position } = addMeasureBefore(tab, at(0, 1, 2, 4));
+    expect(frameCounts(next)).toEqual([2, 1, 3]);
+    expect(position).toEqual(at(0, 2, 2, 0));
+  });
+
+  it("addFrameAndAdvance lands on the inserted frame, keeping the string", () => {
+    const tab = body({ name: "Intro", measures: [2] });
+    const { tab: next, position } = addFrameAndAdvance(tab, at(0, 0, 0), true, at(0, 0, 0, 3));
+    expect(frameCounts(next)).toEqual([3]);
+    expect(position).toEqual(at(0, 0, 1, 3));
+  });
+
+  it("addFrameAndAdvance leaves the cursor when nothing was inserted", () => {
+    const tab = body({ name: "Intro", measures: [2] });
+    const cursor = at(0, 0, 1, 2);
+    const result = addFrameAndAdvance(tab, at(0, 5, 0), true, cursor);
+    expect(result.tab).toBe(tab);
+    expect(result.position).toBe(cursor);
+  });
+
+  it("addFrameBefore inserts before the cursor and keeps it on its frame", () => {
+    const tab = body({ name: "Intro", measures: [3] });
+    const original = tab.sections[0].measures[0].frames[1].id;
+    const { tab: next, position } = addFrameBefore(tab, at(0, 0, 1, 2));
+    expect(frameCounts(next)).toEqual([4]);
+    expect(position).toEqual(at(0, 0, 2, 2));
+    expect(next.sections[0].measures[0].frames[2].id).toBe(original);
+  });
+
+  it("addFrameBefore on the first frame prepends", () => {
+    const tab = body({ name: "Intro", measures: [1] });
+    const original = tab.sections[0].measures[0].frames[0].id;
+    const { tab: next, position } = addFrameBefore(tab, at(0, 0, 0));
+    expect(next.sections[0].measures[0].frames[1].id).toBe(original);
+    expect(position).toEqual(at(0, 0, 1));
+  });
+
+  it("deleteFrame lands on the frame that took its place", () => {
+    const { tab: next, position } = deleteFrame(body({ name: "Intro", measures: [3] }), 0, 0, 1);
+    expect(frameCounts(next)).toEqual([2]);
+    expect(position).toEqual(at(0, 0, 1));
+  });
+
+  it("deleteFrame of a measure's last frame lands on the next measure's first", () => {
+    const { position } = deleteFrame(body({ name: "Intro", measures: [2, 2] }), 0, 0, 1);
+    expect(position).toEqual(at(0, 1, 0));
+  });
+
+  it("deleteFrame of a section's last frame lands on the frame before", () => {
+    const { position } = deleteFrame(body({ name: "Intro", measures: [2, 3] }), 0, 1, 2);
+    expect(position).toEqual(at(0, 1, 1));
+  });
+
+  it("deleteFrame of a measure's only frame removes it and lands on the end of the one before", () => {
+    const { tab: next, position } = deleteFrame(body({ name: "Intro", measures: [3, 1] }), 0, 1, 0);
+    expect(frameCounts(next)).toEqual([3]);
+    expect(position).toEqual(at(0, 0, 2));
+  });
+
+  it("deleteFrame of the first measure's only frame lands on the measure that took its place", () => {
+    const { tab: next, position } = deleteFrame(body({ name: "Intro", measures: [1, 2] }), 0, 0, 0);
+    expect(frameCounts(next)).toEqual([2]);
+    expect(position).toEqual(at(0, 0, 1));
+  });
+
+  it("deleteFrame keeps a section's only frame", () => {
+    const tab = body({ name: "Intro", measures: [1] });
+    expect(deleteFrame(tab, 0, 0, 0).tab).toBe(tab);
+  });
+
+  it("addSection lands on the new section's first frame, keeping the string", () => {
+    const tab = body({ name: "Intro", measures: [2] });
+    const { tab: next, position } = addSection(tab, 99, "Verse", at(0, 0, 1, 3));
+    expect(next.sections.map((s) => s.name)).toEqual(["Intro", "Verse"]);
+    expect(position).toEqual(at(1, 0, 0, 3));
+  });
+
+  it("deleteSection shifts the cursor back when a section above it goes", () => {
+    const tab = body({ name: "A", measures: [1] }, { name: "B", measures: [1] }, { name: "C", measures: [2] });
+    const { position } = deleteSection(tab, 0, at(2, 0, 1, 3));
+    expect(position).toEqual(at(1, 0, 1, 3));
+  });
+
+  it("deleteSection leaves the cursor when a section below it goes", () => {
+    const tab = body({ name: "A", measures: [2] }, { name: "B", measures: [1] });
+    const cursor = at(0, 0, 1, 3);
+    expect(deleteSection(tab, 1, cursor).position).toEqual(cursor);
+  });
+
+  it("deleteSection of the cursor's own section lands on the one that took its place", () => {
+    const tab = body({ name: "A", measures: [1] }, { name: "B", measures: [2] }, { name: "C", measures: [1] });
+    expect(deleteSection(tab, 1, at(1, 0, 1, 3)).position).toEqual(at(1, 0, 0, 0));
+    expect(deleteSection(tab, 2, at(2, 0, 0, 3)).position).toEqual(at(1, 0, 0, 0));
+  });
+
+  it("deleteSection keeps the last section", () => {
+    const tab = body({ name: "A", measures: [1] });
+    const cursor = at(0, 0, 0);
+    const result = deleteSection(tab, 0, cursor);
+    expect(result.tab).toBe(tab);
+    expect(result.position).toBe(cursor);
+  });
+
+  it("relocateMeasure lands on the moved measure's first frame, keeping the string", () => {
+    const tab = body({ name: "A", measures: [1, 2] }, { name: "B", measures: [3] });
+    const { tab: next, position } = relocateMeasure(
+      tab,
+      { section: 0, measure: 1 },
+      { section: 1, measure: 99 },
+      at(0, 1, 1, 2),
+    );
+    expect(frameCounts(next, 1)).toEqual([3, 2]);
+    expect(position).toEqual(at(1, 1, 0, 2));
+  });
+
+  it("relocateMeasure leaves the cursor when the move is refused", () => {
+    const tab = body({ name: "A", measures: [1] }, { name: "B", measures: [1] });
+    const cursor = at(0, 0, 0);
+    const result = relocateMeasure(tab, { section: 0, measure: 0 }, { section: 1, measure: 0 }, cursor);
+    expect(result.tab).toBe(tab);
+    expect(result.position).toBe(cursor);
   });
 });

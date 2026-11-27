@@ -363,9 +363,7 @@ export function TabEditorProvider({
 
         // Inserts
         case "addFrameBefore":
-          dispatch({ type: "ADD_FRAME", payload: { section, measure, frame: frame - 1, isEmpty: true } });
-          // Stay on the frame we were on, now one further along.
-          moveCursor({ to: { section, measure, frame: frame + 1 } });
+          dispatch({ type: "ADD_FRAME_BEFORE", payload: { section, measure, frame } });
           break;
         case "addFrameAfter":
           dispatch({ type: "ADD_FRAME", payload: { section, measure, frame, isEmpty: true } });
@@ -374,9 +372,7 @@ export function TabEditorProvider({
           dispatch({ type: "DUPLICATE_FRAMES" });
           break;
         case "addMeasureBefore":
-          dispatch({ type: "ADD_MEASURE", payload: { section, measure } });
-          // Stay on the frame we were on, in its measure now one further along.
-          moveCursor({ to: { section, measure: measure + 1, frame } });
+          dispatch({ type: "ADD_MEASURE_BEFORE", payload: { section, measure, frame } });
           break;
         case "addMeasureAfter":
           dispatch({ type: "ADD_MEASURE", payload: { section, measure: measure + 1 } });

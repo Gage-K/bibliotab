@@ -520,3 +520,76 @@ describe("rests and per-measure meter", () => {
     expect(activeBody(cleared).sections[0].measures[0].timeSignature).toBeUndefined();
   });
 });
+
+// The insert-before keys were once an insert followed by a MOVE_CURSOR back onto the
+// original frame. These pin the single actions to what that pair did.
+describe("insert-before actions", () => {
+  const tab = body({ name: "Intro", measures: [2, 3] });
+  const selected = (state: TabEditorState): TabEditorState => ({
+    ...state,
+    selection: { anchor: { ...state.position }, head: { ...state.position, frame: 0 } },
+  });
+  // Ignores fresh frame ids, which differ between any two inserts.
+  const shape = (state: TabEditorState) => ({
+    ...state,
+    tracks: state.tracks.map((track) => ({
+      ...track,
+      body: {
+        sections: track.body.sections.map((s) => ({
+          ...s,
+          measures: s.measures.map((m) => ({ ...m, frames: m.frames.map((f) => f.notes) })),
+        })),
+      },
+    })),
+  });
+
+  it("ADD_FRAME_BEFORE inserts before the cursor and keeps it on its frame", () => {
+    const state = selected(stateWith(tab, { measure: 1, frame: 2, string: 3 }));
+    const next = tabEditorReducer(state, {
+      type: "ADD_FRAME_BEFORE",
+      payload: { section: 0, measure: 1, frame: 2 },
+    });
+
+    expect(activeBody(next).sections[0].measures[1].frames).toHaveLength(4);
+    expect(activeBody(next).sections[0].measures[1].frames[3].id).toBe(
+      tab.sections[0].measures[1].frames[2].id,
+    );
+    expect(next.position).toEqual({ section: 0, measure: 1, frame: 3, string: 3 });
+    expect(next.selection).toBeNull();
+    expect(next.isEditing).toBe(true);
+
+    const before = tabEditorReducer(state, {
+      type: "ADD_FRAME",
+      payload: { section: 0, measure: 1, frame: 1, isEmpty: true },
+    });
+    const pair = tabEditorReducer(before, {
+      type: "MOVE_CURSOR",
+      payload: { to: { section: 0, measure: 1, frame: 3 } },
+    });
+    expect(shape(next)).toEqual(shape(pair));
+  });
+
+  it("ADD_MEASURE_BEFORE inserts before the cursor's measure and keeps it on its frame", () => {
+    const state = selected(stateWith(tab, { measure: 1, frame: 2, string: 3 }));
+    const next = tabEditorReducer(state, {
+      type: "ADD_MEASURE_BEFORE",
+      payload: { section: 0, measure: 1, frame: 2 },
+    });
+
+    expect(activeBody(next).sections[0].measures.map((m) => m.frames.length)).toEqual([2, 1, 3]);
+    // The string goes back to the first, as ADD_MEASURE has always left it.
+    expect(next.position).toEqual({ section: 0, measure: 2, frame: 2, string: 0 });
+    expect(next.selection).toBeNull();
+    expect(next.isEditing).toBe(true);
+
+    const before = tabEditorReducer(state, {
+      type: "ADD_MEASURE",
+      payload: { section: 0, measure: 1 },
+    });
+    const pair = tabEditorReducer(before, {
+      type: "MOVE_CURSOR",
+      payload: { to: { section: 0, measure: 2, frame: 2 } },
+    });
+    expect(shape(next)).toEqual(shape(pair));
+  });
+});
