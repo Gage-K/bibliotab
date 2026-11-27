@@ -1,7 +1,11 @@
 import { TabRepository } from "../../data/repositories/tab.repository";
 import { ForbiddenError, NotFoundError } from "../../common/errors/AppError";
 import { CreateTabDto, TabResponse, UpdateTabDto } from "../types/tab.types";
-import { tabEntityToResponse, tabEntitiesToResponses } from "@tablab/shared";
+import {
+  tabEntityToResponse,
+  tabEntitiesToResponses,
+  normalizeTabTracks,
+} from "@tablab/shared";
 
 export class TabService {
   constructor(private tabRepo: TabRepository) {}
@@ -38,7 +42,14 @@ export class TabService {
   }
 
   async createTab(tabData: CreateTabDto, userId: string): Promise<TabResponse> {
-    const created = await this.tabRepo.create(userId, tabData);
+    // Store the tracked shape regardless of which generation the client sent.
+    const tab_data = normalizeTabTracks(tabData.tab_data, tabData.tuning);
+    const created = await this.tabRepo.create(userId, {
+      ...tabData,
+      // `tuning` is vestigial but NOT NULL; keep it mirroring track 0.
+      tuning: tab_data.tracks[0]?.tuning ?? tabData.tuning,
+      tab_data,
+    });
     return tabEntityToResponse(created);
   }
 
@@ -49,7 +60,20 @@ export class TabService {
   ): Promise<TabResponse> {
     await this.verifyOwnership(tabId, userId);
 
-    const updatedTab = await this.tabRepo.update(tabId, tabData);
+    const normalized =
+      tabData.tab_data !== undefined
+        ? normalizeTabTracks(tabData.tab_data, tabData.tuning)
+        : undefined;
+
+    const updatedTab = await this.tabRepo.update(tabId, {
+      ...tabData,
+      ...(normalized
+        ? {
+            tab_data: normalized,
+            tuning: normalized.tracks[0]?.tuning ?? tabData.tuning,
+          }
+        : {}),
+    });
     if (!updatedTab) {
       throw new NotFoundError("Tab");
     }

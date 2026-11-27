@@ -1,27 +1,126 @@
-import { createContext, useReducer, useEffect, useContext, useRef, useCallback } from "react";
-import { createEmptyFrame } from "../utils/tabOperations";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useReducer,
+  useRef,
+  useState,
+  type Dispatch,
+} from "react";
 import { useTab, useUpdateTab } from "../hooks/useTabs";
 import { useEditorKeybindings } from "../hooks/useEditorKeybindings";
 import type { EditorAction } from "../shared/keymaps/defaultKeymap";
-import type { NoteStyleType } from "../shared/types/tab.types";
 import type {
-  TabBodyType,
-  EditorDetailsType,
-  FrameType,
   NoteFretType,
+  TabBodyType,
+  TimeSignatureType,
+  TrackType,
   TuningType,
-} from "../shared/types/tab.types";
-import type { TabPositionType, TabSelectionType } from "../shared/types/utilities.types";
-import { tabEditorReducer, initialTabEditorState } from "./tabEditorReducer";
+} from "@tablab/shared";
+import { FRET_EMPTY, FRET_MUTED, normalizeTabTracks } from "@tablab/shared";
+import type {
+  EditorDetailsType,
+  TabPositionType,
+  TabSelectionType,
+} from "../shared/types/utilities.types";
+import {
+  tabEditorReducer,
+  initialTabEditorState,
+  activeBody,
+  type TabEditorAction,
+} from "./tabEditorReducer";
+import { trackStringCount } from "../utils/trackOperations";
+import { createFretEntry } from "../utils/fretEntry";
+import type { CursorMotion } from "../utils/cursor";
+import { useTabPlayback } from "../hooks/useTabPlayback";
 
-const FRET_EMPTY = -2;
-const FRET_MUTED = -1;
-const MAX_FRET = 24;
-const DIGIT_BUFFER_TIMEOUT_MS = 200;
+type MeasureRef = { section: number; measure: number };
 
-interface TabEditorContextType {
+/**
+ * The edits the editor offers its components. Each one only dispatches, so the object is
+ * built once per editor and never changes. Adding an edit is one entry here plus its
+ * case in the reducer.
+ */
+function createCommands(dispatch: Dispatch<TabEditorAction>) {
+  return {
+    /** Song or artist. Tuning belongs to a track: see setTrackTuning. */
+    updateDetails: (name: string, value: string) =>
+      dispatch({ type: "UPDATE_DETAILS", payload: { name, value } }),
+    setNotes: (notes: string) => dispatch({ type: "SET_NOTES", payload: { notes } }),
+    setBpm: (bpm: number) => dispatch({ type: "SET_BPM", payload: { bpm } }),
+    setTimeSignature: (timeSignature: TimeSignatureType) =>
+      dispatch({ type: "SET_TIME_SIGNATURE", payload: { timeSignature } }),
+
+    /**
+     * Moves the cursor: a frame, measure, or string at a time (crossing measure and
+     * section boundaries), or straight to a frame. See utils/cursor.
+     */
+    moveCursor: (motion: CursorMotion) => dispatch({ type: "MOVE_CURSOR", payload: motion }),
+
+    updateTabData: (section: number, measure: number, frame: number, formData: NoteFretType[]) =>
+      dispatch({ type: "UPDATE_TAB_FRAME", payload: { section, measure, frame, formData } }),
+    setFrameDuration: (section: number, measure: number, frame: number, duration: number) =>
+      dispatch({ type: "SET_FRAME_DURATION", payload: { section, measure, frame, duration } }),
+    setFrameRest: (section: number, measure: number, frame: number, isRest: boolean) =>
+      dispatch({ type: "SET_FRAME_REST", payload: { section, measure, frame, isRest } }),
+    /** A meter for one measure, or null to inherit the tab's. */
+    setMeasureTimeSignature: (
+      section: number,
+      measure: number,
+      timeSignature: TimeSignatureType | null,
+    ) =>
+      dispatch({ type: "SET_MEASURE_TIME_SIGNATURE", payload: { section, measure, timeSignature } }),
+
+    /** Inserts a frame after `frame` and moves the cursor onto it. */
+    addFrameAndAdvance: (section: number, measure: number, frame: number, isEmpty: boolean) =>
+      dispatch({ type: "ADD_FRAME_AND_ADVANCE", payload: { section, measure, frame, isEmpty } }),
+    /** Duplicates the selection, or the cursor's frame when nothing is selected. */
+    duplicateFrames: () => dispatch({ type: "DUPLICATE_FRAMES" }),
+    /** Deletes the selection, or this frame when nothing is selected. */
+    deleteFrame: (section: number, measure: number, frame: number) =>
+      dispatch({ type: "DELETE_FRAME", payload: { section, measure, frame } }),
+    /** Inserts an empty measure at index `measure` of the section. */
+    addNewMeasure: (section: number, measure: number) =>
+      dispatch({ type: "ADD_MEASURE", payload: { section, measure } }),
+    moveMeasure: (from: MeasureRef, to: MeasureRef) =>
+      dispatch({ type: "MOVE_MEASURE", payload: { from, to } }),
+
+    addSection: (index: number, name: string) =>
+      dispatch({ type: "ADD_SECTION", payload: { index, name } }),
+    renameSection: (index: number, name: string) =>
+      dispatch({ type: "RENAME_SECTION", payload: { index, name } }),
+    deleteSection: (index: number) => dispatch({ type: "DELETE_SECTION", payload: { index } }),
+
+    setActiveTrack: (index: number) => dispatch({ type: "SET_ACTIVE_TRACK", payload: { index } }),
+    addTrack: (options: {
+      name: string;
+      instrument: string;
+      tuning: TuningType;
+      octaves?: number[];
+    }) => dispatch({ type: "ADD_TRACK", payload: options }),
+    removeTrack: (index: number) => dispatch({ type: "REMOVE_TRACK", payload: { index } }),
+    renameTrack: (index: number, name: string) =>
+      dispatch({ type: "RENAME_TRACK", payload: { index, name } }),
+    setTrackTuning: (
+      index: number,
+      tuning: TuningType,
+      options?: { instrument?: string; octaves?: number[] },
+    ) => dispatch({ type: "SET_TRACK_TUNING", payload: { index, tuning, ...options } }),
+
+    handleOpeningEditor: () => dispatch({ type: "TOGGLE_EDITOR" }),
+  };
+}
+
+interface TabEditorContextType extends ReturnType<typeof createCommands> {
+  /** The active track's body — what the tab display and editing actions operate on. */
   tab: TabBodyType;
+  tracks: TrackType[];
+  activeTrack: number;
+  /** The track being edited, or undefined before the tab loads. */
+  track: TrackType | undefined;
   details: EditorDetailsType;
+  notes: string;
   isLoading: boolean;
   position: TabPositionType;
   selection: TabSelectionType;
@@ -29,20 +128,25 @@ interface TabEditorContextType {
   isEditing: boolean;
   isSaving: boolean;
   isDemo: boolean;
-  updateDetails: (name: string, value: string | TuningType) => void;
+  /** Number of strings on the current instrument — the tuning's length. */
+  stringCount: number;
+  isPlaying: boolean;
+  togglePlayback: () => void;
+  /** Frames in the longest track — zero means there is nothing to play. */
+  totalSteps: number;
   saveChanges: () => Promise<void>;
-  handleOpeningEditor: () => void;
-  updatePosition: (measure: number, frame: number) => void;
-  getEmptyFrame: () => FrameType;
-  addNewMeasure: (measure: number) => void;
-  addNewFrame: (measure: number, frame: number, isEmpty: boolean) => void;
-  addFrameAndAdvance: (measure: number, frame: number, isEmpty: boolean) => void;
-  deleteMeasure: (measure: number) => void;
-  deleteFrame: (frame: number, measure: number) => void;
-  updateTabData: (measure: number, index: number, formData: NoteFretType[]) => void;
 }
 
 const TabEditorContext = createContext<TabEditorContextType | null>(null);
+
+const FRET_DIGIT_PREFIX = "fretDigit";
+
+/** The digit a number-key action stands for, or null for any other action. */
+function fretDigit(action: EditorAction): number | null {
+  return action.startsWith(FRET_DIGIT_PREFIX)
+    ? Number(action.slice(FRET_DIGIT_PREFIX.length))
+    : null;
+}
 
 export function TabEditorProvider({
   tabId,
@@ -50,12 +154,30 @@ export function TabEditorProvider({
   children,
 }: {
   tabId?: string;
-  demoData?: { tab: TabBodyType; details: EditorDetailsType };
+  demoData?: {
+    tracks: TrackType[];
+    details: EditorDetailsType;
+    notes?: string;
+  };
   children: React.ReactNode;
 }) {
   const isDemo = !!demoData;
   const [state, dispatch] = useReducer(tabEditorReducer, initialTabEditorState);
-  const { tab, details, position, selection, editorIsOpen, isEditing, isSaving } = state;
+  const [commands] = useState(() => createCommands(dispatch));
+  const {
+    tracks,
+    activeTrack,
+    details,
+    notes,
+    position,
+    selection,
+    editorIsOpen,
+    isEditing,
+    isSaving,
+  } = state;
+
+  const track = tracks[activeTrack];
+  const tab = activeBody(state);
 
   const { data: serverTab, isLoading: isQueryLoading } = useTab(tabId ?? "", { enabled: !isDemo && !!tabId });
   const updateTabMutation = useUpdateTab(tabId ?? "");
@@ -64,7 +186,14 @@ export function TabEditorProvider({
   useEffect(() => {
     if (demoData && !hasLoaded.current) {
       hasLoaded.current = true;
-      dispatch({ type: "SET_TAB_DATA", payload: demoData });
+      dispatch({
+        type: "SET_TAB_DATA",
+        payload: {
+          ...demoData,
+          notes: demoData.notes ?? "",
+          tracks: normalizeTabTracks({ tracks: demoData.tracks }).tracks,
+        },
+      });
     } else if (serverTab && !hasLoaded.current) {
       hasLoaded.current = true;
       dispatch({
@@ -74,19 +203,21 @@ export function TabEditorProvider({
             id: serverTab.id,
             artist: serverTab.details.artist,
             song: serverTab.details.song,
-            tuning: serverTab.details.tuning,
+            bpm: serverTab.details.bpm,
+            timeSignature: serverTab.details.timeSignature,
           },
-          tab: serverTab.body,
+          // The server already normalizes, but a response cached from an older client
+          // can still be a pre-tracks shape. normalizeTabTracks is the same function the
+          // server reads with, so both sides upgrade old shapes identically.
+          tracks: normalizeTabTracks({ tracks: serverTab.tracks }).tracks,
+          notes: serverTab.notes ?? "",
         },
       });
     }
   }, [serverTab, demoData]);
 
-  const isLoading = isDemo ? false : isQueryLoading || tab.length === 0;
-
-  function updateDetails(name: string, value: string | TuningType) {
-    dispatch({ type: "UPDATE_DETAILS", payload: { name, value } });
-  }
+  const isLoading = isDemo ? false : isQueryLoading || tracks.length === 0;
+  const stringCount = trackStringCount(track);
 
   async function saveChanges() {
     if (isDemo) return;
@@ -94,8 +225,13 @@ export function TabEditorProvider({
     const data = {
       tab_name: details.song,
       tab_artist: details.artist,
-      tuning: details.tuning,
-      tab_data: tab,
+      // `tuning` is vestigial on the server (NOT NULL column) but still required by the
+      // API; it mirrors track 0.
+      tuning: tracks[0]?.tuning ?? [],
+      tab_data: { tracks },
+      bpm: details.bpm,
+      time_signature: details.timeSignature,
+      notes,
     };
 
     updateTabMutation.mutate(data, {
@@ -109,246 +245,178 @@ export function TabEditorProvider({
     });
   }
 
-  function handleOpeningEditor() {
-    dispatch({ type: "TOGGLE_EDITOR" });
-  }
-
-  function updatePosition(measure: number, frame: number) {
-    dispatch({ type: "SET_POSITION", payload: { measure, frame } });
-  }
-
-  function addNewMeasure(measure: number) {
-    dispatch({ type: "ADD_MEASURE", payload: { measure } });
-  }
-
-  function addNewFrame(measure: number, frame: number, isEmpty: boolean) {
-    dispatch({ type: "ADD_FRAME", payload: { measure, frame, isEmpty } });
-  }
-
-  function addFrameAndAdvance(measure: number, frame: number, isEmpty: boolean) {
-    dispatch({ type: "ADD_FRAME_AND_ADVANCE", payload: { measure, frame, isEmpty } });
-  }
-
-  function deleteMeasure(measure: number) {
-    dispatch({ type: "DELETE_FRAME", payload: { frame: 0, measure } });
-  }
-
-  function deleteFrame(frame: number, measure: number) {
-    dispatch({ type: "DELETE_FRAME", payload: { frame, measure } });
-  }
-
-  function updateTabData(measure: number, index: number, formData: NoteFretType[]) {
-    dispatch({ type: "UPDATE_TAB_FRAME", payload: { measure, frame: index, formData } });
-  }
-
-  // Fret digit buffering
-  const digitBufferRef = useRef("");
-  const digitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const commitFret = useCallback(
-    (fret: number) => {
-      if (fret > MAX_FRET) return;
-      dispatch({
-        type: "SET_NOTE_FRET",
-        payload: {
-          measure: position.measure,
-          frame: position.frame,
-          string: position.string,
-          fret,
-        },
+  // ==========================================================================
+  // Playback
+  //
+  // Lives here rather than in the transport component because two consumers need it:
+  // the transport button and the timeline's playhead.
+  // ==========================================================================
+  const handlePlaybackStep = useCallback(
+    (step: TabPositionType) => {
+      commands.moveCursor({
+        to: { section: step.section, measure: step.measure, frame: step.frame },
       });
     },
-    [position]
+    [commands],
   );
 
-  const clearDigitBuffer = useCallback(() => {
-    digitBufferRef.current = "";
-    if (digitTimerRef.current) {
-      clearTimeout(digitTimerRef.current);
-      digitTimerRef.current = null;
-    }
-  }, []);
+  const {
+    isPlaying,
+    toggle: togglePlayback,
+    totalSteps,
+  } = useTabPlayback({
+    tracks,
+    activeTrack,
+    bpm: details.bpm,
+    onStep: handlePlaybackStep,
+  });
 
-  const handleDigit = useCallback(
-    (digit: number) => {
-      if (digitTimerRef.current) {
-        clearTimeout(digitTimerRef.current);
-        digitTimerRef.current = null;
-      }
-
-      const buffer = digitBufferRef.current + String(digit);
-      const twoDigit = parseInt(buffer, 10);
-
-      if (buffer.length >= 2) {
-        if (twoDigit <= MAX_FRET) {
-          commitFret(twoDigit);
-        } else {
-          // Two-digit number > 24: commit first digit, start new buffer with second
-          commitFret(parseInt(buffer[0], 10));
-          digitBufferRef.current = buffer[1];
-          digitTimerRef.current = setTimeout(() => {
-            commitFret(parseInt(digitBufferRef.current, 10));
-            clearDigitBuffer();
-          }, DIGIT_BUFFER_TIMEOUT_MS);
-          return;
-        }
-        clearDigitBuffer();
-        return;
-      }
-
-      // Single digit — buffer and wait
-      digitBufferRef.current = buffer;
-      digitTimerRef.current = setTimeout(() => {
-        commitFret(parseInt(digitBufferRef.current, 10));
-        clearDigitBuffer();
-      }, DIGIT_BUFFER_TIMEOUT_MS);
-    },
-    [commitFret, clearDigitBuffer]
+  // Fret entry from the number keys. One instance for the provider's life: a held digit
+  // outlives renders, and committing only needs the stable `dispatch`.
+  const [fretEntry] = useState(() =>
+    createFretEntry((target, fret) => {
+      dispatch({ type: "SET_NOTE_FRET", payload: { ...target, fret } });
+    })
   );
+  // A held digit must not commit into an editor that has gone away.
+  useEffect(() => () => fretEntry.cancel(), [fretEntry]);
 
-  const toggleStyle = useCallback(
-    (style: NoteStyleType) => {
-      const currentFrame = tab[position.measure]?.[position.frame];
-      if (!currentFrame) return;
-      const note = currentFrame.notes[position.string];
-      if (!note || note.fret === FRET_EMPTY || note.fret === FRET_MUTED) return;
-
-      const newStyle: NoteStyleType = note.style === style ? "none" : style;
-      dispatch({
-        type: "SET_NOTE_STYLE",
-        payload: {
-          measure: position.measure,
-          frame: position.frame,
-          string: position.string,
-          style: newStyle,
-        },
-      });
-    },
-    [tab, position]
-  );
-
+  // The keyboard. Edits that depend on what is under the cursor (styles, durations) are
+  // decided by the reducer, which sees state as it is now rather than as last drawn.
   const handleEditorAction = useCallback(
     (action: EditorAction) => {
+      const { section, measure, frame } = position;
+
+      const digit = fretDigit(action);
+      if (digit !== null) {
+        fretEntry.push(position, digit);
+        return;
+      }
+      // Settle a held digit before anything else, so edits land in the order they were
+      // typed (a quick `1` then `m` ends muted, not on fret 1). Escape abandons it.
+      if (action === "escape") fretEntry.cancel();
+      else fretEntry.flush();
+
+      const { moveCursor } = commands;
       switch (action) {
         // Navigation
         case "moveUp":
-          dispatch({ type: "SET_STRING", payload: { string: position.string - 1 } });
+          moveCursor({ by: "string", delta: -1 });
           break;
         case "moveDown":
-          dispatch({ type: "SET_STRING", payload: { string: position.string + 1 } });
+          moveCursor({ by: "string", delta: 1 });
           break;
         case "moveLeft":
-          dispatch({ type: "SET_POSITION", payload: { measure: position.measure, frame: position.frame - 1 } });
+          moveCursor({ by: "frame", delta: -1 });
           break;
         case "moveRight":
-          dispatch({ type: "SET_POSITION", payload: { measure: position.measure, frame: position.frame + 1 } });
+          moveCursor({ by: "frame", delta: 1 });
           break;
-        case "nextMeasureStart": {
-          const next = position.measure + 1;
-          if (next < tab.length) {
-            dispatch({ type: "SET_POSITION", payload: { measure: next, frame: 0 } });
-          }
+        case "nextMeasureStart":
+          moveCursor({ by: "measureStart", delta: 1 });
           break;
-        }
-        case "prevMeasureStart": {
-          if (position.frame > 0) {
-            dispatch({ type: "SET_POSITION", payload: { measure: position.measure, frame: 0 } });
-          } else {
-            const prev = position.measure - 1;
-            if (prev >= 0) {
-              dispatch({ type: "SET_POSITION", payload: { measure: prev, frame: 0 } });
-            }
-          }
+        case "prevMeasureStart":
+          moveCursor({ by: "measureStart", delta: -1 });
           break;
-        }
 
         // Selection
         case "selectLeft":
           dispatch({
             type: "EXTEND_SELECTION",
-            payload: { measure: position.measure, frame: position.frame - 1 },
+            payload: { section, measure, frame: frame - 1 },
           });
           break;
         case "selectRight":
           dispatch({
             type: "EXTEND_SELECTION",
-            payload: { measure: position.measure, frame: position.frame + 1 },
+            payload: { section, measure, frame: frame + 1 },
           });
           break;
-
-        // Fret digits
-        case "fretDigit0": handleDigit(0); break;
-        case "fretDigit1": handleDigit(1); break;
-        case "fretDigit2": handleDigit(2); break;
-        case "fretDigit3": handleDigit(3); break;
-        case "fretDigit4": handleDigit(4); break;
-        case "fretDigit5": handleDigit(5); break;
-        case "fretDigit6": handleDigit(6); break;
-        case "fretDigit7": handleDigit(7); break;
-        case "fretDigit8": handleDigit(8); break;
-        case "fretDigit9": handleDigit(9); break;
 
         // Note operations
         case "clearNote":
-          dispatch({
-            type: "SET_NOTE_FRET",
-            payload: {
-              measure: position.measure,
-              frame: position.frame,
-              string: position.string,
-              fret: FRET_EMPTY,
-            },
-          });
+          dispatch({ type: "SET_NOTE_FRET", payload: { ...position, fret: FRET_EMPTY } });
           break;
         case "muteNote":
-          dispatch({
-            type: "SET_NOTE_FRET",
-            payload: {
-              measure: position.measure,
-              frame: position.frame,
-              string: position.string,
-              fret: FRET_MUTED,
-            },
-          });
+          dispatch({ type: "SET_NOTE_FRET", payload: { ...position, fret: FRET_MUTED } });
           break;
 
         // Styles
-        case "styleBend": toggleStyle("bend"); break;
-        case "styleSlide": toggleStyle("slide"); break;
-        case "styleHammerOn": toggleStyle("hammerOn"); break;
-        case "stylePullOff": toggleStyle("pullOff"); break;
-        case "styleHarmonic": toggleStyle("harmonic"); break;
-        case "styleTap": toggleStyle("tap"); break;
+        case "styleBend":
+          dispatch({ type: "TOGGLE_NOTE_STYLE", payload: { style: "bend" } });
+          break;
+        case "styleSlide":
+          dispatch({ type: "TOGGLE_NOTE_STYLE", payload: { style: "slide" } });
+          break;
+        case "styleHammerOn":
+          dispatch({ type: "TOGGLE_NOTE_STYLE", payload: { style: "hammerOn" } });
+          break;
+        case "stylePullOff":
+          dispatch({ type: "TOGGLE_NOTE_STYLE", payload: { style: "pullOff" } });
+          break;
+        case "styleHarmonic":
+          dispatch({ type: "TOGGLE_NOTE_STYLE", payload: { style: "harmonic" } });
+          break;
+        case "styleTap":
+          dispatch({ type: "TOGGLE_NOTE_STYLE", payload: { style: "tap" } });
+          break;
 
         // Inserts
         case "addFrameBefore":
-          dispatch({ type: "ADD_FRAME", payload: { measure: position.measure, frame: position.frame - 1, isEmpty: true } });
-          dispatch({ type: "SET_POSITION", payload: { measure: position.measure, frame: position.frame + 1 } });
+          dispatch({ type: "ADD_FRAME", payload: { section, measure, frame: frame - 1, isEmpty: true } });
+          // Stay on the frame we were on, now one further along.
+          moveCursor({ to: { section, measure, frame: frame + 1 } });
           break;
         case "addFrameAfter":
-          dispatch({ type: "ADD_FRAME", payload: { measure: position.measure, frame: position.frame, isEmpty: true } });
+          dispatch({ type: "ADD_FRAME", payload: { section, measure, frame, isEmpty: true } });
           break;
         case "duplicateFrame":
-          dispatch({ type: "ADD_FRAME_AND_ADVANCE", payload: { measure: position.measure, frame: position.frame, isEmpty: false } });
+          dispatch({ type: "DUPLICATE_FRAMES" });
           break;
         case "addMeasureBefore":
-          dispatch({ type: "ADD_MEASURE", payload: { measure: position.measure } });
-          dispatch({ type: "SET_POSITION", payload: { measure: position.measure + 1, frame: position.frame } });
+          dispatch({ type: "ADD_MEASURE", payload: { section, measure } });
+          // Stay on the frame we were on, in its measure now one further along.
+          moveCursor({ to: { section, measure: measure + 1, frame } });
           break;
         case "addMeasureAfter":
-          dispatch({ type: "ADD_MEASURE", payload: { measure: position.measure + 1 } });
+          dispatch({ type: "ADD_MEASURE", payload: { section, measure: measure + 1 } });
           break;
 
         case "deleteFrame":
-          dispatch({ type: "DELETE_FRAME", payload: { measure: position.measure, frame: position.frame } })
+          dispatch({ type: "DELETE_FRAME", payload: { section, measure, frame } });
+          break;
 
-        // Escape
+        // Duration — step the cursor's frame through the editor's note values.
+        case "durationLonger":
+          dispatch({ type: "ADJUST_FRAME_DURATION", payload: { adjust: "longer" } });
+          break;
+        case "durationShorter":
+          dispatch({ type: "ADJUST_FRAME_DURATION", payload: { adjust: "shorter" } });
+          break;
+        case "toggleDot":
+          dispatch({ type: "ADJUST_FRAME_DURATION", payload: { adjust: "dot" } });
+          break;
+
+        // Moving a run of frames (or the current frame when nothing is selected).
+        case "moveFramesLeft":
+          dispatch({ type: "MOVE_FRAMES", payload: { direction: "left" } });
+          break;
+        case "moveFramesRight":
+          dispatch({ type: "MOVE_FRAMES", payload: { direction: "right" } });
+          break;
+        case "moveFramesToPrevMeasure":
+          dispatch({ type: "MOVE_FRAMES_TO_MEASURE", payload: { delta: -1 } });
+          break;
+        case "moveFramesToNextMeasure":
+          dispatch({ type: "MOVE_FRAMES_TO_MEASURE", payload: { delta: 1 } });
+          break;
+
         case "escape":
-          dispatch({ type: "SET_POSITION", payload: { measure: position.measure, frame: position.frame } });
+          dispatch({ type: "CLEAR_SELECTION" });
           break;
       }
     },
-    [tab, position, handleDigit, toggleStyle]
+    [position, fretEntry, commands]
   );
 
   useEditorKeybindings(handleEditorAction);
@@ -356,8 +424,13 @@ export function TabEditorProvider({
   return (
     <TabEditorContext.Provider
       value={{
+        ...commands,
         tab,
+        tracks,
+        activeTrack,
+        track,
         details,
+        notes,
         isLoading,
         position,
         selection,
@@ -365,17 +438,11 @@ export function TabEditorProvider({
         isEditing,
         isSaving,
         isDemo,
-        updateDetails,
+        stringCount,
+        isPlaying,
+        togglePlayback,
+        totalSteps,
         saveChanges,
-        handleOpeningEditor,
-        updatePosition,
-        getEmptyFrame: createEmptyFrame,
-        addNewMeasure,
-        addNewFrame,
-        addFrameAndAdvance,
-        deleteMeasure,
-        deleteFrame,
-        updateTabData,
       }}>
       {children}
     </TabEditorContext.Provider>
@@ -389,9 +456,3 @@ export function useTabEditor() {
   }
   return context;
 }
-
-export function useOptionalTabEditor() {
-  return useContext(TabEditorContext);
-}
-
-export default TabEditorContext;

@@ -1,10 +1,150 @@
 import {
+  DEFAULT_BPM,
+  DEFAULT_TIME_SIGNATURE,
+  MAX_BPM,
+  MAX_STRINGS,
+  MAX_TRACKS,
+  MIN_BPM,
+  MIN_STRINGS,
+  TUNING_NOTES,
+} from "../constants/tab.constants";
+import {
   TabEntity,
   TabType,
   TabResponse,
   CreateTabDto,
   UpdateTabDto,
+  TabBodyType,
+  TabTracksType,
+  TrackType,
+  MeasureType,
+  TuningType,
+  TuningNoteType,
 } from "../types/tab.types";
+import { octavesForTuning, reconcileOctaves, DEFAULT_TUNING } from "./tuning";
+import { newId } from "./ids";
+
+export const DEFAULT_SECTION_NAME = "Section 1";
+export const DEFAULT_TRACK_NAME = "Track 1";
+export const DEFAULT_INSTRUMENT = "guitar";
+
+/**
+ * Upgrades a legacy flat `MeasureType[]` tab body into the sectioned shape by
+ * wrapping it in a single default section. Already-sectioned bodies pass through
+ * untouched.
+ *
+ * The 0001 migration backfills every stored blob, so this is belt & suspenders for
+ * anything that slips past it (an old client posting a flat array, a restored dump).
+ */
+export function normalizeTabBody(raw: unknown): TabBodyType {
+  if (Array.isArray(raw)) {
+    return {
+      sections: [
+        {
+          id: newId(),
+          name: DEFAULT_SECTION_NAME,
+          measures: raw.map(normalizeMeasure),
+        },
+      ],
+    };
+  }
+
+  if (raw && typeof raw === "object" && Array.isArray((raw as TabBodyType).sections)) {
+    const body = raw as TabBodyType;
+    // Pass an already-current body through by reference; only a legacy array-measure,
+    // which predates the measure-object shape, forces a rebuild.
+    const hasLegacyMeasures = body.sections.some((section) =>
+      (section.measures as unknown[]).some((measure) => Array.isArray(measure))
+    );
+    if (!hasLegacyMeasures) return body;
+    return {
+      ...body,
+      sections: body.sections.map((section) => ({
+        ...section,
+        measures: (section.measures as unknown[]).map(normalizeMeasure),
+      })),
+    };
+  }
+
+  // Unrecognisable input is not upgraded into an empty tab: it yields no sections, which
+  // validateTabSize rejects, so junk posted to the API is refused rather than stored.
+  return { sections: [] };
+}
+
+/**
+ * Upgrades a legacy `FrameType[]` measure into the `{ frames }` shape (the measure
+ * gained an optional per-bar time signature, so it is an object now). Measures already
+ * in object form pass through.
+ */
+export function normalizeMeasure(raw: unknown): MeasureType {
+  if (Array.isArray(raw)) return { frames: raw };
+  if (raw && typeof raw === "object" && Array.isArray((raw as MeasureType).frames)) {
+    return raw as MeasureType;
+  }
+  return { frames: [] };
+}
+
+/**
+ * Upgrades any stored `tab_data` into the tracked shape. Three generations of the blob
+ * exist in the wild and all three arrive here:
+ *
+ *   1. `MeasureType[]`          — pre-sections
+ *   2. `{ sections: [...] }`    — sections, pre-tracks
+ *   3. `{ tracks: [...] }`      — current
+ *
+ * `fallbackTuning` is the row's legacy `tuning` column, which is where the tuning
+ * lived before it moved onto the track.
+ */
+export function normalizeTabTracks(
+  raw: unknown,
+  fallbackTuning: TuningType = DEFAULT_TUNING
+): TabTracksType {
+  if (
+    raw &&
+    typeof raw === "object" &&
+    Array.isArray((raw as TabTracksType).tracks)
+  ) {
+    return {
+      tracks: (raw as TabTracksType).tracks.map((track, i) =>
+        normalizeTrack(track, i, fallbackTuning)
+      ),
+    };
+  }
+
+  // Generations 1 and 2 both reduce to a single track holding the whole body.
+  return {
+    tracks: [
+      normalizeTrack(
+        { body: normalizeTabBody(raw) } as Partial<TrackType>,
+        0,
+        fallbackTuning
+      ),
+    ],
+  };
+}
+
+/** Fills in anything a stored track is missing, so downstream code can assume it. */
+function normalizeTrack(
+  track: Partial<TrackType>,
+  index: number,
+  fallbackTuning: TuningType
+): TrackType {
+  const tuning =
+    Array.isArray(track.tuning) && track.tuning.length > 0
+      ? track.tuning
+      : fallbackTuning;
+
+  return {
+    id: track.id ?? newId(),
+    name: track.name ?? `Track ${index + 1}`,
+    instrument: track.instrument ?? DEFAULT_INSTRUMENT,
+    tuning,
+    octaves: track.octaves
+      ? reconcileOctaves(tuning, track.octaves)
+      : octavesForTuning(tuning),
+    body: normalizeTabBody(track.body),
+  };
+}
 
 /**
  * Converts a database TabEntity to a frontend-friendly TabResponse
@@ -18,9 +158,12 @@ export function tabEntityToResponse(entity: TabEntity): TabResponse {
       creator: entity.user_id,
       dateCreated: entity.created_at.toISOString(),
       dateModified: entity.modified_at.toISOString(),
-      tuning: entity.tuning,
+      // Columns are nullable on rows written before the rhythm migration ran.
+      bpm: entity.bpm ?? DEFAULT_BPM,
+      timeSignature: entity.time_signature ?? DEFAULT_TIME_SIGNATURE,
     },
-    body: entity.tab_data,
+    tracks: normalizeTabTracks(entity.tab_data, entity.tuning).tracks,
+    notes: entity.notes ?? "",
   };
 }
 
@@ -38,62 +181,235 @@ export function createDtoToEntity(
   userId: string,
   dto: CreateTabDto
 ): Omit<TabEntity, "id" | "created_at" | "modified_at"> {
+  const tab_data = normalizeTabTracks(dto.tab_data, dto.tuning);
   return {
     user_id: userId,
     tab_name: dto.tab_name,
     tab_artist: dto.tab_artist,
-    tuning: dto.tuning,
-    tab_data: dto.tab_data,
+    // The column is NOT NULL and no longer read; mirror track 0 to keep it honest.
+    tuning: tab_data.tracks[0]?.tuning ?? dto.tuning,
+    tab_data,
+    bpm: dto.bpm ?? DEFAULT_BPM,
+    time_signature: dto.time_signature ?? DEFAULT_TIME_SIGNATURE,
+    notes: dto.notes ?? "",
   };
 }
 
 /**
- * Validates that a TabBodyType is within reasonable size limits
- * Returns error message if invalid, null if valid
+ * Validates a whole `{ tracks: [...] }` blob: every track's tuning, and every track's
+ * body against that track's own string count.
  */
-export function validateTabSize(
-  body: any
+export function validateTabTracks(
+  data: any
 ): { valid: false; error: string } | { valid: true } {
-  if (!Array.isArray(body)) {
-    return { valid: false, error: "Tab body must be an array of measures" };
-  }
-
-  const MAX_MEASURES = 500;
-  const MAX_FRAMES_PER_MEASURE = 64;
-
-  if (body.length > MAX_MEASURES) {
+  if (!data || typeof data !== "object" || !Array.isArray(data.tracks)) {
     return {
       valid: false,
-      error: `Tab exceeds maximum of ${MAX_MEASURES} measures`,
+      error: "tab_data must be an object with a tracks array",
     };
   }
 
-  for (let i = 0; i < body.length; i++) {
-    const measure = body[i];
-    if (!Array.isArray(measure)) {
+  if (data.tracks.length < 1 || data.tracks.length > MAX_TRACKS) {
+    return {
+      valid: false,
+      error: `A tab must have between 1 and ${MAX_TRACKS} tracks`,
+    };
+  }
+
+  for (let t = 0; t < data.tracks.length; t++) {
+    const track = data.tracks[t];
+    if (!track || typeof track !== "object") {
+      return { valid: false, error: `Track ${t} must be an object` };
+    }
+
+    const tuningResult = validateTuning(track.tuning);
+    if (!tuningResult.valid) {
+      return { valid: false, error: `Track ${t}: ${tuningResult.error}` };
+    }
+
+    const bodyResult = validateTabSize(track.body, track.tuning.length);
+    if (!bodyResult.valid) {
+      return { valid: false, error: `Track ${t}: ${bodyResult.error}` };
+    }
+  }
+
+  return { valid: true };
+}
+
+/**
+ * Validates that a TabBodyType is within reasonable size limits.
+ *
+ * `expectedStringCount` (the tuning's length) is optional: when supplied, every frame
+ * must have exactly that many notes, which is what keeps the note rows and the tuning
+ * from drifting apart. Without it, frames only have to be a plausible width.
+ */
+export function validateTabSize(
+  body: any,
+  expectedStringCount?: number
+): { valid: false; error: string } | { valid: true } {
+  if (!body || typeof body !== "object" || !Array.isArray(body.sections)) {
+    return {
+      valid: false,
+      error: "Tab body must be an object with a sections array",
+    };
+  }
+
+  const MAX_SECTIONS = 100;
+  const MAX_MEASURES = 500;
+  const MAX_FRAMES_PER_MEASURE = 64;
+
+  // The editor assumes a body always has a section to put the cursor in.
+  if (body.sections.length === 0) {
+    return { valid: false, error: "Tab body must have at least one section" };
+  }
+
+  if (body.sections.length > MAX_SECTIONS) {
+    return {
+      valid: false,
+      error: `Tab exceeds maximum of ${MAX_SECTIONS} sections`,
+    };
+  }
+
+  let measureCount = 0;
+
+  for (let s = 0; s < body.sections.length; s++) {
+    const section = body.sections[s];
+    if (
+      !section ||
+      typeof section !== "object" ||
+      !Array.isArray(section.measures)
+    ) {
       return {
         valid: false,
-        error: `Measure ${i} is not an array of frames`,
+        error: `Section ${s} must be an object with a measures array`,
       };
     }
 
-    if (measure.length > MAX_FRAMES_PER_MEASURE) {
+    measureCount += section.measures.length;
+    if (measureCount > MAX_MEASURES) {
       return {
         valid: false,
-        error: `Measure ${i} exceeds maximum of ${MAX_FRAMES_PER_MEASURE} frames`,
+        error: `Tab exceeds maximum of ${MAX_MEASURES} measures`,
       };
     }
 
-    for (let j = 0; j < measure.length; j++) {
-      const frame = measure[j];
-      if (!frame || typeof frame !== "object" || !Array.isArray(frame.notes) || frame.notes.length !== 6) {
+    for (let i = 0; i < section.measures.length; i++) {
+      const measure = section.measures[i];
+      if (!measure || typeof measure !== "object" || !Array.isArray(measure.frames)) {
         return {
           valid: false,
-          error: `Frame ${j} in measure ${i} must be an object with a notes array of 6 notes`,
+          error: `Measure ${i} in section ${s} must be an object with a frames array`,
         };
+      }
+
+      if (
+        measure.timeSignature !== undefined &&
+        !validateTimeSignature(measure.timeSignature).valid
+      ) {
+        return {
+          valid: false,
+          error: `Measure ${i} in section ${s} has an invalid time signature`,
+        };
+      }
+
+      if (measure.frames.length > MAX_FRAMES_PER_MEASURE) {
+        return {
+          valid: false,
+          error: `Measure ${i} in section ${s} exceeds maximum of ${MAX_FRAMES_PER_MEASURE} frames`,
+        };
+      }
+
+      for (let j = 0; j < measure.frames.length; j++) {
+        const frame = measure.frames[j];
+        if (!frame || typeof frame !== "object" || !Array.isArray(frame.notes)) {
+          return {
+            valid: false,
+            error: `Frame ${j} in measure ${i} of section ${s} must be an object with a notes array`,
+          };
+        }
+
+        if (
+          expectedStringCount !== undefined &&
+          frame.notes.length !== expectedStringCount
+        ) {
+          return {
+            valid: false,
+            error: `Frame ${j} in measure ${i} of section ${s} has ${frame.notes.length} notes but the tuning has ${expectedStringCount} strings`,
+          };
+        }
+
+        if (
+          frame.notes.length < MIN_STRINGS ||
+          frame.notes.length > MAX_STRINGS
+        ) {
+          return {
+            valid: false,
+            error: `Frame ${j} in measure ${i} of section ${s} must have between ${MIN_STRINGS} and ${MAX_STRINGS} notes`,
+          };
+        }
       }
     }
   }
 
+  return { valid: true };
+}
+
+/**
+ * Validates a tuning: an array of known note names, one per string.
+ */
+export function validateTuning(
+  tuning: unknown
+): { valid: false; error: string } | { valid: true } {
+  if (!Array.isArray(tuning)) {
+    return { valid: false, error: "tuning must be an array of note names" };
+  }
+  if (tuning.length < MIN_STRINGS || tuning.length > MAX_STRINGS) {
+    return {
+      valid: false,
+      error: `tuning must have between ${MIN_STRINGS} and ${MAX_STRINGS} strings`,
+    };
+  }
+  const unknown = tuning.find(
+    (note) => !TUNING_NOTES.includes(note as TuningNoteType)
+  );
+  if (unknown !== undefined) {
+    return { valid: false, error: `"${unknown}" is not a valid note name` };
+  }
+  return { valid: true };
+}
+
+/** Validates a `[beats, beatValue]` pair, e.g. [4, 4] or [6, 8]. */
+export function validateTimeSignature(
+  value: unknown
+): { valid: false; error: string } | { valid: true } {
+  if (!Array.isArray(value) || value.length !== 2) {
+    return {
+      valid: false,
+      error: "time_signature must be a [beats, beatValue] pair",
+    };
+  }
+  const [beats, beatValue] = value;
+  if (!Number.isInteger(beats) || beats < 1 || beats > 32) {
+    return { valid: false, error: "time signature beats must be 1-32" };
+  }
+  // Beat values are note denominators, so only powers of two make sense.
+  if (![1, 2, 4, 8, 16, 32].includes(beatValue)) {
+    return {
+      valid: false,
+      error: "time signature beat value must be 1, 2, 4, 8, 16 or 32",
+    };
+  }
+  return { valid: true };
+}
+
+export function validateBpm(
+  value: unknown
+): { valid: false; error: string } | { valid: true } {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return { valid: false, error: "bpm must be a number" };
+  }
+  if (value < MIN_BPM || value > MAX_BPM) {
+    return { valid: false, error: `bpm must be between ${MIN_BPM} and ${MAX_BPM}` };
+  }
   return { valid: true };
 }

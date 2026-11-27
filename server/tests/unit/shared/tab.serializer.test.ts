@@ -1,0 +1,319 @@
+import { describe, it, expect } from "vitest";
+import {
+  normalizeTabBody,
+  validateBpm,
+  validateTimeSignature,
+  normalizeTabTracks,
+  validateTabSize,
+  validateTabTracks,
+  validateTuning,
+  tabEntityToResponse,
+} from "@tablab/shared";
+import type { TabEntity, MeasureType, TuningType } from "@tablab/shared";
+
+const frame = (notes = 6) => ({
+  id: "f",
+  notes: Array.from({ length: notes }, () => ({ fret: -2, style: "none" as const })),
+});
+
+const measure = (frames = 1): MeasureType => ({
+  frames: Array.from({ length: frames }, () => frame()),
+});
+
+const section = (measures: MeasureType[], name = "Section 1") => ({
+  id: "s",
+  name,
+  measures,
+});
+
+describe("normalizeTabBody", () => {
+  it("wraps a legacy flat measures array in one default section", () => {
+    const legacy = [measure(2), measure(1)];
+    const normalized = normalizeTabBody(legacy);
+
+    expect(normalized.sections).toHaveLength(1);
+    expect(normalized.sections[0].name).toBe("Section 1");
+    expect(normalized.sections[0].measures).toEqual(legacy);
+    expect(normalized.sections[0].id).toMatch(/^[0-9a-f-]{36}$/);
+  });
+
+  it("passes a sectioned body through untouched", () => {
+    const body = { sections: [section([measure()], "Chorus")] };
+    expect(normalizeTabBody(body)).toBe(body);
+  });
+
+  it("upgrades legacy array-measures into the { frames } shape", () => {
+    // Before per-measure meter, a measure was a bare FrameType[]. Such a measure is
+    // wrapped so downstream code can read measure.frames and measure.timeSignature.
+    const legacyMeasure = [frame(), frame()];
+    const normalized = normalizeTabBody([legacyMeasure]);
+    expect(normalized.sections[0].measures[0]).toEqual({ frames: legacyMeasure });
+  });
+
+  it("yields no sections for junk, which the route validator rejects", () => {
+    expect(normalizeTabBody(null).sections).toEqual([]);
+    expect(normalizeTabBody("nope").sections).toEqual([]);
+    expect(normalizeTabBody(42).sections).toEqual([]);
+  });
+});
+
+const GUITAR = ["E", "B", "G", "D", "A", "E"];
+const BASS = ["G", "D", "A", "E"];
+
+function entityWith(tab_data: unknown, tuning: unknown = GUITAR): TabEntity {
+  return {
+    id: "t1",
+    user_id: "u1",
+    tab_name: "Song",
+    tab_artist: "Artist",
+    tuning,
+    tab_data,
+    created_at: new Date("2026-01-01"),
+    modified_at: new Date("2026-01-02"),
+  } as unknown as TabEntity;
+}
+
+describe("tempo and meter", () => {
+  it("defaults bpm and time signature for rows written before the rhythm migration", () => {
+    const response = tabEntityToResponse(entityWith({ sections: [section([measure(1)])] }));
+
+    expect(response.details.bpm).toBe(90);
+    expect(response.details.timeSignature).toEqual([4, 4]);
+  });
+
+  it("passes stored tempo and meter through", () => {
+    const entity = {
+      ...entityWith({ sections: [section([measure(1)])] }),
+      bpm: 132,
+      time_signature: [6, 8],
+    } as unknown as TabEntity;
+
+    const response = tabEntityToResponse(entity);
+    expect(response.details.bpm).toBe(132);
+    expect(response.details.timeSignature).toEqual([6, 8]);
+  });
+
+  it("validates bpm", () => {
+    expect(validateBpm(120)).toEqual({ valid: true });
+    expect(validateBpm(10)).toMatchObject({ valid: false });
+    expect(validateBpm(1000)).toMatchObject({ valid: false });
+    expect(validateBpm("fast")).toMatchObject({ valid: false });
+  });
+
+  it("defaults notes to an empty string for rows written before the notes column", () => {
+    const response = tabEntityToResponse(entityWith({ sections: [section([measure(1)])] }));
+    expect(response.notes).toBe("");
+  });
+
+  it("passes stored notes through", () => {
+    const entity = {
+      ...entityWith({ sections: [section([measure(1)])] }),
+      notes: "Capo 2",
+    } as unknown as TabEntity;
+    expect(tabEntityToResponse(entity).notes).toBe("Capo 2");
+  });
+
+  it("validates time signatures", () => {
+    expect(validateTimeSignature([4, 4])).toEqual({ valid: true });
+    expect(validateTimeSignature([6, 8])).toEqual({ valid: true });
+    expect(validateTimeSignature([4])).toMatchObject({ valid: false });
+    // Beat values are note denominators, so 3 is not one.
+    expect(validateTimeSignature([4, 3])).toMatchObject({ valid: false });
+    expect(validateTimeSignature([0, 4])).toMatchObject({ valid: false });
+  });
+});
+
+describe("normalizeTabTracks", () => {
+  it("wraps a pre-sections measures array in one track", () => {
+    const tracks = normalizeTabTracks([measure(2)]).tracks;
+
+    expect(tracks).toHaveLength(1);
+    expect(tracks[0].instrument).toBe("guitar");
+    expect(tracks[0].body.sections[0].measures[0].frames).toHaveLength(2);
+  });
+
+  it("wraps a sectioned body in one track using the fallback tuning", () => {
+    const tracks = normalizeTabTracks({ sections: [section([measure(1)])] }, BASS as any)
+      .tracks;
+
+    expect(tracks).toHaveLength(1);
+    expect(tracks[0].tuning).toEqual(BASS);
+    // The 0002 migration writes no octaves; they are derived from the preset on read.
+    expect(tracks[0].octaves).toEqual([2, 2, 1, 1]);
+  });
+
+  it("fills in what a stored track omits", () => {
+    const tracks = normalizeTabTracks({
+      tracks: [{ body: { sections: [section([measure(1)])] } }],
+    }).tracks;
+
+    expect(tracks[0].id).toBeTruthy();
+    expect(tracks[0].name).toBe("Track 1");
+    expect(tracks[0].tuning).toEqual(GUITAR);
+    expect(tracks[0].octaves).toEqual([4, 3, 3, 3, 2, 2]);
+  });
+
+  it("keeps multiple tracks and their own tunings", () => {
+    const tracks = normalizeTabTracks({
+      tracks: [
+        { id: "a", name: "Guitar", instrument: "guitar", tuning: GUITAR, body: { sections: [section([measure(1)])] } },
+        { id: "b", name: "Bass", instrument: "bass", tuning: BASS, body: { sections: [section([measure(1)])] } },
+      ],
+    }).tracks;
+
+    expect(tracks.map((t) => t.name)).toEqual(["Guitar", "Bass"]);
+    expect(tracks[1].tuning).toEqual(BASS);
+  });
+});
+
+describe("tabEntityToResponse", () => {
+  it("normalizes a legacy tab_data blob on the way out", () => {
+    const response = tabEntityToResponse(entityWith([measure(2)]));
+
+    expect(response.tracks).toHaveLength(1);
+    expect(response.tracks[0].body.sections).toHaveLength(1);
+    expect(response.tracks[0].body.sections[0].measures[0].frames).toHaveLength(2);
+  });
+
+  it("pulls the legacy tuning column onto the track", () => {
+    const response = tabEntityToResponse(
+      entityWith({ sections: [section([measure(1)])] }, BASS)
+    );
+
+    expect(response.tracks[0].tuning).toEqual(BASS);
+    // Tuning no longer appears in details.
+    expect("tuning" in response.details).toBe(false);
+  });
+});
+
+describe("validateTabSize", () => {
+  it("accepts a well-formed sectioned body", () => {
+    const body = { sections: [section([measure(4)]), section([measure(2)], "Verse")] };
+    expect(validateTabSize(body)).toEqual({ valid: true });
+  });
+
+  it("rejects a body that is not an object with sections", () => {
+    expect(validateTabSize([measure()])).toMatchObject({ valid: false });
+    expect(validateTabSize(null)).toMatchObject({ valid: false });
+  });
+
+  it("rejects a body with no sections", () => {
+    const result = validateTabSize({ sections: [] });
+    expect(result).toMatchObject({ valid: false });
+    expect((result as { error: string }).error).toContain("at least one section");
+  });
+
+  it("rejects a section without a measures array", () => {
+    const result = validateTabSize({ sections: [{ id: "s", name: "x" }] });
+    expect(result).toMatchObject({ valid: false });
+    expect((result as { error: string }).error).toContain("Section 0");
+  });
+
+  it("counts measures across all sections against the 500 limit", () => {
+    const spread = {
+      sections: [section(Array(300).fill(measure())), section(Array(201).fill(measure()))],
+    };
+    expect(validateTabSize(spread)).toMatchObject({ valid: false });
+
+    const underLimit = {
+      sections: [section(Array(300).fill(measure())), section(Array(200).fill(measure()))],
+    };
+    expect(validateTabSize(underLimit)).toEqual({ valid: true });
+  });
+
+  it("caps frames per measure and names the offending section", () => {
+    const result = validateTabSize({ sections: [section([measure(65)], "Solo")] });
+    expect(result).toMatchObject({ valid: false });
+    expect((result as { error: string }).error).toContain("section 0");
+  });
+
+  it("accepts non-6-string frames but still bounds them", () => {
+    expect(validateTabSize({ sections: [section([{ frames: [frame(4)] }])] })).toEqual({ valid: true });
+    expect(validateTabSize({ sections: [section([{ frames: [frame(2)] }])] })).toMatchObject({ valid: false });
+    expect(validateTabSize({ sections: [section([{ frames: [frame(13)] }])] })).toMatchObject({ valid: false });
+  });
+
+  it("requires one note per string when given a string count", () => {
+    const bass = { sections: [section([{ frames: [frame(4)] }])] };
+    expect(validateTabSize(bass, 4)).toEqual({ valid: true });
+
+    const mismatch = validateTabSize(bass, 6);
+    expect(mismatch).toMatchObject({ valid: false });
+    expect((mismatch as { error: string }).error).toContain("4 notes");
+  });
+});
+
+describe("validateTabTracks", () => {
+  const track = (tuning: string[], measures = [measure(1)]) => ({
+    id: "t",
+    name: "Track 1",
+    instrument: "guitar",
+    tuning,
+    octaves: tuning.map(() => 3),
+    body: { sections: [section(measures)] },
+  });
+
+  it("accepts a well-formed multi-track blob", () => {
+    const bassTrack = {
+      ...track(BASS),
+      body: { sections: [section([{ frames: [frame(4)] }])] },
+    };
+    expect(validateTabTracks({ tracks: [track(GUITAR), bassTrack] })).toEqual({
+      valid: true,
+    });
+  });
+
+  it("rejects a blob without a tracks array", () => {
+    expect(validateTabTracks({ sections: [] })).toMatchObject({ valid: false });
+    expect(validateTabTracks(null)).toMatchObject({ valid: false });
+  });
+
+  it("rejects an empty tracks array", () => {
+    expect(validateTabTracks({ tracks: [] })).toMatchObject({ valid: false });
+  });
+
+  it("rejects junk tab_data the way the route sees it: normalized, then validated", () => {
+    // Junk normalizes to a track with no sections. Before the section check, this passed
+    // validation and was stored as a tab the editor could not open.
+    for (const junk of [null, "nope", 42, {}]) {
+      const result = validateTabTracks(normalizeTabTracks(junk, GUITAR as TuningType));
+      expect(result).toMatchObject({ valid: false });
+      expect((result as { error: string }).error).toContain("at least one section");
+    }
+  });
+
+  it("checks each track's frames against that track's own tuning", () => {
+    // A 4-string tuning with 6-note frames — the mismatch tracks are meant to prevent.
+    const mismatched = { ...track(BASS) };
+    const result = validateTabTracks({ tracks: [track(GUITAR), mismatched] });
+
+    expect(result).toMatchObject({ valid: false });
+    expect((result as { error: string }).error).toContain("Track 1");
+  });
+
+  it("names the offending track when its tuning is invalid", () => {
+    const result = validateTabTracks({ tracks: [track(["E", "A"])] });
+    expect(result).toMatchObject({ valid: false });
+    expect((result as { error: string }).error).toContain("Track 0");
+  });
+});
+
+describe("validateTuning", () => {
+  it("accepts tunings of any supported width", () => {
+    expect(validateTuning(["E", "B", "G", "D", "A", "E"])).toEqual({ valid: true });
+    expect(validateTuning(["G", "D", "A", "E"])).toEqual({ valid: true });
+    expect(validateTuning(["E", "B", "G", "D", "A", "E", "B"])).toEqual({ valid: true });
+  });
+
+  it("rejects non-arrays and out-of-range string counts", () => {
+    expect(validateTuning("EADGBE")).toMatchObject({ valid: false });
+    expect(validateTuning(["E", "A"])).toMatchObject({ valid: false });
+    expect(validateTuning(Array(13).fill("E"))).toMatchObject({ valid: false });
+  });
+
+  it("rejects unknown note names", () => {
+    const result = validateTuning(["E", "B", "G", "D", "A", "H"]);
+    expect(result).toMatchObject({ valid: false });
+    expect((result as { error: string }).error).toContain("H");
+  });
+});

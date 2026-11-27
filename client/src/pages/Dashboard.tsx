@@ -1,6 +1,6 @@
 import { DEFAULT_TAB } from "../shared/types/consts";
 import { useTabs, useCreateTab, useDeleteTab } from "../hooks/useTabs";
-import type { TabType } from "../shared/types/tab.types";
+import type { TabType } from "@tablab/shared";
 import type { CreateTabPayload } from "../api/services/tabService";
 
 import { SkeletonText } from "../components/Skeleton";
@@ -27,8 +27,8 @@ export default function Dashboard() {
     const payload: CreateTabPayload = {
       tab_name: `${tab.details.song} (Copy)`,
       tab_artist: tab.details.artist,
-      tuning: [...tab.details.tuning],
-      tab_data: tab.body,
+      tuning: [...(tab.tracks[0]?.tuning ?? [])],
+      tab_data: { tracks: tab.tracks },
     };
     createTabMutation.mutate(payload);
   }

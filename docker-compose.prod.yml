@@ -40,8 +40,9 @@ services:
 
   frontend:
     build:
-      context: ./client
-      dockerfile: Dockerfile.prod
+      # Repo root, like the backend, so the image can include shared/.
+      context: .
+      dockerfile: client/Dockerfile.prod
       args:
         VITE_BE_URL: https://bibliotab.com
     restart: always

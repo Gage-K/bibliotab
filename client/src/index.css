@@ -110,6 +110,59 @@ body {
   opacity: 100%;
 }
 
+/* Continuous horizontal string lines behind a measure's note columns. Drawing them on
+   the staff container rather than per note keeps the strings unbroken across the small
+   gaps between frame columns. One line sits at the vertical centre of each row band. */
+.td-staff {
+  /* A fixed length, not em: the note cells render at text-xs while the staff itself is
+     at the base size, so an em would resolve to two different heights and the frets
+     would drift off the lines. */
+  --td-row-h: 1.4rem;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent calc(var(--td-row-h) / 2 - 0.5px),
+    oklch(0.85 0 0) calc(var(--td-row-h) / 2 - 0.5px),
+    oklch(0.85 0 0) calc(var(--td-row-h) / 2 + 0.5px),
+    transparent calc(var(--td-row-h) / 2 + 0.5px),
+    transparent var(--td-row-h)
+  );
+}
+
+.dark .td-staff {
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent calc(var(--td-row-h) / 2 - 0.5px),
+    oklch(0.44 0 0) calc(var(--td-row-h) / 2 - 0.5px),
+    oklch(0.44 0 0) calc(var(--td-row-h) / 2 + 0.5px),
+    transparent calc(var(--td-row-h) / 2 + 0.5px),
+    transparent var(--td-row-h)
+  );
+}
+
+/* One string row within a frame column; its height matches the staff line spacing so
+   the fret number sits on its string. */
+.td-note-cell {
+  height: var(--td-row-h, 1.4rem);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+/* A rest reads as faint diagonal hatching in the note area, echoing the hollow
+   segment above it in the duration bar. */
+.td-rest {
+  background-image: repeating-linear-gradient(
+    45deg,
+    color-mix(in oklch, var(--muted-foreground) 18%, transparent) 0 1px,
+    transparent 1px 6px
+  );
+  border-radius: 2px;
+  line-height: 1;
+}
+
 .td-measure-start {
   border-left: 1px solid rgba(192, 192, 192, 75%);
 }

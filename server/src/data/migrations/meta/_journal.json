@@ -1,0 +1,55 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1788804734413,
+      "tag": "0000_good_marrow",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1788827891582,
+      "tag": "0001_wrap_tab_data_in_sections",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1788916152176,
+      "tag": "0002_wrap_tab_data_in_tracks",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1788916739812,
+      "tag": "0003_add_tempo_and_time_signature",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1788917084752,
+      "tag": "0004_add_tab_notes",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1788917200674,
+      "tag": "0005_add_tab_lyrics",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1789833714008,
+      "tag": "0006_drop_tab_lyrics",
+      "breakpoints": true
+    }
+  ]
+}

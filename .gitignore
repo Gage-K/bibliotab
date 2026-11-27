@@ -8,6 +8,8 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
+# pnpm falls back to a project-local store when the global one is on another volume.
+.pnpm-store
 dist
 dist-ssr
 *.local

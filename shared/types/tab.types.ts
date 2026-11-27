@@ -19,14 +19,11 @@ export type TuningNoteType =
   | "G#"
   | "Gb";
 
-export type TuningType = [
-  TuningNoteType,
-  TuningNoteType,
-  TuningNoteType,
-  TuningNoteType,
-  TuningNoteType,
-  TuningNoteType
-];
+/**
+ * Open notes per string, index 0 = string 1 = highest-pitched. Length is the string
+ * count, so a 4-string bass and a 7-string guitar are both just tunings.
+ */
+export type TuningType = TuningNoteType[];
 
 export type NoteStyleType =
   | "none"
@@ -45,29 +42,86 @@ export type NoteFretType = {
 export type FrameType = {
   id: string;
   notes: NoteFretType[];
+  /**
+   * Length in beats — quarter = 1, eighth = 0.5, dotted quarter = 1.5. Beats rather
+   * than seconds so changing the tempo never means editing frames.
+   *
+   * Optional on the type because rows written before the rhythm migration have no
+   * duration; read it through DEFAULT_FRAME_DURATION rather than directly.
+   */
+  duration?: number;
+  /**
+   * A rest sounds nothing for its duration — silence, distinct from a frame that just
+   * hasn't been filled in yet. Optional so pre-rest rows read as non-rests. Read it
+   * through `isRestFrame` rather than directly.
+   */
+  isRest?: boolean;
 };
 
-export type MeasureType = FrameType[];
+/** Beats per measure and the note value that gets the beat, e.g. [4, 4]. */
+export type TimeSignatureType = [number, number];
 
-export type TabBodyType = MeasureType[];
+/**
+ * One bar. A measure carries its frames and, optionally, its own time signature so a
+ * song can change meter bar to bar (three 4/4 bars then a 5/4). An absent
+ * `timeSignature` inherits the tab's default; read it through `measureTimeSignature`.
+ */
+export type MeasureType = {
+  frames: FrameType[];
+  timeSignature?: TimeSignatureType;
+};
 
-// Tab metadata
+// Tab metadata. Tuning lives on the track, not here — each instrument tunes
+// independently.
 export type TabDetailsType = {
   song: string;
   artist: string;
   creator: string;
   dateCreated: string;
   dateModified: string;
+  bpm: number;
+  timeSignature: TimeSignatureType;
+};
+
+export type SectionType = { id: string; name: string; measures: MeasureType[] };
+
+export type TabBodyType = {
+  sections: SectionType[];
+};
+
+/**
+ * One instrument's part. A tab is a list of these; a plain guitar tab is a tab with a
+ * single track.
+ */
+export type TrackType = {
+  id: string;
+  /** Display name, e.g. "Rhythm guitar". Distinct from `instrument`. */
+  name: string;
+  /** Instrument family — "guitar" | "bass" | "ukulele" | ... Drives the sound preset. */
+  instrument: string;
   tuning: TuningType;
+  /**
+   * Octave of each open string, parallel to `tuning`. Note names alone give pitch
+   * classes, which is enough to name a chord but not to sound one, so playback needs
+   * absolute pitch.
+   */
+  octaves: number[];
+  body: TabBodyType;
+};
+
+/** The shape stored in `tabs.tab_data`. */
+export type TabTracksType = {
+  tracks: TrackType[];
 };
 
 // Complete tab document
 export type TabType = {
   id: IdType;
   details: TabDetailsType;
-  body: TabBodyType;
+  tracks: TrackType[];
+  /** Freeform markdown notes for the tab. */
+  notes: string;
 };
-
 
 // ============================================================================
 // DB Model
@@ -75,8 +129,10 @@ export type TabType = {
 
 /**
  * Tab as stored in the database.
- * - tuning: JSON array of 6 notes
- * - tab_data: JSON blob containing TabBodyType
+ * - tab_data: JSON blob containing TabTracksType
+ * - tuning: vestigial. Tuning moved onto each track in the tracks migration; the
+ *   column is NOT NULL, so it is still written as a mirror of `tracks[0].tuning` and
+ *   never read back. Drop it in a follow-up migration.
  */
 export interface TabEntity {
   id: string;
@@ -84,7 +140,10 @@ export interface TabEntity {
   tab_name: string;
   tab_artist: string;
   tuning: TuningType;
-  tab_data: TabBodyType;
+  tab_data: TabTracksType;
+  bpm: number;
+  time_signature: TimeSignatureType;
+  notes: string;
   created_at: Date;
   modified_at: Date;
 }
@@ -96,15 +155,22 @@ export interface TabEntity {
 export type CreateTabDto = {
   tab_name: string;
   tab_artist: string;
+  /** Mirrors tracks[0].tuning; see the note on TabEntity. */
   tuning: TuningType;
-  tab_data: TabBodyType;
+  tab_data: TabTracksType;
+  bpm?: number;
+  time_signature?: TimeSignatureType;
+  notes?: string;
 };
 
 export type UpdateTabDto = {
   tab_name?: string;
   tab_artist?: string;
   tuning?: TuningType;
-  tab_data?: TabBodyType;
+  tab_data?: TabTracksType;
+  bpm?: number;
+  time_signature?: TimeSignatureType;
+  notes?: string;
 };
 
 // ============================================================================

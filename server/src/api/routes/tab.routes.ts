@@ -6,6 +6,54 @@ import { validateRequest } from "../middleware/validation.middleware";
 import { UserRepository } from "../../data/repositories/user.repository";
 import { authMiddleware } from "../middleware/auth.middleware";
 import { body, param, query } from "express-validator";
+import {
+  MAX_NOTES_LENGTH,
+  normalizeTabTracks,
+  validateBpm,
+  validateTabTracks,
+  validateTimeSignature,
+  validateTuning,
+} from "@tablab/shared";
+
+/**
+ * Validates tab_data in whichever generation the client sent it — legacy flat array,
+ * sectioned body, or tracks — by normalizing first and validating the result. That
+ * keeps an older client able to write while still enforcing the current invariants:
+ * a known tuning per track, and one note per string in every frame.
+ */
+const tabDataValidator = (value: unknown, { req }: { req: any }) => {
+  const tuning = req.body?.tuning;
+  const tracks = normalizeTabTracks(
+    value,
+    Array.isArray(tuning) ? tuning : undefined
+  );
+
+  const result = validateTabTracks(tracks);
+  if (!result.valid) {
+    throw new Error(result.error);
+  }
+  return true;
+};
+
+const tuningValidator = (value: unknown) => {
+  const result = validateTuning(value);
+  if (!result.valid) {
+    throw new Error(result.error);
+  }
+  return true;
+};
+
+const bpmValidator = (value: unknown) => {
+  const result = validateBpm(value);
+  if (!result.valid) throw new Error(result.error);
+  return true;
+};
+
+const timeSignatureValidator = (value: unknown) => {
+  const result = validateTimeSignature(value);
+  if (!result.valid) throw new Error(result.error);
+  return true;
+};
 
 export const createTabRouter = (
   tabService: TabService,
@@ -52,8 +100,11 @@ export const createTabRouter = (
     [
       body("tab_name").trim().isLength({ min: 1, max: 255 }),
       body("tab_artist").optional().trim().isLength({ max: 255 }),
-      body("tuning").isArray(),
-      body("tab_data").isArray(),
+      body("tuning").custom(tuningValidator),
+      body("tab_data").custom(tabDataValidator),
+      body("bpm").optional().custom(bpmValidator),
+      body("time_signature").optional().custom(timeSignatureValidator),
+      body("notes").optional().isString().isLength({ max: MAX_NOTES_LENGTH }),
     ],
     validateRequest(),
     (async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
@@ -89,8 +140,11 @@ export const createTabRouter = (
       param("tabId").isUUID(),
       body("tab_name").optional().trim().isLength({ min: 1, max: 255 }),
       body("tab_artist").optional().trim().isLength({ max: 255 }),
-      body("tuning").optional().isArray(),
-      body("tab_data").optional().isArray(),
+      body("tuning").optional().custom(tuningValidator),
+      body("tab_data").optional().custom(tabDataValidator),
+      body("bpm").optional().custom(bpmValidator),
+      body("time_signature").optional().custom(timeSignatureValidator),
+      body("notes").optional().isString().isLength({ max: MAX_NOTES_LENGTH }),
     ],
     validateRequest(),
     (async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {

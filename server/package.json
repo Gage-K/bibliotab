@@ -1,6 +1,7 @@
 {
   "name": "server",
   "version": "1.0.0",
+  "packageManager": "pnpm@11.25.0",
   "description": "backend for tablab",
   "main": "index.js",
   "scripts": {
@@ -8,7 +9,13 @@
     "build": "tsc && tsc-alias",
     "start": "node dist/server/src/app.js",
     "dev": "nodemon --exec ts-node -r tsconfig-paths/register src/app.ts",
-    "watch": "tsc -w"
+    "watch": "tsc -w",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:baseline": "node scripts/stamp-baseline.mjs",
+    "db:studio": "drizzle-kit studio",
+    "db:backfill-durations": "node scripts/backfill-frame-durations.mjs",
+    "seed:song": "node scripts/seed-song.mjs"
   },
   "author": "Gage Krause",
   "license": "ISC",
@@ -16,6 +23,7 @@
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.6",
     "dotenv": "^16.6.1",
+    "drizzle-orm": "^0.45.2",
     "express": "^5.2.1",
     "express-validator": "^7.3.2",
     "jsonwebtoken": "^9.0.3",
@@ -28,6 +36,7 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^24.12.2",
     "@types/pg": "^8.20.0",
+    "drizzle-kit": "^0.31.10",
     "nodemon": "^3.1.14",
     "ts-node": "^10.9.2",
     "tsc-alias": "^1.8.16",

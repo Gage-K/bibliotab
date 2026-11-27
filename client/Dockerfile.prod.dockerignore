@@ -1,0 +1,20 @@
+# Applies to client/Dockerfile.prod only (BuildKit reads <Dockerfile>.dockerignore in
+# preference to a root .dockerignore). That build's context is the repo root, so send
+# just the two folders it copies, minus what client/.dockerignore keeps out when the
+# context is client/.
+*
+!client
+!shared
+
+**/node_modules
+**/npm-debug.log
+**/dist
+**/.env
+**/.env.local
+**/.DS_Store
+**/*.log
+**/.vite
+**/coverage
+**/.git
+**/.gitignore
+**/README.md

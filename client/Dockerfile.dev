@@ -1,12 +1,19 @@
-FROM node:20-alpine
+# Node 22 to match the host and satisfy pnpm 11 (engines: node >=22.13).
+FROM node:22-alpine
 
 WORKDIR /app
 
-# Install pnpm
-RUN corepack enable && corepack prepare pnpm@latest --activate
+# Install pnpm. Pinned rather than @latest: corepack would otherwise pull whatever
+# pnpm is current at build time, so an image rebuilt months apart resolves differently
+# from the host and from the committed lockfile. Keep in step with "packageManager"
+# in package.json.
+RUN corepack enable && corepack prepare pnpm@11.25.0 --activate
 
-# Copy package files
-COPY package.json pnpm-lock.yaml* ./
+# Copy package files. pnpm-workspace.yaml matters as much as the lockfile here: it
+# carries the allowBuilds approvals (without which pnpm 10+ fails the install on
+# esbuild's script) and the security overrides, so leaving it out made the container
+# resolve a different tree from the host.
+COPY package.json pnpm-lock.yaml* pnpm-workspace.yaml* ./
 
 # Install dependencies
 RUN pnpm install

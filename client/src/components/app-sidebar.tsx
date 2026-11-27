@@ -11,7 +11,7 @@ import {
 import { ModeToggle } from "./theme-switcher"
 import { useTabs, useCreateTab } from "../hooks/useTabs"
 import useTypedAuth from "../hooks/useTypedAuth"
-import { DEFAULT_TAB } from "../shared/types/consts"
+import { DEFAULT_TAB } from "../shared/types/consts";
 import {
   Sidebar,
   SidebarContent,
