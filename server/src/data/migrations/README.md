@@ -143,8 +143,7 @@ migrate step should log `Database is up to date (latest: 0006_drop_tab_lyrics)`.
   `octaves`: deriving them in SQL would duplicate the instrument-preset table in a
   second language and persist a wrong guess, so the read path fills them in from
   `octavesForTuning` instead and they are saved on the next write. The `tuning` column
-  is left in place — no longer read, still NOT NULL, written as a mirror of track 0.
-  Dropping it is a follow-up migration.
+  was left in place as a NOT NULL mirror of track 0; see 0007.
 - **`0003_add_tempo_and_time_signature.sql` is generated** (real DDL: two columns).
   Frame durations are per-frame and live in the blob, so they are backfilled by
   `pnpm db:backfill-durations` rather than by SQL — walking
@@ -158,6 +157,17 @@ migrate step should log `Database is up to date (latest: 0006_drop_tab_lyrics)`.
   the `lyrics` column added in 0005 is dropped. Freeform text lives in `notes`. The drop
   is destructive by design — the feature is gone — and `init.sql` no longer defines the
   column either.
+- **`0007_relax_tab_tuning.sql` is generated** and only drops `NOT NULL` from
+  `tabs.tuning`. It is the first of two steps that retire the column. From this release
+  the code neither reads nor writes it (the API still accepts and ignores a top-level
+  `tuning` from older clients), but the backend from the release before still INSERTs
+  it, and that backend serves for a while after the deploy's migrate step. Relaxing the
+  column is safe for both. Rows written from here on have `tuning = NULL`; older rows keep
+  a stale value nobody reads. **Step 2**, in a later release once every running backend
+  is from this one or newer: drop the column, remove it from `tabs.schema.ts` and
+  `init.sql`, and drop the `nullable`-aware branch in `scripts/seed-song.mjs`. Note that
+  `0002` reads `tuning`, so a fresh `init.sql` database must still have the column when
+  0002 runs — drop it in a migration, not only from `init.sql`'s CREATE TABLE.
 - `db/init.sql` still bootstraps a fresh Postgres container (mounted in
   `docker-compose.yml` and `docker-compose.prod.yml`). It and the baseline migration
   describe the same schema; a fresh Docker DB is initialized by `init.sql` and then needs

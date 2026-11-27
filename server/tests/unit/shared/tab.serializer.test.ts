@@ -175,12 +175,13 @@ describe("tabEntityToResponse", () => {
     expect(response.tracks[0].body.sections[0].measures[0].frames).toHaveLength(2);
   });
 
-  it("pulls the legacy tuning column onto the track", () => {
+  it("ignores the retired tuning column", () => {
+    // The column is still selected until it is dropped, but tuning lives on the track.
     const response = tabEntityToResponse(
       entityWith({ sections: [section([measure(1)])] }, BASS)
     );
 
-    expect(response.tracks[0].tuning).toEqual(BASS);
+    expect(response.tracks[0].tuning).toEqual(GUITAR);
     // Tuning no longer appears in details.
     expect("tuning" in response.details).toBe(false);
   });

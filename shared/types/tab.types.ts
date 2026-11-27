@@ -130,16 +130,16 @@ export type TabType = {
 /**
  * Tab as stored in the database.
  * - tab_data: JSON blob containing TabTracksType
- * - tuning: vestigial. Tuning moved onto each track in the tracks migration; the
- *   column is NOT NULL, so it is still written as a mirror of `tracks[0].tuning` and
- *   never read back. Drop it in a follow-up migration.
+ *
+ * The table still has a `tuning` column, but it is retired: tuning lives on each track
+ * since the 0002 tracks migration, and 0007 made the column nullable so nothing has to
+ * write it. It is deliberately absent here; a follow-up migration drops it.
  */
 export interface TabEntity {
   id: string;
   user_id: string;
   tab_name: string;
   tab_artist: string;
-  tuning: TuningType;
   tab_data: TabTracksType;
   bpm: number;
   time_signature: TimeSignatureType;
@@ -155,8 +155,6 @@ export interface TabEntity {
 export type CreateTabDto = {
   tab_name: string;
   tab_artist: string;
-  /** Mirrors tracks[0].tuning; see the note on TabEntity. */
-  tuning: TuningType;
   tab_data: TabTracksType;
   bpm?: number;
   time_signature?: TimeSignatureType;
@@ -166,7 +164,6 @@ export type CreateTabDto = {
 export type UpdateTabDto = {
   tab_name?: string;
   tab_artist?: string;
-  tuning?: TuningType;
   tab_data?: TabTracksType;
   bpm?: number;
   time_signature?: TimeSignatureType;

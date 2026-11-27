@@ -27,7 +27,6 @@ export default function Dashboard() {
     const payload: CreateTabPayload = {
       tab_name: `${tab.details.song} (Copy)`,
       tab_artist: tab.details.artist,
-      tuning: [...(tab.tracks[0]?.tuning ?? [])],
       tab_data: { tracks: tab.tracks },
     };
     createTabMutation.mutate(payload);

@@ -80,12 +80,12 @@ export class TabRepository {
       const now = new Date();
       const query = `
         INSERT INTO tabs (
-          user_id, tab_name, tab_artist, tuning, created_at, modified_at, tab_data,
+          user_id, tab_name, tab_artist, created_at, modified_at, tab_data,
           bpm, time_signature, notes
         )
         VALUES (
-          $1, $2, $3, $4, $5, $6, $7,
-          COALESCE($8, 90), COALESCE($9, '[4,4]'::jsonb), COALESCE($10, '')
+          $1, $2, $3, $4, $5, $6,
+          COALESCE($7, 90), COALESCE($8, '[4,4]'::jsonb), COALESCE($9, '')
         )
         RETURNING *
       `;
@@ -93,7 +93,6 @@ export class TabRepository {
         userId,
         tabData.tab_name,
         tabData.tab_artist,
-        JSON.stringify(tabData.tuning),
         now,
         now,
         JSON.stringify(tabData.tab_data),
@@ -123,12 +122,6 @@ export class TabRepository {
       if (tabData.tab_artist !== undefined) {
         updateFields.push(`tab_artist = $${paramIndex}`);
         values.push(tabData.tab_artist);
-        paramIndex++;
-      }
-
-      if (tabData.tuning !== undefined) {
-        updateFields.push(`tuning = $${paramIndex}`);
-        values.push(JSON.stringify(tabData.tuning));
         paramIndex++;
       }
 

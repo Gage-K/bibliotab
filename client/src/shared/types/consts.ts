@@ -18,8 +18,6 @@ export const MEASURE_METERS: [number, number][] = [
 export const DEFAULT_TAB: CreateTabPayload = {
   tab_name: "Untitled",
   tab_artist: "Untitled",
-  // Mirrors tracks[0].tuning; the server ignores it on read.
-  tuning: STANDARD_TUNINGS.standard,
   tab_data: {
     tracks: [
       {

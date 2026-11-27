@@ -20,8 +20,10 @@ import type {
 /**
  * tabs — mirrors server/db/init.sql.
  * `tuning` and `tab_data` are JSONB, typed via .$type<>() to the shared domain types.
- * `tuning` is vestigial since the tracks migration — tuning lives on each track now —
- * but the column is NOT NULL, so it is still written as a mirror of tracks[0].
+ * `tuning` is retired: tuning lives on each track since the 0002 tracks migration.
+ * 0007 made it nullable and nothing writes or reads it any more; it stays only so a
+ * backend from before that change keeps working through a deploy. A follow-up
+ * migration drops it.
  *
  * NOTE: init.sql also defines an `update_modified_at` BEFORE UPDATE trigger on this
  * table. It is intentionally NOT modeled here — TabRepository.update sets modified_at
@@ -37,7 +39,7 @@ export const tabs = pgTable(
       .references(() => users.id, { onDelete: "cascade" }),
     tabName: varchar("tab_name", { length: 255 }).notNull(),
     tabArtist: varchar("tab_artist", { length: 255 }),
-    tuning: jsonb("tuning").$type<TuningType>().notNull(),
+    tuning: jsonb("tuning").$type<TuningType>(),
     tabData: jsonb("tab_data").$type<TabTracksType>().notNull(),
     // Timing is tab-level and queryable, so it lives in columns rather than inside the
     // tab_data blob. Frame durations are in beats, which makes them independent of bpm.

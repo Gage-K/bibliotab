@@ -1,0 +1,1 @@
+ALTER TABLE "tabs" ALTER COLUMN "tuning" DROP NOT NULL;

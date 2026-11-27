@@ -15,7 +15,6 @@ function makeEntity(overrides: Partial<TabEntity> = {}): TabEntity {
     user_id: "user-123",
     tab_name: "Test tab",
     tab_artist: "Test artist",
-    tuning: TUNING,
     created_at: new Date("2024-01-01T00:00:00.000Z"),
     modified_at: new Date("2024-01-02T00:00:00.000Z"),
     bpm: 90,
@@ -103,13 +102,17 @@ describe("TabService", () => {
       ]);
     });
 
-    it("should pull the legacy tuning column onto the wrapped track", async () => {
-      // Rows written before the 0002 tracks migration keep their tuning in a column.
-      const preTracks = makeEntity({
-        tab_data: {
-          sections: [{ id: "s", name: "Intro", measures: [[makeFrame("f1")]] }],
-        } as any,
-      });
+    it("should not read the retired tuning column", async () => {
+      // `SELECT *` still returns the column until it is dropped; a pre-tracks blob gets
+      // the default tuning rather than whatever the column holds.
+      const preTracks = {
+        ...makeEntity({
+          tab_data: {
+            sections: [{ id: "s", name: "Intro", measures: [[makeFrame("f1")]] }],
+          } as any,
+        }),
+        tuning: ["G", "D", "A", "E"],
+      };
       vi.mocked(mockTabRepository.findById).mockResolvedValue(preTracks);
 
       const result = await tabService.getTab(preTracks.id, preTracks.user_id);
@@ -139,7 +142,6 @@ describe("TabService", () => {
         {
           tab_name: "Test tab",
           tab_artist: "Test artist",
-          tuning: TUNING,
           tab_data: [[makeFrame("f1")]] as any,
         },
         "user-123"
@@ -152,7 +154,7 @@ describe("TabService", () => {
       ]);
     });
 
-    it("should mirror track 0's tuning into the vestigial tuning column", async () => {
+    it("should keep each track's own tuning, ignoring a top-level tuning from an old client", async () => {
       const created = makeEntity();
       vi.mocked(mockTabRepository.create).mockResolvedValue(created);
 
@@ -161,6 +163,7 @@ describe("TabService", () => {
         {
           tab_name: "Bass line",
           tab_artist: "Test artist",
+          // Clients built before the column was retired still send this.
           tuning: TUNING,
           tab_data: {
             tracks: [
@@ -174,12 +177,12 @@ describe("TabService", () => {
               },
             ],
           },
-        },
+        } as any,
         "user-123"
       );
 
       const persisted = vi.mocked(mockTabRepository.create).mock.calls[0][1];
-      expect(persisted.tuning).toEqual(bass);
+      expect(persisted.tab_data.tracks[0].tuning).toEqual(bass);
     });
   });
 

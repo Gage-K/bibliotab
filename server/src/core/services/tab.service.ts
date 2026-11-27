@@ -43,12 +43,9 @@ export class TabService {
 
   async createTab(tabData: CreateTabDto, userId: string): Promise<TabResponse> {
     // Store the tracked shape regardless of which generation the client sent.
-    const tab_data = normalizeTabTracks(tabData.tab_data, tabData.tuning);
     const created = await this.tabRepo.create(userId, {
       ...tabData,
-      // `tuning` is vestigial but NOT NULL; keep it mirroring track 0.
-      tuning: tab_data.tracks[0]?.tuning ?? tabData.tuning,
-      tab_data,
+      tab_data: normalizeTabTracks(tabData.tab_data),
     });
     return tabEntityToResponse(created);
   }
@@ -60,18 +57,10 @@ export class TabService {
   ): Promise<TabResponse> {
     await this.verifyOwnership(tabId, userId);
 
-    const normalized =
-      tabData.tab_data !== undefined
-        ? normalizeTabTracks(tabData.tab_data, tabData.tuning)
-        : undefined;
-
     const updatedTab = await this.tabRepo.update(tabId, {
       ...tabData,
-      ...(normalized
-        ? {
-            tab_data: normalized,
-            tuning: normalized.tracks[0]?.tuning ?? tabData.tuning,
-          }
+      ...(tabData.tab_data !== undefined
+        ? { tab_data: normalizeTabTracks(tabData.tab_data) }
         : {}),
     });
     if (!updatedTab) {

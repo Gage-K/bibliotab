@@ -225,9 +225,6 @@ export function TabEditorProvider({
     const data = {
       tab_name: details.song,
       tab_artist: details.artist,
-      // `tuning` is vestigial on the server (NOT NULL column) but still required by the
-      // API; it mirrors track 0.
-      tuning: tracks[0]?.tuning ?? [],
       tab_data: { tracks },
       bpm: details.bpm,
       time_signature: details.timeSignature,

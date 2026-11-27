@@ -12,7 +12,6 @@ import {
   validateBpm,
   validateTabTracks,
   validateTimeSignature,
-  validateTuning,
 } from "@tablab/shared";
 
 /**
@@ -20,23 +19,15 @@ import {
  * sectioned body, or tracks — by normalizing first and validating the result. That
  * keeps an older client able to write while still enforcing the current invariants:
  * a known tuning per track, and one note per string in every frame.
+ *
+ * A top-level `tuning` field is no longer part of the API (tuning lives on each track),
+ * but clients built before its retirement still send one. It is accepted and ignored:
+ * no validator names it, and the repository never writes it.
  */
-const tabDataValidator = (value: unknown, { req }: { req: any }) => {
-  const tuning = req.body?.tuning;
-  const tracks = normalizeTabTracks(
-    value,
-    Array.isArray(tuning) ? tuning : undefined
-  );
+const tabDataValidator = (value: unknown) => {
+  const tracks = normalizeTabTracks(value);
 
   const result = validateTabTracks(tracks);
-  if (!result.valid) {
-    throw new Error(result.error);
-  }
-  return true;
-};
-
-const tuningValidator = (value: unknown) => {
-  const result = validateTuning(value);
   if (!result.valid) {
     throw new Error(result.error);
   }
@@ -100,7 +91,6 @@ export const createTabRouter = (
     [
       body("tab_name").trim().isLength({ min: 1, max: 255 }),
       body("tab_artist").optional().trim().isLength({ max: 255 }),
-      body("tuning").custom(tuningValidator),
       body("tab_data").custom(tabDataValidator),
       body("bpm").optional().custom(bpmValidator),
       body("time_signature").optional().custom(timeSignatureValidator),
@@ -140,7 +130,6 @@ export const createTabRouter = (
       param("tabId").isUUID(),
       body("tab_name").optional().trim().isLength({ min: 1, max: 255 }),
       body("tab_artist").optional().trim().isLength({ max: 255 }),
-      body("tuning").optional().custom(tuningValidator),
       body("tab_data").optional().custom(tabDataValidator),
       body("bpm").optional().custom(bpmValidator),
       body("time_signature").optional().custom(timeSignatureValidator),
