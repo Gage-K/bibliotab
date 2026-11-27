@@ -1,15 +1,11 @@
-import { Link, NavLink, redirect } from "react-router";
+import { Link, NavLink } from "react-router";
 import PageWrapper from "../layouts/PageWrapper";
 import useTypedAuth from "../hooks/useTypedAuth";
 import { Button } from "./ui/button";
 
 export default function Header() {
-  const { auth, setAuth } = useTypedAuth();
+  const { auth } = useTypedAuth();
 
-  function logout() {
-    setAuth({});
-    redirect("/");
-  }
   const linkBaseStyle =
     "rounded-sm px-3 py-1 hover:bg-accent hover:text-accent-foreground duration-150 ease-in-out";
   const activeStyle = `${linkBaseStyle} bg-accent text-accent-foreground`;

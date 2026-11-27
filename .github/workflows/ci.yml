@@ -1,0 +1,95 @@
+name: CI
+
+# Catches a broken build on the pull request, before deploy.yml rebuilds prod from main.
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+# A new push to the PR supersedes the run still going for the old one.
+concurrency:
+  group: ci-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+env:
+  # corepack downloads the pnpm named by "packageManager" in each package.json
+  # (pnpm@11.25.0) without asking.
+  COREPACK_ENABLE_DOWNLOAD_PROMPT: 0
+
+jobs:
+  client:
+    name: client (typecheck, test)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: client
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: corepack enable && pnpm --version
+      # pnpm-workspace.yaml sits beside the lockfile, so its build-script approvals and
+      # security overrides apply to this install as they do in the Dockerfiles.
+      - run: pnpm install --frozen-lockfile
+      # Includes ../shared, which the client imports as @tablab/shared.
+      - run: pnpm run typecheck
+      - run: pnpm exec vitest run
+
+  server:
+    name: server (typecheck, test)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: corepack enable && pnpm --version
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run typecheck
+      - run: pnpm exec vitest run
+
+  lint:
+    name: lint (client)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: client
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: corepack enable && pnpm --version
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run lint
+
+  prod-image:
+    name: prod image (${{ matrix.service }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - service: client
+            build-args: VITE_BE_URL=https://bibliotab.com
+          - service: server
+            build-args: ""
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      # Same Dockerfile and repo-root context as docker-compose.prod.yml. Built only,
+      # never pushed: this is the build the deploy runs on the VPS.
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ matrix.service }}/Dockerfile.prod
+          build-args: ${{ matrix.build-args }}
+          push: false
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
