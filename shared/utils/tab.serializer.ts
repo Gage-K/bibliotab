@@ -92,8 +92,10 @@ export function normalizeMeasure(raw: unknown): MeasureType {
  *   2. `{ sections: [...] }`    — sections, pre-tracks
  *   3. `{ tracks: [...] }`      — current
  *
- * `fallbackTuning` is the row's legacy `tuning` column, which is where the tuning
- * lived before it moved onto the track.
+ * `fallbackTuning` fills in a track that has no tuning of its own, which is every
+ * generation-1/2 blob: before the tracks migration the tuning lived in the row's
+ * `tuning` column. That column is retired and no longer read, so stored rows (all in
+ * generation 3 by now) never need it, and a legacy blob gets the default tuning.
  */
 export function normalizeTabTracks(
   raw: unknown,
@@ -162,7 +164,7 @@ export function tabEntityToResponse(entity: TabEntity): TabResponse {
       bpm: entity.bpm ?? DEFAULT_BPM,
       timeSignature: entity.time_signature ?? DEFAULT_TIME_SIGNATURE,
     },
-    tracks: normalizeTabTracks(entity.tab_data, entity.tuning).tracks,
+    tracks: normalizeTabTracks(entity.tab_data).tracks,
     notes: entity.notes ?? "",
   };
 }
@@ -181,14 +183,11 @@ export function createDtoToEntity(
   userId: string,
   dto: CreateTabDto
 ): Omit<TabEntity, "id" | "created_at" | "modified_at"> {
-  const tab_data = normalizeTabTracks(dto.tab_data, dto.tuning);
   return {
     user_id: userId,
     tab_name: dto.tab_name,
     tab_artist: dto.tab_artist,
-    // The column is NOT NULL and no longer read; mirror track 0 to keep it honest.
-    tuning: tab_data.tracks[0]?.tuning ?? dto.tuning,
-    tab_data,
+    tab_data: normalizeTabTracks(dto.tab_data),
     bpm: dto.bpm ?? DEFAULT_BPM,
     time_signature: dto.time_signature ?? DEFAULT_TIME_SIGNATURE,
     notes: dto.notes ?? "",

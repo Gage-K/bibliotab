@@ -27,7 +27,8 @@ CREATE TABLE IF NOT EXISTS tabs (
   user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   tab_name VARCHAR(255) NOT NULL,
   tab_artist VARCHAR(255),
-  tuning JSONB NOT NULL,
+  -- Retired (tuning lives on each track in tab_data); nullable since migration 0007.
+  tuning JSONB,
   tab_data JSONB NOT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   modified_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP

@@ -1,18 +1,14 @@
 import type { AxiosInstance } from "axios";
 import { API_ENDPOINTS } from "../endpoints";
-import type { TabTracksType, TabType, TimeSignatureType, TuningType } from "@tablab/shared";
+import type { TabTracksType, TabType, TimeSignatureType } from "@tablab/shared";
 
 /** Every tab endpoint wraps its payload in `{ data }`. */
 type ApiEnvelope<T> = { data: T };
 
-/**
- * `tuning` is vestigial server-side — tuning lives on each track — but the column is
- * NOT NULL, so the API still requires it and it mirrors tracks[0].
- */
+/** Tuning lives on each track in `tab_data`; there is no tab-level tuning field. */
 export interface CreateTabPayload {
   tab_name: string;
   tab_artist: string;
-  tuning: TuningType;
   tab_data: TabTracksType;
   bpm?: number;
   time_signature?: TimeSignatureType;
@@ -22,7 +18,6 @@ export interface CreateTabPayload {
 export interface SaveTabPayload {
   tab_name: string;
   tab_artist: string;
-  tuning: TuningType;
   tab_data: TabTracksType;
   bpm: number;
   time_signature: TimeSignatureType;

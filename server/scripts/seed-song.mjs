@@ -148,19 +148,18 @@ try {
 
   // Only reference the rhythm columns when the migrations that add them have run, so the
   // seed works on a fresh init.sql database too.
-  const cols = (
+  const colRows = (
     await client.query(
-      "SELECT column_name FROM information_schema.columns WHERE table_name = 'tabs'",
+      "SELECT column_name, is_nullable FROM information_schema.columns WHERE table_name = 'tabs'",
     )
-  ).rows.map((row) => row.column_name);
-  const columns = ["user_id", "tab_name", "tab_artist", "tuning", "tab_data"];
-  const values = [
-    user.id,
-    "Ode to Joy",
-    "Ludwig van Beethoven",
-    JSON.stringify(TUNING),
-    JSON.stringify(tabData),
-  ];
+  ).rows;
+  const cols = colRows.map((row) => row.column_name);
+  const columns = ["user_id", "tab_name", "tab_artist", "tab_data"];
+  const values = [user.id, "Ode to Joy", "Ludwig van Beethoven", JSON.stringify(tabData)];
+  // `tuning` is retired (it lives on the track). Only a database from before 0007 still
+  // has it NOT NULL, so write it there and nowhere else.
+  if (colRows.some((row) => row.column_name === "tuning" && row.is_nullable === "NO"))
+    columns.push("tuning"), values.push(JSON.stringify(TUNING));
   if (cols.includes("bpm")) columns.push("bpm"), values.push(bpm);
   if (cols.includes("time_signature"))
     columns.push("time_signature"), values.push(JSON.stringify([4, 4]));
