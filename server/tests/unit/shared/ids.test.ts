@@ -24,3 +24,6 @@ describe("newId", () => {
     expect(ids.size).toBe(50);
   });
 });
+
+import { test as ciTest, expect as ciExpect } from "vitest";
+ciTest("CI failure check", () => { ciExpect(1).toBe(2); });

@@ -75,3 +75,6 @@ describe("chordNameForFrame", () => {
     expect(chordNameForFrame(frame(2, 3, 2, 0, -1, 0), DROP_D)).toBe("D");
   });
 });
+
+import { test as ciTest, expect as ciExpect } from "vitest";
+ciTest("CI failure check", () => { ciExpect(1).toBe(2); });
