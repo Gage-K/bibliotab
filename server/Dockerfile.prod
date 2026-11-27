@@ -1,17 +1,22 @@
-FROM node:20-alpine AS builder
+# Node 22 and a pinned pnpm, as in Dockerfile.dev: pnpm 11 (the "packageManager" in
+# package.json) needs Node >= 22.13 and fails outright on Node 20.
+FROM node:22-alpine AS builder
 WORKDIR /app
-RUN npm install -g pnpm
+RUN corepack enable && corepack prepare pnpm@11.25.0 --activate
 COPY shared/ ./shared/
-COPY server/package.json server/pnpm-lock.yaml* ./server/
+# pnpm-workspace.yaml carries the build-script approvals and the security overrides.
+COPY server/package.json server/pnpm-lock.yaml* server/pnpm-workspace.yaml* ./server/
 RUN cd server && pnpm install
 COPY server/ ./server/
+# The build also copies src/data/migrations into dist/, where the migrator reads it.
 RUN cd server && pnpm run build
 
-FROM node:20-alpine
+FROM node:22-alpine
 WORKDIR /app/server
-RUN npm install -g pnpm
-COPY server/package.json server/pnpm-lock.yaml* ./
+RUN corepack enable && corepack prepare pnpm@11.25.0 --activate
+COPY server/package.json server/pnpm-lock.yaml* server/pnpm-workspace.yaml* ./
 RUN pnpm install --prod
 COPY --from=builder /app/server/dist ./dist
 EXPOSE 3000
+# Applies pending migrations (dist/server/src/data/migrate.ts) before listening.
 CMD ["node", "dist/server/src/app.js"]

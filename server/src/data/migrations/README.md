@@ -17,9 +17,46 @@ unchanged — Drizzle is used here **only for schema/migrations**, not as an ORM
 DB connection comes from `DB_*` in `server/.env` (`drizzle.config.ts` reads
 `process.env` directly). Override the target with e.g. `DB_NAME=other pnpm db:migrate`.
 
+## Migrations run automatically on server start and on deploy
+
+The server applies pending migrations itself; nobody needs to run `db:migrate` against
+production. [`../migrate.ts`](../migrate.ts) uses drizzle-orm's runtime migrator (the
+prod image has no drizzle-kit), reads this folder, and records progress in the same
+`drizzle.__drizzle_migrations` table as `pnpm db:migrate`, so the two are interchangeable.
+
+**On every server start** (`app.ts`, dev and prod), before it listens:
+
+- Database at the latest migration → logs `[migrate] Database is up to date` and starts.
+- Migrations pending → logs which, applies them, then starts.
+- A migration fails → nothing is applied (drizzle runs all pending migrations in one
+  transaction), the error is logged, and the process exits 1 without listening.
+- Tables exist but there is no migration history (an un-baselined DB) → refuses with
+  `NotBaselinedError` and exits 1. **It never baselines on its own**; see below.
+
+**On deploy** ([`.github/workflows/deploy.yml`](../../../../.github/workflows/deploy.yml)),
+on the VPS:
+
+1. `git pull`, then `docker compose -f docker-compose.prod.yml build`.
+2. `docker compose ... run --rm backend node dist/server/src/data/migrate.js`: the same
+   migrator as a one-off container from the **new** image, while the **old** backend is
+   still serving. If it fails, the deploy stops here and goes red with the error in the
+   job log under "Database migrations"; the old backend keeps serving an unchanged
+   schema. Fix the migration and push again.
+3. `docker compose ... up -d` replaces the containers. The new backend's own startup
+   migrate is a no-op by now.
+4. The job waits up to 60s for the backend to log `Application running`, and otherwise
+   prints its last 100 log lines and fails.
+
+Running it in step 2 rather than only on boot is the safer failure: a broken migration is
+caught before the working container is torn down, instead of leaving a crash-looping
+backend (`restart: always`) and a site that is down until the next push.
+
+Not automatic: `pnpm db:baseline` (by hand, once per existing database) and one-off data
+scripts such as `pnpm db:backfill-durations`.
+
 ## Setting up a database
 
-**A brand-new / empty database** (no tables yet):
+**A brand-new / empty database** (no tables yet): just start the server, or
 
 ```bash
 pnpm db:migrate      # creates everything from the migrations
@@ -27,7 +64,8 @@ pnpm db:migrate      # creates everything from the migrations
 
 **An existing database** that already has the schema — your current dev and prod DBs,
 created by [`../../../db/init.sql`](../../../db/init.sql) — must be baselined **once** so
-`db:migrate` doesn't try to re-create existing tables:
+`db:migrate` doesn't try to re-create existing tables. Until it is, the server refuses to
+start (and a deploy fails at its migrate step) with `NotBaselinedError`:
 
 ```bash
 pnpm db:baseline     # stamp 0000 as applied
@@ -52,7 +90,10 @@ the error**. If `db:migrate` fails with no message, check whether the DB was bas
 1. Edit the table(s) in [`../schema/`](../schema) (or add a new schema file).
 2. `pnpm db:generate` → review the generated SQL. For data backfills (e.g. reshaping
    `tab_data` JSONB), hand-edit the generated migration or add a custom one.
-3. `pnpm db:migrate` locally; commit the migration + snapshot; deploy runs `db:migrate`.
+3. `pnpm db:migrate` locally (or restart the dev server); commit the migration +
+   snapshot. Merging to `main` deploys, and the deploy applies it (see above). Keep
+   migrations safe for the **old** code too: the old backend serves for a short while
+   after step 2 of the deploy, and keeps serving if a later step fails.
 
 ## Notes
 
@@ -89,8 +130,9 @@ the error**. If `db:migrate` fails with no message, check whether the DB was bas
   is destructive by design — the feature is gone — and `init.sql` no longer defines the
   column either.
 - `db/init.sql` still bootstraps a fresh Postgres container (mounted in
-  `docker-compose.yml`). It and the baseline migration describe the same schema; a fresh
-  Docker DB is initialized by `init.sql` and then just needs `db:baseline`.
+  `docker-compose.yml` and `docker-compose.prod.yml`). It and the baseline migration
+  describe the same schema; a fresh Docker DB is initialized by `init.sql` and then needs
+  `db:baseline` before the backend will start.
 - The pre-Drizzle hand-written migration is archived at
   [`../../../db/legacy/001_update_tab_schema.sql`](../../../db/legacy/001_update_tab_schema.sql)
   (already reflected in the baseline).

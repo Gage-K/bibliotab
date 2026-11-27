@@ -44,10 +44,34 @@ jobs:
           host: ${{ secrets.SERVER_IP }}
           username: deploy
           key: ${{ secrets.SSH_PRIVATE_KEY }}
+          # Migrations run as their own step, against the freshly built image, BEFORE the
+          # running containers are replaced. If one fails, the step exits non-zero, the old
+          # backend keeps serving (drizzle applies all pending migrations in one
+          # transaction, so the schema is unchanged), and the error is in this log. The
+          # backend also migrates on boot (a no-op by then) so it can never listen
+          # against an older schema.
           script: |
+            set -e
             cd ~/bibliotab
             git pull
-            docker compose -f docker-compose.prod.yml up -d --build
+            compose="docker compose -f docker-compose.prod.yml"
+            $compose build
+            echo "::group::Database migrations"
+            $compose run --rm backend node dist/server/src/data/migrate.js
+            echo "::endgroup::"
+            $compose up -d
+            # `up -d` returns as soon as containers are created, even if the backend then
+            # crash-loops. Wait for it to report that it is listening.
+            for i in $(seq 1 30); do
+              if $compose logs backend 2>&1 | grep -q "Application running"; then
+                echo "Backend is up."
+                exit 0
+              fi
+              sleep 2
+            done
+            echo "Backend did not start within 60s. Recent logs:"
+            $compose logs --tail 100 backend
+            exit 1
 
       - name: Finish GitHub deployment
         if: always()

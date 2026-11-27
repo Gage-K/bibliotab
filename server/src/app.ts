@@ -11,16 +11,11 @@ import { authMiddleware } from "./api/middleware/auth.middleware";
 import { errorHandler } from "./api/middleware/error.middleware";
 import { createTabRouter } from "./api/routes/tab.routes";
 import { createUserRouter } from "./api/routes/user.routes";
+import { dbConfig } from "./data/db.config";
+import { runMigrations } from "./data/migrate";
 
 // Create database pool
-const pool = new Pool({
-  host: env.DB_HOST,
-  user: env.DB_USER,
-  database: env.DB_NAME,
-  password: env.DB_PASSWORD,
-  port: env.DB_PORT,
-  ssl: env.NODE_ENV === "production" && env.DB_HOST !== "postgres" ? { rejectUnauthorized: false } : false,
-});
+const pool = new Pool(dbConfig);
 
 // Initialize repositories
 const userRepository = new UserRepository(pool);
@@ -49,7 +44,16 @@ app.use("/api/tabs", createTabRouter(tabService, userRepository));
 // Error middleware
 app.use(errorHandler);
 
-// Start server
-app.listen(3000, () => {
-  console.log(`Application running on port ${env.PORT || 3000}`);
-});
+// Start server, but only once the schema matches this code. A failed migration exits
+// the process before it listens, so a broken deploy never serves requests.
+runMigrations(dbConfig).then(
+  () => {
+    app.listen(3000, () => {
+      console.log(`Application running on port ${env.PORT || 3000}`);
+    });
+  },
+  (error: unknown) => {
+    console.error("Not starting: database migration failed.", error);
+    process.exit(1);
+  },
+);
