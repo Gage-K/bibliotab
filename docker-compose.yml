@@ -35,6 +35,9 @@ services:
       ACCESS_TOKEN_SECRET: ${ACCESS_TOKEN_SECRET:-dev-access-token-secret-change-me-in-production-1234}
       REFRESH_TOKEN_SECRET: ${REFRESH_TOKEN_SECRET:-dev-refresh-token-secret-change-me-in-production-5678}
       FE_API: http://localhost:5173
+      # See the note on the frontend service: let pnpm reconcile node_modules without a
+      # TTY prompt when the cached volume drifts from the lockfile.
+      NPM_CONFIG_CONFIRM_MODULES_PURGE: "false"
     ports:
       - "3000:3000"
     volumes:
@@ -54,6 +57,11 @@ services:
     container_name: tablab-frontend
     environment:
       VITE_BE_URL: http://localhost:3000
+      # A container has no TTY, so pnpm aborts rather than prompting before it purges
+      # node_modules — which it wants to do when the cached node_modules volume drifts
+      # from the lockfile (e.g. after a dependency change + image rebuild). Let it
+      # reconcile non-interactively.
+      NPM_CONFIG_CONFIRM_MODULES_PURGE: "false"
     ports:
       - "5173:5173"
     volumes:
