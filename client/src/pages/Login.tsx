@@ -141,3 +141,6 @@ export default function Login() {
     </PageWrapper>
   );
 }
+
+// CI failure check: a lint error.
+const ciUnused = 1;
