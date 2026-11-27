@@ -3,15 +3,8 @@ import type { EditorDetailsType } from "../shared/types/utilities.types";
 import type { TabPositionType, TabSelectionType } from "../shared/types/utilities.types";
 import {
   isExistingPosition,
-  isOnlyFrame,
-  isOnlyMeasure,
-  isOnlySection,
   getFrame,
-  getMeasures,
-  insertMeasure,
   insertFrame,
-  removeMeasure,
-  removeFrame,
   updateFrameNotes,
   setFrameDuration,
   setFrameRest,
@@ -19,17 +12,21 @@ import {
   frameDuration,
   stepDuration,
   toggleDot,
-  resolvePositionAfterFrameDelete,
-  insertSection,
-  removeSection,
   renameSection,
-  moveMeasure,
-  resolveMoveTarget,
   resizeFrames,
+  addMeasure,
+  addMeasureBefore,
+  addFrameAndAdvance,
+  addFrameBefore,
+  deleteFrame,
+  addSection,
+  deleteSection,
+  relocateMeasure,
   nudgeFrameRange,
   moveFrameRangeToMeasure,
   deleteFrameRange,
   duplicateFrameRange,
+  type EditResult,
   type FrameRange,
 } from "../utils/tabOperations";
 import { createTrack, trackStringCount } from "../utils/trackOperations";
@@ -110,6 +107,10 @@ export type TabEditorAction =
   | { type: "ADD_MEASURE"; payload: { section: number; measure: number } }
   | { type: "ADD_FRAME"; payload: { section: number; measure: number; frame: number; isEmpty: boolean } }
   | { type: "ADD_FRAME_AND_ADVANCE"; payload: { section: number; measure: number; frame: number; isEmpty: boolean } }
+  /** Inserts an empty frame before this one, keeping the cursor on it. */
+  | { type: "ADD_FRAME_BEFORE"; payload: { section: number; measure: number; frame: number } }
+  /** Inserts an empty measure before this frame's, keeping the cursor on the frame. */
+  | { type: "ADD_MEASURE_BEFORE"; payload: { section: number; measure: number; frame: number } }
   | { type: "DELETE_FRAME"; payload: { section: number; measure: number; frame: number } }
   | { type: "MOVE_CURSOR"; payload: CursorMotion }
   | { type: "CLEAR_SELECTION" }
@@ -212,6 +213,11 @@ function currentRange(state: TabEditorState): FrameRange {
     start: position.frame,
     end: position.frame,
   };
+}
+
+/** Applies an edit: the new body, with the cursor where the edit landed it. */
+function stateAfterEdit(state: TabEditorState, result: EditResult): TabEditorState {
+  return { ...withBody(state, result.tab), position: result.position, isEditing: true };
 }
 
 /** Applies a move result: re-selects the moved block and lands the cursor on its end. */
@@ -352,12 +358,17 @@ export function tabEditorReducer(state: TabEditorState, action: TabEditorAction)
 
     case "ADD_MEASURE": {
       const { section, measure } = action.payload;
-      const newTab = insertMeasure(activeBody(state), section, measure, stringCount(state));
-      return {
-        ...withBody(state, newTab),
-        position: { section, measure: measure === -1 ? 0 : measure, frame: 0, string: 0 },
-        isEditing: true,
-      };
+      return stateAfterEdit(
+        state,
+        addMeasure(activeBody(state), section, measure, stringCount(state))
+      );
+    }
+
+    case "ADD_MEASURE_BEFORE": {
+      const cursor = { ...action.payload, string: state.position.string };
+      const result = addMeasureBefore(activeBody(state), cursor, stringCount(state));
+      if (result.tab === activeBody(state)) return state;
+      return { ...stateAfterEdit(state, result), selection: null };
     }
 
     case "ADD_FRAME": {
@@ -372,23 +383,18 @@ export function tabEditorReducer(state: TabEditorState, action: TabEditorAction)
     }
 
     case "ADD_FRAME_AND_ADVANCE": {
-      const { section, measure, frame, isEmpty } = action.payload;
-      const newTab = insertFrame(
-        activeBody(state),
-        section,
-        measure,
-        frame,
-        isEmpty,
-        stringCount(state)
+      const { isEmpty, ...at } = action.payload;
+      return stateAfterEdit(
+        state,
+        addFrameAndAdvance(activeBody(state), at, isEmpty, state.position, stringCount(state))
       );
-      const newPosition = isExistingPosition(newTab, section, measure, frame + 1)
-        ? { section, measure, frame: frame + 1, string: state.position.string }
-        : state.position;
-      return {
-        ...withBody(state, newTab),
-        position: newPosition,
-        isEditing: true,
-      };
+    }
+
+    case "ADD_FRAME_BEFORE": {
+      const cursor = { ...action.payload, string: state.position.string };
+      const result = addFrameBefore(activeBody(state), cursor, stringCount(state));
+      if (result.tab === activeBody(state)) return state;
+      return { ...stateAfterEdit(state, result), selection: null };
     }
 
     case "DELETE_FRAME": {
@@ -397,41 +403,13 @@ export function tabEditorReducer(state: TabEditorState, action: TabEditorAction)
       if (range.end > range.start) {
         const result = deleteFrameRange(activeBody(state), range);
         if (result.tab === activeBody(state)) return state;
-        return {
-          ...withBody(state, result.tab),
-          position: result.position,
-          selection: null,
-          isEditing: true,
-        };
+        return { ...stateAfterEdit(state, result), selection: null };
       }
 
       const { section, measure, frame } = action.payload;
-
-      if (isOnlyFrame(activeBody(state), section, measure)) {
-        // A section always keeps at least one measure; empty it out via DELETE_SECTION.
-        if (isOnlyMeasure(activeBody(state), section)) {
-          return state;
-        }
-        const newTab = removeMeasure(activeBody(state), section, measure);
-        const prevMeasure = Math.max(measure - 1, 0);
-        return {
-          ...withBody(state, newTab),
-          position: {
-            section,
-            measure: prevMeasure,
-            frame: getMeasures(newTab, section)[prevMeasure]?.frames.length - 1 || 0,
-            string: 0,
-          },
-          isEditing: true,
-        };
-      }
-
-      const newTab = removeFrame(activeBody(state), section, measure, frame);
-      return {
-        ...withBody(state, newTab),
-        position: resolvePositionAfterFrameDelete(newTab, section, measure, frame),
-        isEditing: true,
-      };
+      const result = deleteFrame(activeBody(state), section, measure, frame);
+      if (result.tab === activeBody(state)) return state;
+      return stateAfterEdit(state, result);
     }
 
     case "MOVE_CURSOR": {
@@ -537,15 +515,9 @@ export function tabEditorReducer(state: TabEditorState, action: TabEditorAction)
 
     case "ADD_SECTION": {
       const { index, name } = action.payload;
-      const newTab = insertSection(activeBody(state), index, name, stringCount(state));
-      if (newTab === activeBody(state)) return state;
-      const newSection = Math.max(Math.min(index, newTab.sections.length - 1), 0);
-      return {
-        ...withBody(state, newTab),
-        position: { section: newSection, measure: 0, frame: 0, string: state.position.string },
-        selection: null,
-        isEditing: true,
-      };
+      const result = addSection(activeBody(state), index, name, state.position, stringCount(state));
+      if (result.tab === activeBody(state)) return state;
+      return { ...stateAfterEdit(state, result), selection: null };
     }
 
     case "RENAME_SECTION": {
@@ -555,48 +527,16 @@ export function tabEditorReducer(state: TabEditorState, action: TabEditorAction)
     }
 
     case "DELETE_SECTION": {
-      const { index } = action.payload;
-      if (isOnlySection(activeBody(state))) return state;
-      const newTab = removeSection(activeBody(state), index);
-      if (newTab === activeBody(state)) return state;
-
-      // Deleting a section the cursor isn't in leaves the cursor on the same frame,
-      // shifted if the deletion was above it. Deleting the cursor's own section lands
-      // on whichever section took its place (or the new last one).
-      if (state.position.section !== index) {
-        const shifted =
-          state.position.section > index
-            ? state.position.section - 1
-            : state.position.section;
-        return {
-          ...withBody(state, newTab),
-          position: { ...state.position, section: shifted },
-          selection: null,
-          isEditing: true,
-        };
-      }
-
-      const newSection = Math.min(index, newTab.sections.length - 1);
-      return {
-        ...withBody(state, newTab),
-        position: { section: newSection, measure: 0, frame: 0, string: 0 },
-        selection: null,
-        isEditing: true,
-      };
+      const result = deleteSection(activeBody(state), action.payload.index, state.position);
+      if (result.tab === activeBody(state)) return state;
+      return { ...stateAfterEdit(state, result), selection: null };
     }
 
     case "MOVE_MEASURE": {
       const { from, to } = action.payload;
-      const newTab = moveMeasure(activeBody(state), from, to);
-      if (newTab === activeBody(state)) return state;
-
-      const landed = resolveMoveTarget(activeBody(state), from, to);
-      return {
-        ...withBody(state, newTab),
-        position: { ...landed, frame: 0, string: state.position.string },
-        selection: null,
-        isEditing: true,
-      };
+      const result = relocateMeasure(activeBody(state), from, to, state.position);
+      if (result.tab === activeBody(state)) return state;
+      return { ...stateAfterEdit(state, result), selection: null };
     }
 
     case "SET_ACTIVE_TRACK": {

@@ -290,7 +290,11 @@ export function updateFrameNotes(
   );
 }
 
-export function resolvePositionAfterFrameDelete(
+/**
+ * Where the cursor lands after removeFrame: the frame that took its place, else the next
+ * measure's first, else the frame before.
+ */
+function resolvePositionAfterFrameDelete(
   tab: TabBodyType,
   section: number,
   measure: number,
@@ -411,6 +415,157 @@ export function resolveMoveTarget(
     section: to.section,
     measure: clampInsertIndex(to.measure, Math.max(lastIndex, 0)),
   };
+}
+
+// ============================================================================
+// Edits that land the cursor
+//
+// Each is one editor edit: it returns the new body and where the cursor lands in it, so
+// the reducer only applies the result. One that changes nothing returns the same tab.
+// ============================================================================
+
+/** A body after an edit, and where the cursor lands in it. */
+export type EditResult = { tab: TabBodyType; position: TabPositionType };
+
+/** Inserts an empty measure at index `measure` (-1 prepends) and lands on its first frame. */
+export function addMeasure(
+  tab: TabBodyType,
+  section: number,
+  measure: number,
+  stringCount: number = bodyStringCount(tab)
+): EditResult {
+  return {
+    tab: insertMeasure(tab, section, measure, stringCount),
+    position: { section, measure: measure === -1 ? 0 : measure, frame: 0, string: 0 },
+  };
+}
+
+/**
+ * Inserts an empty measure before the cursor's and keeps the cursor on its frame, now one
+ * measure further along. Like every measure insert, it lands on the first string.
+ */
+export function addMeasureBefore(
+  tab: TabBodyType,
+  cursor: TabPositionType,
+  stringCount: number = bodyStringCount(tab)
+): EditResult {
+  const { section, measure, frame } = cursor;
+  return {
+    tab: insertMeasure(tab, section, measure, stringCount),
+    position: { section, measure: measure + 1, frame, string: 0 },
+  };
+}
+
+/**
+ * Inserts a frame after `at` (empty, or a copy of it) and lands on the new frame, keeping
+ * the cursor's string. If there is no frame after `at`, the cursor stays where it was.
+ */
+export function addFrameAndAdvance(
+  tab: TabBodyType,
+  at: { section: number; measure: number; frame: number },
+  isEmpty: boolean,
+  cursor: TabPositionType,
+  stringCount: number = bodyStringCount(tab)
+): EditResult {
+  const { section, measure, frame } = at;
+  const next = insertFrame(tab, section, measure, frame, isEmpty, stringCount);
+  const position = isExistingPosition(next, section, measure, frame + 1)
+    ? { section, measure, frame: frame + 1, string: cursor.string }
+    : cursor;
+  return { tab: next, position };
+}
+
+/** Inserts an empty frame before the cursor's and keeps the cursor on its frame, now one further along. */
+export function addFrameBefore(
+  tab: TabBodyType,
+  cursor: TabPositionType,
+  stringCount: number = bodyStringCount(tab)
+): EditResult {
+  const { section, measure, frame } = cursor;
+  return {
+    tab: insertFrame(tab, section, measure, frame - 1, true, stringCount),
+    position: { ...cursor, frame: frame + 1 },
+  };
+}
+
+/**
+ * Deletes one frame. A measure's only frame takes the measure with it, landing on the end
+ * of the measure before; a section's only measure is never removed this way (a no-op —
+ * see deleteSection). Otherwise the cursor lands on the frame that took its place, else
+ * the next measure's first, else the frame before.
+ */
+export function deleteFrame(
+  tab: TabBodyType,
+  section: number,
+  measure: number,
+  frame: number
+): EditResult {
+  if (isOnlyFrame(tab, section, measure)) {
+    if (isOnlyMeasure(tab, section)) {
+      return { tab, position: { section, measure, frame, string: 0 } };
+    }
+    const next = removeMeasure(tab, section, measure);
+    const prevMeasure = Math.max(measure - 1, 0);
+    const frames = getMeasures(next, section)[prevMeasure]?.frames.length ?? 0;
+    return {
+      tab: next,
+      position: { section, measure: prevMeasure, frame: Math.max(frames - 1, 0), string: 0 },
+    };
+  }
+
+  const next = removeFrame(tab, section, measure, frame);
+  return { tab: next, position: resolvePositionAfterFrameDelete(next, section, measure, frame) };
+}
+
+/** Inserts a section at `index` (clamped) and lands on its first frame, keeping the string. */
+export function addSection(
+  tab: TabBodyType,
+  index: number,
+  name: string,
+  cursor: TabPositionType,
+  stringCount: number = bodyStringCount(tab)
+): EditResult {
+  const next = insertSection(tab, index, name, stringCount);
+  const section = Math.max(Math.min(index, next.sections.length - 1), 0);
+  return { tab: next, position: { section, measure: 0, frame: 0, string: cursor.string } };
+}
+
+/**
+ * Deletes a section (a no-op on the last one). Deleting a section the cursor isn't in
+ * leaves the cursor on the same frame, shifted if the deletion was above it. Deleting the
+ * cursor's own section lands on whichever section took its place (or the new last one).
+ */
+export function deleteSection(
+  tab: TabBodyType,
+  index: number,
+  cursor: TabPositionType
+): EditResult {
+  const next = removeSection(tab, index);
+  if (next === tab) return { tab, position: cursor };
+
+  if (cursor.section !== index) {
+    const section = cursor.section > index ? cursor.section - 1 : cursor.section;
+    return { tab: next, position: { ...cursor, section } };
+  }
+
+  const section = Math.min(index, next.sections.length - 1);
+  return { tab: next, position: { section, measure: 0, frame: 0, string: 0 } };
+}
+
+/**
+ * moveMeasure, landing the cursor on the first frame of the moved measure and keeping its
+ * string. A move that changes nothing leaves the cursor where it was.
+ */
+export function relocateMeasure(
+  tab: TabBodyType,
+  from: { section: number; measure: number },
+  to: { section: number; measure: number },
+  cursor: TabPositionType
+): EditResult {
+  const next = moveMeasure(tab, from, to);
+  if (next === tab) return { tab, position: cursor };
+  const landed = resolveMoveTarget(tab, from, to);
+  return { tab: next, position: { ...landed, frame: 0, string: cursor.string } };
 }
 
 // ============================================================================
@@ -603,7 +758,7 @@ export function moveFrameRangeToMeasure(
 export function deleteFrameRange(
   tab: TabBodyType,
   range: FrameRange
-): { tab: TabBodyType; position: TabPositionType } {
+): EditResult {
   const fallback: TabPositionType = {
     section: range.section,
     measure: range.measure,
