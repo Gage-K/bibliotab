@@ -1,0 +1,16 @@
+# Applies to server/Dockerfile.prod only (BuildKit reads <Dockerfile>.dockerignore in
+# preference to a root .dockerignore). That build's context is the repo root, so send
+# just the two folders it copies, and never a machine's own node_modules or build
+# output, which would overwrite what the image installed.
+*
+!server
+!shared
+
+**/node_modules
+**/dist
+**/coverage
+**/.env
+**/.env.local
+**/*.log
+**/.DS_Store
+**/.git
